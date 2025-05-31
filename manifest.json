@@ -1,0 +1,64 @@
+{
+  "manifest_version": 3,
+  "name": "DSA to GitHub",
+  "version": "1.0.0",
+  "description": "Automatically push your DSA solutions from LeetCode, GeeksforGeeks, and TakeUforward to GitHub",
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*.leetcode.com/*",
+    "https://*.geeksforgeeks.org/*",
+    "https://practice.geeksforgeeks.org/*",
+    "https://*.takeuforward.org/*",
+    "https://api.github.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.leetcode.com/*"],
+      "js": [
+        "utils/common.js",
+        "utils/github-api.js",
+        "content-scripts/leetcode.js"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "https://*.geeksforgeeks.org/*",
+        "https://practice.geeksforgeeks.org/*"
+      ],
+      "js": [
+        "utils/common.js",
+        "utils/github-api.js", 
+        "content-scripts/geeksforgeeks.js"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["https://*.takeuforward.org/*"],
+      "js": [
+        "utils/common.js",
+        "utils/github-api.js",
+        "content-scripts/takeuforward.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_title": "DSA to GitHub",
+    "default_popup": "popup/popup.html"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["utils/interceptor.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

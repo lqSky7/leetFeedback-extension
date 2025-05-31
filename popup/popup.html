@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DSA to GitHub</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1>DSA to GitHub</h1>
+        <div class="status" id="status">
+          <span class="status-dot" id="status-dot"></span>
+          <span class="status-text" id="status-text">Disconnected</span>
+        </div>
+      </header>
+
+      <nav class="tabs">
+        <button class="tab active" data-tab="config">Config</button>
+        <button class="tab" data-tab="stats">Stats</button>
+      </nav>
+
+      <main class="content">
+        <section class="tab-panel active" id="config">
+          <form id="config-form" class="form">
+            <div class="field">
+              <label for="token">GitHub Token</label>
+              <div class="input-group">
+                <input type="password" id="token" placeholder="ghp_..." required />
+                <button type="button" class="toggle-btn" id="toggle-token">Show</button>
+              </div>
+              <a href="https://github.com/settings/tokens/new?scopes=repo&description=DSA%20to%20GitHub%20Extension" 
+                 target="_blank" class="token-link">Generate Token</a>
+            </div>
+            
+            <div class="field-group">
+              <div class="field">
+                <label for="owner">Owner</label>
+                <input type="text" id="owner" placeholder="username" required />
+              </div>
+              <div class="field">
+                <label for="repo">Repository</label>
+                <input type="text" id="repo" placeholder="repo-name" required />
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="branch">Branch</label>
+              <select id="branch">
+                <option value="main">main</option>
+                <option value="master">master</option>
+                <option value="solutions">solutions</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label class="checkbox-label">
+                <input type="checkbox" id="debug-mode" />
+                <span class="checkbox-custom"></span>
+                Enable Debug Logs
+              </label>
+              <small class="field-help">Shows detailed console logs for debugging</small>
+            </div>
+
+            <div class="actions">
+              <button type="button" id="test-btn" class="btn btn-secondary">Test</button>
+              <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+          </form>
+
+          <div class="messages" id="messages"></div>
+        </section>
+
+        <section class="tab-panel" id="stats">
+          <div class="stats-grid">
+            <div class="stat">
+              <div class="stat-value" id="total-solved">0</div>
+              <div class="stat-label">Total</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value" id="this-week">0</div>
+              <div class="stat-label">Week</div>
+            </div>
+          </div>
+
+          <div class="platforms">
+            <div class="platform">
+              <span class="platform-name">LeetCode</span>
+              <span class="platform-count" id="leetcode-count">0</span>
+            </div>
+            <div class="platform">
+              <span class="platform-name">GeeksforGeeks</span>
+              <span class="platform-count" id="geeksforgeeks-count">0</span>
+            </div>
+            <div class="platform">
+              <span class="platform-name">TakeUforward</span>
+              <span class="platform-count" id="takeuforward-count">0</span>
+            </div>
+          </div>
+
+          <div class="recent">
+            <h3>Recent Activity</h3>
+            <div class="activity-list" id="activity-list">
+              <div class="activity-empty">No recent activity</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
