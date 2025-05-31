@@ -3,22 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DSA to GitHub</title>
+    <title>leetFeedback</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <div class="container">
       <header class="header">
-        <h1>DSA to GitHub</h1>
+        <h1>leetFeedback</h1>
         <div class="status" id="status">
           <span class="status-dot" id="status-dot"></span>
           <span class="status-text" id="status-text">Disconnected</span>
         </div>
       </header>
+      
+      <div class="platform-icons">
+        <img src="../icons/leetcode-svgrepo-com.svg" alt="LeetCode" class="platform-icon">
+        <img src="../icons/geeksforgeeks.svg" alt="GeeksForGeeks" class="platform-icon">
+        <img src="../icons/TufPlusDark.2f9770f2ccd35b40c4c5.svg" alt="TakeuForward" class="platform-icon">
+        <img src="../icons/hackerrank-svgrepo-com.svg" alt="HackerRank" class="platform-icon">
+        <img src="../icons/codechef-svgrepo-com.svg" alt="CodeChef" class="platform-icon">
+      </div>
+      
+      <div class="separator"></div>
 
       <nav class="tabs">
         <button class="tab active" data-tab="config">Config</button>
         <button class="tab" data-tab="stats">Stats</button>
+        <button class="tab" data-tab="settings">Settings</button>
       </nav>
 
       <main class="content">
@@ -54,17 +68,7 @@
               </select>
             </div>
 
-            <div class="field">
-              <label class="checkbox-label">
-                <input type="checkbox" id="debug-mode" />
-                <span class="checkbox-custom"></span>
-                Enable Debug Logs
-              </label>
-              <small class="field-help">Shows detailed console logs for debugging</small>
-            </div>
-
             <div class="actions">
-              <button type="button" id="test-btn" class="btn btn-secondary">Test</button>
               <button type="submit" class="btn btn-primary">Save</button>
             </div>
           </form>
@@ -127,7 +131,45 @@
 
           </div>
         </section>
+
+        <section class="tab-panel" id="settings">
+          <div class="settings-section">
+            <h3>Connection</h3>
+            <div class="settings-option">
+              <div class="settings-option-title">Test GitHub Connection</div>
+              <div class="settings-option-description">
+                Verify your token and repository settings are correct
+              </div>
+              <div class="settings-action">
+                <button type="button" id="test-btn" class="btn btn-primary">Test Connection</button>
+              </div>
+            </div>
+          </div>
+            
+          <div class="separator"></div>
+            
+          <div class="settings-section">
+            <h3>Debugging Options</h3>
+            <div class="settings-option">
+              <div class="settings-option-title">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="debug-mode" />
+                  <span class="checkbox-custom"></span>
+                  Enable Debug Logs
+                </label>
+              </div>
+              <div class="settings-option-description">
+                Shows detailed console logs for debugging
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
+      
+      <footer class="footer">
+        <div class="separator"></div>
+        <p class="privacy-note">Privacy: Local storage only.</p>
+      </footer>
     </div>
 
     <script src="popup.js"></script>

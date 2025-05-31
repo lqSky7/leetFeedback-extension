@@ -14,17 +14,36 @@ class PopupController {
     this.updateConnectionStatus();
     this.loadStatistics();
     this.loadTimeTracking();
+    this.initializePlatformIcons();
     
     // Set up timer to refresh time tracking data
     this.timeTrackingInterval = setInterval(() => {
       this.loadTimeTracking();
     }, 30000); // Update every 30 seconds
   }
+  
+  initializePlatformIcons() {
+    // Add subtle hover animation to platform icons
+    document.querySelectorAll('.platform-icon').forEach(icon => {
+      icon.addEventListener('mouseover', () => {
+        setTimeout(() => icon.style.transform = 'scale(1.1)', 0);
+      });
+      icon.addEventListener('mouseout', () => {
+        setTimeout(() => icon.style.transform = 'scale(1.0)', 0);
+      });
+    });
+  }
 
   setupEventListeners() {
-    // Tab navigation
+    // Tab navigation with animation
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', (e) => {
+        // Add ripple effect to tab clicks
+        const ripple = document.createElement('span');
+        ripple.classList.add('tab-ripple');
+        e.target.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+        
         this.switchTab(e.target.dataset.tab);
       });
     });
@@ -114,6 +133,10 @@ class PopupController {
 
     if (tabName === 'stats') {
       this.loadStatistics();
+    } else if (tabName === 'settings') {
+      // Ensure debug checkbox is properly loaded with current value
+      document.getElementById('debug-mode').checked = this.config.debugMode || false;
+      console.log('Settings tab loaded. Debug mode:', this.config.debugMode);
     }
   }
 
@@ -324,19 +347,19 @@ class PopupController {
     const geeksforgeeksPercent = (geeksforgeeksTime / totalTime) * 100;
     const takeuforwardPercent = (takeuforwardTime / totalTime) * 100;
     
-    // Create bar chart HTML
+    // Create bar chart HTML with staggered animations - white bars as requested
     const chartHtml = `
       <div class="chart-bars">
         <div class="chart-bar-container">
-          <div class="chart-bar leetcode" style="width: ${leetcodePercent}%"></div>
+          <div class="chart-bar leetcode" style="width: ${leetcodePercent}%; animation-delay: 0.1s;"></div>
           <div class="chart-label">LeetCode: ${this.formatTime(leetcodeTime)}</div>
         </div>
         <div class="chart-bar-container">
-          <div class="chart-bar gfg" style="width: ${geeksforgeeksPercent}%"></div>
+          <div class="chart-bar gfg" style="width: ${geeksforgeeksPercent}%; animation-delay: 0.2s;"></div>
           <div class="chart-label">GFG: ${this.formatTime(geeksforgeeksTime)}</div>
         </div>
         <div class="chart-bar-container">
-          <div class="chart-bar tuf" style="width: ${takeuforwardPercent}%"></div>
+          <div class="chart-bar tuf" style="width: ${takeuforwardPercent}%; animation-delay: 0.3s;"></div>
           <div class="chart-label">TUF: ${this.formatTime(takeuforwardTime)}</div>
         </div>
       </div>
