@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "DSA to GitHub",
+    "name": "LeetFeedback",
     "version": "0.0.1",
     "description": "Automatically push your DSA solutions from LeetCode, GeeksforGeeks, and TakeUforward to GitHub",
     "permissions": ["storage", "scripting", "activeTab", "tabs"],
