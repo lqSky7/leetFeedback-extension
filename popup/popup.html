@@ -82,20 +82,33 @@
               <div class="stat-value" id="this-week">0</div>
               <div class="stat-label">Week</div>
             </div>
+            <div class="stat">
+              <div class="stat-value" id="total-time">0h</div>
+              <div class="stat-label">Time</div>
+            </div>
           </div>
 
           <div class="platforms">
             <div class="platform">
               <span class="platform-name">LeetCode</span>
-              <span class="platform-count" id="leetcode-count">0</span>
+              <div class="platform-stats">
+                <span class="platform-count" id="leetcode-count">0</span>
+                <span class="platform-time" id="leetcode-time">0h</span>
+              </div>
             </div>
             <div class="platform">
               <span class="platform-name">GeeksforGeeks</span>
-              <span class="platform-count" id="geeksforgeeks-count">0</span>
+              <div class="platform-stats">
+                <span class="platform-count" id="geeksforgeeks-count">0</span>
+                <span class="platform-time" id="geeksforgeeks-time">0h</span>
+              </div>
             </div>
             <div class="platform">
               <span class="platform-name">TakeUforward</span>
-              <span class="platform-count" id="takeuforward-count">0</span>
+              <div class="platform-stats">
+                <span class="platform-count" id="takeuforward-count">0</span>
+                <span class="platform-time" id="takeuforward-time">0h</span>
+              </div>
             </div>
           </div>
 
@@ -104,6 +117,14 @@
             <div class="activity-list" id="activity-list">
               <div class="activity-empty">No recent activity</div>
             </div>
+          </div>
+          
+          <div class="time-tracking">
+            <h3>Time Tracking</h3>
+            <div class="time-chart" id="time-chart">
+              <div class="time-chart-empty">Tracking time spent on DSA platforms</div>
+            </div>
+
           </div>
         </section>
       </main>

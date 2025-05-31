@@ -2,9 +2,27 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log("DSA to GitHub Extension installed.");
   
   // Initialize default settings
-  chrome.storage.sync.get(['github_branch'], (data) => {
+  chrome.storage.sync.get(['github_branch', 'time_tracking'], (data) => {
+    const updates = {};
+    
     if (!data.github_branch) {
-      chrome.storage.sync.set({ github_branch: 'main' });
+      updates.github_branch = 'main';
+    }
+    
+    // Initialize time tracking data if it doesn't exist (with simplified structure)
+    if (!data.time_tracking) {
+      updates.time_tracking = {
+        platforms: {
+          leetcode: { totalTime: 0 },
+          geeksforgeeks: { totalTime: 0 },
+          takeuforward: { totalTime: 0 }
+        },
+        lastUpdated: new Date().toISOString()
+      };
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      chrome.storage.sync.set(updates);
     }
   });
 });
@@ -28,6 +46,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.type === 'initializeConfig') {
     handleInitializeConfig(request, sender, sendResponse);
+    return true;
+  }
+  
+  if (request.type === 'updateTimeTracking') {
+    handleUpdateTimeTracking(request, sender, sendResponse);
+    return true;
+  }
+  
+  if (request.type === 'getTimeTracking') {
+    handleGetTimeTracking(request, sender, sendResponse);
     return true;
   }
 });
@@ -270,11 +298,18 @@ async function handleUpdateStats(request, sender, sendResponse) {
 async function handleInitializeConfig(request, sender, sendResponse) {
   try {
     const defaults = {
-      github_branch: 'main',
       github_token: '',
       github_owner: '',
       github_repo: '',
-      dsa_stats: {}
+      dsa_stats: {},
+      time_tracking: {
+        platforms: {
+          leetcode: { totalTime: 0 },
+          geeksforgeeks: { totalTime: 0 },
+          takeuforward: { totalTime: 0 }
+        },
+        lastUpdated: new Date().toISOString()
+      }
     };
 
     const result = await chrome.storage.sync.get(Object.keys(defaults));
@@ -291,9 +326,63 @@ async function handleInitializeConfig(request, sender, sendResponse) {
       await chrome.storage.sync.set(updates);
     }
 
+    
     sendResponse({ success: true, config: { ...defaults, ...result, ...updates } });
   } catch (error) {
     console.error('Error initializing config:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+// Simple time tracking functions
+async function handleUpdateTimeTracking(request, sender, sendResponse) {
+  try {
+    const { platform, timeSpent } = request;
+    
+    if (!platform || !['leetcode', 'geeksforgeeks', 'takeuforward'].includes(platform)) {
+      throw new Error('Invalid platform for time tracking');
+    }
+    
+    // Get current time tracking data
+    const result = await chrome.storage.sync.get(['time_tracking']);
+    let timeTracking = result.time_tracking || {
+      platforms: {
+        leetcode: { totalTime: 0 },
+        geeksforgeeks: { totalTime: 0 },
+        takeuforward: { totalTime: 0 }
+      },
+      lastUpdated: new Date().toISOString()
+    };
+    
+    // Add time silently
+    if (timeSpent && timeSpent > 0) {
+      timeTracking.platforms[platform].totalTime += timeSpent;
+      timeTracking.lastUpdated = new Date().toISOString();
+      await chrome.storage.sync.set({ time_tracking: timeTracking });
+    }
+    
+    sendResponse({ success: true });
+  } catch (error) {
+    console.error('Error updating time tracking:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleGetTimeTracking(request, sender, sendResponse) {
+  try {
+    const result = await chrome.storage.sync.get(['time_tracking']);
+    const timeTracking = result.time_tracking || {
+      platforms: {
+        leetcode: { totalTime: 0 },
+        geeksforgeeks: { totalTime: 0 },
+        takeuforward: { totalTime: 0 }
+      },
+      lastUpdated: new Date().toISOString()
+    };
+    
+    sendResponse({ success: true, timeTracking });
+  } catch (error) {
+    console.error('Error getting time tracking data:', error);
     sendResponse({ success: false, error: error.message });
   }
 }

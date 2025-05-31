@@ -2,6 +2,7 @@ class PopupController {
   constructor() {
     this.config = {};
     this.stats = {};
+    this.timeTracking = {};
     this.connectionStatus = false;
     this.initialize();
   }
@@ -12,6 +13,12 @@ class PopupController {
     this.updateUI();
     this.updateConnectionStatus();
     this.loadStatistics();
+    this.loadTimeTracking();
+    
+    // Set up timer to refresh time tracking data
+    this.timeTrackingInterval = setInterval(() => {
+      this.loadTimeTracking();
+    }, 30000); // Update every 30 seconds
   }
 
   setupEventListeners() {
@@ -60,7 +67,8 @@ class PopupController {
         'github_repo',
         'github_branch',
         'debug_mode',
-        'dsa_stats'
+        'dsa_stats',
+        'time_tracking'
       ], (data) => {
         this.config = {
           token: data.github_token || '',
@@ -70,6 +78,14 @@ class PopupController {
           debugMode: data.debug_mode || false
         };
         this.stats = data.dsa_stats || {};
+        this.timeTracking = data.time_tracking || {
+          platforms: {
+            leetcode: { totalTime: 0, lastActive: null, isActive: false },
+            geeksforgeeks: { totalTime: 0, lastActive: null, isActive: false },
+            takeuforward: { totalTime: 0, lastActive: null, isActive: false }
+          },
+          lastUpdated: new Date().toISOString()
+        };
         resolve();
       });
     });
@@ -254,6 +270,96 @@ class PopupController {
       console.error('Error loading statistics:', error);
     }
   }
+  
+  async loadTimeTracking() {
+    try {
+      // Get the latest time tracking data
+      const response = await this.sendMessageToBackground({
+        type: 'getTimeTracking'
+      });
+      
+      if (response.success) {
+        this.timeTracking = response.timeTracking;
+        this.updateTimeTrackingUI();
+      }
+    } catch (error) {
+      console.error('Error loading time tracking data:', error);
+    }
+  }
+  
+  updateTimeTrackingUI() {
+    const { platforms } = this.timeTracking;
+    
+    // Update platform times
+    document.getElementById('leetcode-time').textContent = this.formatTime(platforms.leetcode.totalTime);
+    document.getElementById('geeksforgeeks-time').textContent = this.formatTime(platforms.geeksforgeeks.totalTime);
+    document.getElementById('takeuforward-time').textContent = this.formatTime(platforms.takeuforward.totalTime);
+    
+    // Calculate and update total time
+    const totalTime = Object.values(platforms).reduce((sum, platform) => sum + platform.totalTime, 0);
+    document.getElementById('total-time').textContent = this.formatTime(totalTime);
+    
+    // Create time chart visualization
+    this.createTimeChart();
+  }
+  
+  createTimeChart() {
+    const chartElement = document.getElementById('time-chart');
+    const { platforms } = this.timeTracking;
+    
+    // Get time values
+    const leetcodeTime = platforms.leetcode.totalTime;
+    const geeksforgeeksTime = platforms.geeksforgeeks.totalTime;
+    const takeuforwardTime = platforms.takeuforward.totalTime;
+    const totalTime = leetcodeTime + geeksforgeeksTime + takeuforwardTime;
+    
+    // Don't display chart if no time tracked yet
+    if (totalTime === 0) {
+      chartElement.innerHTML = '<div class="time-chart-empty">Tracking time spent on DSA platforms</div>';
+      return;
+    }
+    
+    // Calculate percentages
+    const leetcodePercent = (leetcodeTime / totalTime) * 100;
+    const geeksforgeeksPercent = (geeksforgeeksTime / totalTime) * 100;
+    const takeuforwardPercent = (takeuforwardTime / totalTime) * 100;
+    
+    // Create bar chart HTML
+    const chartHtml = `
+      <div class="chart-bars">
+        <div class="chart-bar-container">
+          <div class="chart-bar leetcode" style="width: ${leetcodePercent}%"></div>
+          <div class="chart-label">LeetCode: ${this.formatTime(leetcodeTime)}</div>
+        </div>
+        <div class="chart-bar-container">
+          <div class="chart-bar gfg" style="width: ${geeksforgeeksPercent}%"></div>
+          <div class="chart-label">GFG: ${this.formatTime(geeksforgeeksTime)}</div>
+        </div>
+        <div class="chart-bar-container">
+          <div class="chart-bar tuf" style="width: ${takeuforwardPercent}%"></div>
+          <div class="chart-label">TUF: ${this.formatTime(takeuforwardTime)}</div>
+        </div>
+      </div>
+    `;
+    
+    chartElement.innerHTML = chartHtml;
+  }
+  
+  formatTime(milliseconds) {
+    if (!milliseconds || milliseconds < 1000) return '0h';
+    
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m`;
+    } else {
+      return `${seconds}s`;
+    }
+  }
 
   calculateThisWeekCount() {
     const weekStart = new Date();
@@ -324,6 +430,13 @@ class PopupController {
       return `${diffDays}d`;
     } else {
       return date.toLocaleDateString();
+    }
+  }
+  
+  // Clean up timers when popup is closed
+  disconnected() {
+    if (this.timeTrackingInterval) {
+      clearInterval(this.timeTrackingInterval);
     }
   }
 

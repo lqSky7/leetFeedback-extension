@@ -37,7 +37,7 @@
     constructor() {
       this.currentProblem = null;
       this.currentSolution = null;
-      this.isMonitoring = false;
+      this.isSubmissionInProgress = false;
     }
 
     async initialize() {
@@ -56,10 +56,12 @@
     setupEventListeners() {
       // Listen for URL changes
       this.observeUrlChanges();
-      
-      // Monitor submit button clicks
+    
+      // Monitor submissions
       this.monitorSubmissions();
     }
+    
+
 
     observeUrlChanges() {
       let currentUrl = location.href;

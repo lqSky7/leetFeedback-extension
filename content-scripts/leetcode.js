@@ -19,10 +19,10 @@
 
   class LeetCodeExtractor {
     constructor() {
-      this.currentProblem = null;
-      this.currentSolution = null;
-      this.isSubmissionPage = false;
-    }
+        this.currentProblem = null;
+        this.currentSolution = null;
+        this.isSubmissionPage = false;
+      }
 
     async initialize() {
       try {
@@ -82,6 +82,8 @@
         subtree: true
       });
     }
+    
+
 
     checkPageType() {
       const url = window.location.href;
