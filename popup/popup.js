@@ -584,11 +584,22 @@ class PopupController {
           </div>
         </div>
         <div class="auth-actions">
-          <button class="btn btn-primary" onclick="popupController.openWebsite()">Website</button>
-          <button class="btn sign-out" onclick="popupController.signOut()">Sign Out</button>
+          <button class="btn btn-primary" id="website-btn">Website</button>
+          <button class="btn sign-out" id="sign-out-btn">Sign Out</button>
         </div>
         <div class="sync-status synced">✓ Synced with website</div>
       `;
+      
+      // Add event listeners for the buttons
+      const websiteBtn = document.getElementById('website-btn');
+      const signOutBtn = document.getElementById('sign-out-btn');
+      
+      if (websiteBtn) {
+        websiteBtn.addEventListener('click', () => this.openWebsite());
+      }
+      if (signOutBtn) {
+        signOutBtn.addEventListener('click', () => this.signOut());
+      }
     } else {
       // User is not signed in
       authSection.innerHTML = `
@@ -596,10 +607,16 @@ class PopupController {
           <div class="auth-sign-in-text">
             Sign in to sync your progress across devices and access premium features.
           </div>
-          <button class="btn btn-primary" onclick="popupController.openSignIn()">Sign In</button>
+          <button class="btn btn-primary" id="sign-in-btn">Sign In</button>
           <div class="sync-status">Not synced</div>
         </div>
       `;
+      
+      // Add event listener for sign in button
+      const signInBtn = document.getElementById('sign-in-btn');
+      if (signInBtn) {
+        signInBtn.addEventListener('click', () => this.openSignIn());
+      }
     }
   }
 
@@ -655,9 +672,7 @@ class PopupController {
       // Try to find existing tab first
       const tabs = await chrome.tabs.query({ 
         url: [
-          'http://localhost:5173/*',
-          'http://localhost:3000/*',
-          'https://leetfeedback.vercel.app/*'
+          'https://leet-feedback.vercel.app/*'
         ]
       });
       
@@ -666,15 +681,9 @@ class PopupController {
         chrome.tabs.update(tabs[0].id, { active: true });
         chrome.windows.update(tabs[0].windowId, { focused: true });
       } else {
-        // Create new tab - try localhost first for development
-        const urls = [
-          'http://localhost:5173',
-          'http://localhost:3000',
-          'https://leetfeedback.vercel.app'
-        ];
-        
+        // Create new tab
         chrome.tabs.create({
-          url: urls[0],
+          url: 'https://leet-feedback.vercel.app',
           active: true
         });
       }
@@ -687,6 +696,9 @@ class PopupController {
     try {
       if (typeof extensionAuth !== 'undefined') {
         await extensionAuth.signOut();
+        // Update local auth status
+        this.authStatus = { isAuthenticated: false, user: null };
+        this.updateAuthSection();
         this.showMessage('Signed out successfully', 'success');
       } else {
         // Fallback: clear local storage
@@ -697,7 +709,11 @@ class PopupController {
       }
     } catch (error) {
       console.error('Error signing out:', error);
-      this.showMessage('Failed to sign out. Please try again.', 'error');
+      // Even if sign out fails, clear local state
+      await chrome.storage.local.remove(['firebase_user', 'auth_timestamp']);
+      this.authStatus = { isAuthenticated: false, user: null };
+      this.updateAuthSection();
+      this.showMessage('Failed to sign out from website, but cleared local session.', 'warning');
     }
   }
 }

@@ -8,18 +8,8 @@ class ExtensionAuth {
   }
 
   getWebsiteUrl() {
-    // Try to determine the website URL based on environment
-    // Check if we're in development or production
-    const isDev = chrome.runtime.getManifest().version_name === 'dev' || 
-                  chrome.runtime.getURL('').includes('chrome-extension://');
-    
-    // For development, try localhost first
-    if (isDev) {
-      return 'http://localhost:5173'; // Vite dev server default port
-    }
-    
-    // For production
-    return 'https://leetfeedback.vercel.app';
+    // Always use production URL
+    return 'https://leet-feedback.vercel.app';
   }
 
   // Initialize auth system
@@ -52,11 +42,9 @@ class ExtensionAuth {
   // Request auth status from the website
   async requestAuthStatus() {
     try {
-      // Try both localhost and production URLs
+      // Try production URL
       const urls = [
-        'http://localhost:5173/*',
-        'http://localhost:3000/*',
-        'https://leetfeedback.vercel.app/*',
+        'https://leet-feedback.vercel.app/*',
         'https://*.vercel.app/*',
         'https://*.netlify.app/*'
       ];
@@ -177,9 +165,7 @@ class ExtensionAuth {
       // Try to find existing tab first
       const existingTabs = await chrome.tabs.query({ 
         url: [
-          'http://localhost:5173/*',
-          'http://localhost:3000/*',
-          'https://leetfeedback.vercel.app/*'
+          'https://leet-feedback.vercel.app/*'
         ]
       });
       

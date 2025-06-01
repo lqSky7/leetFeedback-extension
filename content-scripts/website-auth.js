@@ -3,8 +3,8 @@
   'use strict';
 
   // Only run on the LeetFeedback website
-  const isLeetFeedbackSite = window.location.hostname.includes('leetfeedback') || 
-                            window.location.hostname.includes('localhost') ||
+  const isLeetFeedbackSite = window.location.hostname.includes('leet-feedback') || 
+                            window.location.hostname.includes('leetfeedback') || 
                             window.location.hostname.includes('vercel.app') ||
                             window.location.hostname.includes('netlify.app');
 

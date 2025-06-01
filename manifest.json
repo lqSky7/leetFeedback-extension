@@ -10,7 +10,7 @@
         "https://practice.geeksforgeeks.org/*",
         "https://*.takeuforward.org/*",
         "https://api.github.com/*",
-        "http://localhost:*/*",
+        "https://leet-feedback.vercel.app/*",
         "https://*.vercel.app/*",
         "https://*.netlify.app/*"
     ],
@@ -53,7 +53,7 @@
         },
         {
             "matches": [
-                "http://localhost:*/*",
+                "https://leet-feedback.vercel.app/*",
                 "https://*.vercel.app/*",
                 "https://*.netlify.app/*"
             ],
