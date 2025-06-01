@@ -4,11 +4,13 @@ class PopupController {
     this.stats = {};
     this.timeTracking = {};
     this.connectionStatus = false;
+    this.authStatus = { isAuthenticated: false, user: null };
     this.initialize();
   }
 
   async initialize() {
     await this.loadStoredData();
+    await this.initializeAuth();
     this.setupEventListeners();
     this.updateUI();
     this.updateConnectionStatus();
@@ -136,6 +138,7 @@ class PopupController {
     } else if (tabName === 'settings') {
       // Ensure debug checkbox is properly loaded with current value
       document.getElementById('debug-mode').checked = this.config.debugMode || false;
+      this.updateAuthSection();
       console.log('Settings tab loaded. Debug mode:', this.config.debugMode);
     }
   }
@@ -500,9 +503,209 @@ class PopupController {
       chrome.runtime.sendMessage(message, resolve);
     });
   }
+
+  // Authentication methods
+  async initializeAuth() {
+    try {
+      console.log('[Popup] Initializing auth...');
+      
+      // Check local storage for cached auth data first
+      const result = await chrome.storage.local.get(['firebase_user', 'auth_timestamp']);
+      if (result.firebase_user && result.auth_timestamp) {
+        const now = Date.now();
+        const cacheAge = now - result.auth_timestamp;
+        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+        
+        if (cacheAge < maxAge) {
+          console.log('[Popup] Found valid cached auth data');
+          this.authStatus = {
+            isAuthenticated: true,
+            user: result.firebase_user
+          };
+          this.updateAuthSection();
+        }
+      }
+      
+      // Set up auth utility if available
+      if (typeof extensionAuth !== 'undefined') {
+        console.log('[Popup] Setting up extension auth listener');
+        extensionAuth.onAuthStatusChange((authStatus) => {
+          console.log('[Popup] Auth status changed:', authStatus);
+          this.authStatus = authStatus;
+          this.updateAuthSection();
+        });
+        
+        // Request fresh auth status
+        extensionAuth.requestAuthStatus();
+      } else {
+        console.log('[Popup] Extension auth not available, updating auth section');
+        this.updateAuthSection();
+      }
+      
+      // Listen for auth updates from background script
+      chrome.runtime.onMessage.addListener((message) => {
+        if (message.type === 'AUTH_UPDATE') {
+          console.log('[Popup] Received auth update from background:', message);
+          this.authStatus = {
+            isAuthenticated: message.isAuthenticated,
+            user: message.user
+          };
+          this.updateAuthSection();
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error initializing auth:', error);
+    }
+  }
+
+  updateAuthSection() {
+    const authSection = document.getElementById('auth-section');
+    if (!authSection) return;
+
+    if (this.authStatus.isAuthenticated && this.authStatus.user) {
+      // User is signed in
+      const user = this.authStatus.user;
+      const displayName = user.displayName || user.email || 'User';
+      const provider = this.getProviderName(user.provider);
+      
+      authSection.innerHTML = `
+        <div class="auth-user">
+          <div class="auth-avatar">
+            ${user.photoURL 
+              ? `<img src="${user.photoURL}" alt="${displayName}" />`
+              : `<div class="default-avatar">👤</div>`
+            }
+          </div>
+          <div class="auth-user-info">
+            <div class="auth-user-name">${displayName}</div>
+            <div class="auth-user-email">${user.email || ''}</div>
+            <div class="auth-provider">via ${provider}</div>
+          </div>
+        </div>
+        <div class="auth-actions">
+          <button class="btn btn-primary" onclick="popupController.openWebsite()">Website</button>
+          <button class="btn sign-out" onclick="popupController.signOut()">Sign Out</button>
+        </div>
+        <div class="sync-status synced">✓ Synced with website</div>
+      `;
+    } else {
+      // User is not signed in
+      authSection.innerHTML = `
+        <div class="auth-sign-in">
+          <div class="auth-sign-in-text">
+            Sign in to sync your progress across devices and access premium features.
+          </div>
+          <button class="btn btn-primary" onclick="popupController.openSignIn()">Sign In</button>
+          <div class="sync-status">Not synced</div>
+        </div>
+      `;
+    }
+  }
+
+  getProviderName(provider) {
+    switch (provider) {
+      case 'google.com':
+        return 'Google';
+      case 'apple.com':
+        return 'Apple';
+      default:
+        return provider || 'Unknown';
+    }
+  }
+
+  async openSignIn() {
+    try {
+      console.log('[Popup] Opening sign in...');
+      
+      if (typeof extensionAuth !== 'undefined') {
+        await extensionAuth.openSignIn();
+        
+        // Set up periodic check for auth status after opening website
+        const checkInterval = setInterval(async () => {
+          await extensionAuth.requestAuthStatus();
+        }, 2000);
+        
+        // Stop checking after 30 seconds
+        setTimeout(() => {
+          clearInterval(checkInterval);
+        }, 30000);
+        
+      } else {
+        // Fallback: try different URLs for development/production
+        const urls = [
+          'http://localhost:5173',
+          'http://localhost:3000', 
+          'https://leetfeedback.vercel.app'
+        ];
+        
+        chrome.tabs.create({
+          url: urls[0], // Try localhost first
+          active: true
+        });
+      }
+    } catch (error) {
+      console.error('Error opening sign in:', error);
+      this.showMessage('Failed to open sign in. Please try again.', 'error');
+    }
+  }
+
+  async openWebsite() {
+    try {
+      // Try to find existing tab first
+      const tabs = await chrome.tabs.query({ 
+        url: [
+          'http://localhost:5173/*',
+          'http://localhost:3000/*',
+          'https://leetfeedback.vercel.app/*'
+        ]
+      });
+      
+      if (tabs.length > 0) {
+        // Focus existing tab
+        chrome.tabs.update(tabs[0].id, { active: true });
+        chrome.windows.update(tabs[0].windowId, { focused: true });
+      } else {
+        // Create new tab - try localhost first for development
+        const urls = [
+          'http://localhost:5173',
+          'http://localhost:3000',
+          'https://leetfeedback.vercel.app'
+        ];
+        
+        chrome.tabs.create({
+          url: urls[0],
+          active: true
+        });
+      }
+    } catch (error) {
+      console.error('Error opening website:', error);
+    }
+  }
+
+  async signOut() {
+    try {
+      if (typeof extensionAuth !== 'undefined') {
+        await extensionAuth.signOut();
+        this.showMessage('Signed out successfully', 'success');
+      } else {
+        // Fallback: clear local storage
+        await chrome.storage.local.remove(['firebase_user', 'auth_timestamp']);
+        this.authStatus = { isAuthenticated: false, user: null };
+        this.updateAuthSection();
+        this.showMessage('Signed out locally', 'success');
+      }
+    } catch (error) {
+      console.error('Error signing out:', error);
+      this.showMessage('Failed to sign out. Please try again.', 'error');
+    }
+  }
 }
+
+// Global reference for inline event handlers
+let popupController;
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', () => {
-  new PopupController();
+  popupController = new PopupController();
 });

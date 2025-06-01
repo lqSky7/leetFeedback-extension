@@ -58,6 +58,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     handleGetTimeTracking(request, sender, sendResponse);
     return true;
   }
+  
+  if (request.type === 'AUTH_STATE_CHANGED') {
+    handleAuthStateChanged(request, sender, sendResponse);
+    return true;
+  }
+  
+  if (request.type === 'CONTENT_SCRIPT_READY') {
+    handleContentScriptReady(request, sender, sendResponse);
+    return true;
+  }
 });
 
 // Handle getting user solution for GeeksforGeeks
@@ -81,6 +91,88 @@ async function handleGetUserSolution(request, sender, sendResponse) {
     }
   } catch (error) {
     console.error('Error getting user solution:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+// Handle authentication state changes from website
+async function handleAuthStateChanged(request, sender, sendResponse) {
+  try {
+    const { isAuthenticated, user } = request;
+    
+    console.log('[Background] Auth state changed:', { isAuthenticated, user: user?.email });
+    
+    // Store auth data in local storage for extension access
+    if (isAuthenticated && user) {
+      await chrome.storage.local.set({
+        firebase_user: user,
+        auth_timestamp: Date.now()
+      });
+      console.log('[Background] User authenticated and stored:', user.email);
+      
+      // Notify all extension contexts about auth change
+      try {
+        chrome.runtime.sendMessage({
+          type: 'AUTH_UPDATE',
+          isAuthenticated: true,
+          user: user
+        });
+      } catch (e) {
+        // Ignore if no listeners
+      }
+    } else {
+      await chrome.storage.local.remove(['firebase_user', 'auth_timestamp']);
+      console.log('[Background] User signed out, data cleared');
+      
+      // Notify all extension contexts about auth change
+      try {
+        chrome.runtime.sendMessage({
+          type: 'AUTH_UPDATE',
+          isAuthenticated: false,
+          user: null
+        });
+      } catch (e) {
+        // Ignore if no listeners
+      }
+    }
+    
+    sendResponse({ success: true });
+  } catch (error) {
+    console.error('Error handling auth state change:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+// Handle content script ready notification
+async function handleContentScriptReady(request, sender, sendResponse) {
+  try {
+    console.log('[Background] Content script ready on:', request.url);
+    
+    // Check if we have cached auth data and should sync it
+    const result = await chrome.storage.local.get(['firebase_user', 'auth_timestamp']);
+    if (result.firebase_user && result.auth_timestamp) {
+      const now = Date.now();
+      const cacheAge = now - result.auth_timestamp;
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+      
+      if (cacheAge < maxAge) {
+        console.log('[Background] Syncing cached auth data to content script');
+        // Request fresh auth status from the website
+        setTimeout(() => {
+          chrome.tabs.sendMessage(sender.tab.id, {
+            type: 'AUTH_STATUS_REQUEST'
+          }, (response) => {
+            if (response && response.isAuthenticated) {
+              console.log('[Background] Auth status confirmed from website');
+            }
+          });
+        }, 1000);
+      }
+    }
+    
+    sendResponse({ success: true });
+  } catch (error) {
+    console.error('Error handling content script ready:', error);
     sendResponse({ success: false, error: error.message });
   }
 }

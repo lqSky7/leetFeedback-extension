@@ -9,7 +9,10 @@
         "https://*.geeksforgeeks.org/*",
         "https://practice.geeksforgeeks.org/*",
         "https://*.takeuforward.org/*",
-        "https://api.github.com/*"
+        "https://api.github.com/*",
+        "http://localhost:*/*",
+        "https://*.vercel.app/*",
+        "https://*.netlify.app/*"
     ],
     "background": {
         "service_worker": "background.js"
@@ -45,6 +48,17 @@
                 "utils/github-api.js",
                 "utils/time-tracker.js",
                 "content-scripts/takeuforward.js"
+            ],
+            "run_at": "document_end"
+        },
+        {
+            "matches": [
+                "http://localhost:*/*",
+                "https://*.vercel.app/*",
+                "https://*.netlify.app/*"
+            ],
+            "js": [
+                "content-scripts/website-auth.js"
             ],
             "run_at": "document_end"
         }
