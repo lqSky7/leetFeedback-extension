@@ -436,7 +436,8 @@ body {
 }
 
 .recent h3,
-.time-tracking h3 {
+.time-tracking h3,
+.mistake-tags h3 {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
@@ -570,6 +571,49 @@ body {
 /* Time Tracking Styles */
 .time-tracking {
   margin-top: 24px;
+}
+
+.mistake-tags {
+  margin-top: 24px;
+}
+
+.tags-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.tag-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.tag-name {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.tag-count {
+  color: var(--text);
+  font-weight: 600;
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 9px;
+}
+
+.tags-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 20px;
+  font-style: italic;
 }
 
 .time-chart {

@@ -171,6 +171,13 @@ class GitHubAPI {
           if (analysisResult.success) {
             mistakeAnalysis = analysisResult.analysis;
             DSAUtils.logDebug(platform, 'Mistake analysis generated successfully');
+            
+            // Extract and store mistake tags
+            const tags = this.extractMistakeTags(analysisResult.analysis);
+            if (tags.length > 0) {
+              await this.storeMistakeTags(platform, problemInfo.title, tags);
+              DSAUtils.logDebug(platform, 'Stored mistake tags:', tags);
+            }
           } else {
             DSAUtils.logError(platform, 'Failed to analyze mistakes:', analysisResult.error);
           }
@@ -299,6 +306,50 @@ class GitHubAPI {
     };
 
     return languageMap[language] || language.toLowerCase();
+  }
+
+  extractMistakeTags(analysis) {
+    // Extract tags from "TAGS: tag1, tag2, tag3" format
+    const tagMatch = analysis.match(/TAGS:\s*([^\n]+)/i);
+    if (tagMatch) {
+      return tagMatch[1]
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+    }
+    return [];
+  }
+
+  async storeMistakeTags(platform, problemTitle, tags) {
+    return new Promise((resolve) => {
+      chrome.storage.sync.get(['mistake_tags'], (data) => {
+        const mistakeTags = data.mistake_tags || {};
+        
+        // Initialize platform if not exists
+        if (!mistakeTags[platform]) {
+          mistakeTags[platform] = {};
+        }
+        
+        // Store tags for this problem
+        mistakeTags[platform][problemTitle] = {
+          tags: tags,
+          timestamp: new Date().toISOString()
+        };
+        
+        // Update global tag counts
+        if (!mistakeTags.tagCounts) {
+          mistakeTags.tagCounts = {};
+        }
+        
+        tags.forEach(tag => {
+          mistakeTags.tagCounts[tag] = (mistakeTags.tagCounts[tag] || 0) + 1;
+        });
+        
+        chrome.storage.sync.set({ mistake_tags: mistakeTags }, () => {
+          resolve();
+        });
+      });
+    });
   }
 
   async logDebug(message, data = null) {

@@ -101,13 +101,30 @@ ${attempt.code}
         });
 
         prompt += `
-Your answer should directly start from the Mistakes tags
-Please provide a concise analysis focusing on:
-1. **Tag Mistakes**: What Category errors belong to
-2. **Learning Points**: What the errors are and why
-3. **Improvement**: How the solution evolved
 
-Keep the analysis under 100 words and format as markdown. Focus only on code logic, algorithms, and programming concepts. Do not include personal commentary.`;
+CRITICAL: You MUST start your response with exactly this format:
+TAGS: tag1, tag2, tag3
+
+Use ONLY these specific tag categories (pick 1-3 most relevant):
+- Logic Error
+- Syntax Error  
+- Algorithm Choice
+- Edge Cases
+- Data Structure
+- Time Complexity
+- Space Complexity
+- Input Handling
+- Loop Logic
+- Conditional Logic
+- Array Bounds
+- Null Pointer
+- Off By One
+
+Then provide brief analysis:
+1. **Key Issues**: What specific errors occurred
+2. **Evolution**: How attempts improved
+
+Keep under 80 words total. Focus only on technical programming concepts.`;
 
         return prompt;
     }

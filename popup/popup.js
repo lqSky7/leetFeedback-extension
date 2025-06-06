@@ -95,7 +95,8 @@ class PopupController {
         'gemini_api_key',
         'debug_mode',
         'dsa_stats',
-        'time_tracking'
+        'time_tracking',
+        'mistake_tags'
       ], (data) => {
         this.config = {
           token: data.github_token || '',
@@ -114,6 +115,7 @@ class PopupController {
           },
           lastUpdated: new Date().toISOString()
         };
+        this.mistakeTags = data.mistake_tags || {};
         resolve();
       });
     });
@@ -302,10 +304,49 @@ class PopupController {
       document.getElementById('this-week').textContent = weekCount;
 
       this.updateRecentActivity();
+      this.loadMistakeTags();
 
     } catch (error) {
       console.error('Error loading statistics:', error);
     }
+  }
+
+  async loadMistakeTags() {
+    try {
+      const result = await chrome.storage.sync.get(['mistake_tags']);
+      this.mistakeTags = result.mistake_tags || {};
+
+      this.updateMistakeTagsUI();
+    } catch (error) {
+      console.error('Error loading mistake tags:', error);
+    }
+  }
+
+  updateMistakeTagsUI() {
+    const tagsChart = document.getElementById('tags-chart');
+    
+    if (!this.mistakeTags.tagCounts || Object.keys(this.mistakeTags.tagCounts).length === 0) {
+      tagsChart.innerHTML = '<div class="tags-empty">No mistake analysis data yet</div>';
+      return;
+    }
+
+    // Sort tags by count (most common first)
+    const sortedTags = Object.entries(this.mistakeTags.tagCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 8); // Show top 8 tags
+
+    let tagsHTML = '<div class="tags-grid">';
+    sortedTags.forEach(([tag, count]) => {
+      tagsHTML += `
+        <div class="tag-item">
+          <div class="tag-name">${tag}</div>
+          <div class="tag-count">${count}</div>
+        </div>
+      `;
+    });
+    tagsHTML += '</div>';
+
+    tagsChart.innerHTML = tagsHTML;
   }
   
   async loadTimeTracking() {
