@@ -141,19 +141,48 @@ class GitHubAPI {
         }
       }
 
-      const { title, code, language, description, difficulty, number, stats } = problemInfo;
-      
+      const { title, code, language, description, difficulty, number, stats, attempts } = problemInfo;
+
       // Create directory path
       const dirPath = DSAUtils.createDirectoryPath(platform, problemInfo);
-      
+
       // Generate commit message
       const commitMessage = DSAUtils.generateCommitMessage(platform, problemInfo);
 
       // Use single solution.md file for all platforms
       const solutionFilePath = `${dirPath}/solution.md`;
 
-      // Create comprehensive solution content
-      const solutionContent = this.generateComprehensiveSolutionContent(problemInfo, platform);
+      // Analyze mistakes if attempts exist and Gemini API is configured
+      let mistakeAnalysis = '';
+      if (attempts && attempts.length > 0) {
+        DSAUtils.logDebug(platform, `Found ${attempts.length} attempts for analysis:`, attempts.map(a => ({
+          language: a.language,
+          codeLength: a.code?.length || 0,
+          timestamp: a.timestamp
+        })));
+
+        const geminiAPI = new GeminiAPI();
+        const geminiConfigured = await geminiAPI.initialize();
+
+        if (geminiConfigured) {
+          DSAUtils.logDebug(platform, `Analyzing ${attempts.length} attempts with Gemini`);
+          const analysisResult = await geminiAPI.analyzeMistakes(attempts, problemInfo);
+
+          if (analysisResult.success) {
+            mistakeAnalysis = analysisResult.analysis;
+            DSAUtils.logDebug(platform, 'Mistake analysis generated successfully');
+          } else {
+            DSAUtils.logError(platform, 'Failed to analyze mistakes:', analysisResult.error);
+          }
+        } else {
+          DSAUtils.logDebug(platform, 'Gemini API not configured, skipping mistake analysis');
+        }
+      } else {
+        DSAUtils.logDebug(platform, 'No attempts found for mistake analysis');
+      }
+
+      // Create comprehensive solution content with mistake analysis
+      const solutionContent = this.generateComprehensiveSolutionContent(problemInfo, platform, mistakeAnalysis);
 
       // Check if file exists
       const solutionFileInfo = await this.getFileContent(solutionFilePath);
@@ -188,9 +217,9 @@ class GitHubAPI {
     }
   }
 
-  generateComprehensiveSolutionContent(problemInfo, platform) {
+  generateComprehensiveSolutionContent(problemInfo, platform, mistakeAnalysis = '') {
     const { title, description, number, language, code, url } = problemInfo;
-    
+
     this.logDebug('Generating content for platform:', platform);
     this.logDebug('Problem info:', {
       title,
@@ -200,26 +229,26 @@ class GitHubAPI {
       codeLength: code?.length || 0,
       url
     });
-    
+
     let content = '';
-    
+
     // Add problem number if available
     if (number) {
       content += `# ${number}. ${title}\n\n`;
     } else {
       content += `# ${title}\n\n`;
     }
-    
+
     // Add problem URL
     if (url) {
       content += `**Link:** ${url}\n\n`;
     }
-    
+
     // Add problem description/statement
     if (description) {
       content += `${description}\n\n`;
     }
-    
+
     // Add solution code
     if (code) {
       this.logDebug('Adding code block with language:', this.getLanguageForCodeBlock(language));
@@ -231,10 +260,15 @@ class GitHubAPI {
     } else {
       this.logDebug('No code provided');
     }
-    
+
+    // Add mistake analysis if available
+    if (mistakeAnalysis) {
+      content += `\n## Mistake Analysis\n\n${mistakeAnalysis}\n`;
+    }
+
     this.logDebug('Final content length:', content.length);
     this.logDebug('Final content preview:', content.substring(0, 500));
-    
+
     return content;
   }
 
@@ -263,7 +297,7 @@ class GitHubAPI {
       'PHP': 'php',
       'Scala': 'scala'
     };
-    
+
     return languageMap[language] || language.toLowerCase();
   }
 

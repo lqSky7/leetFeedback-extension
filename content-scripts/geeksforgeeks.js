@@ -38,6 +38,7 @@
       this.currentProblem = null;
       this.currentSolution = null;
       this.isSubmissionInProgress = false;
+      this.attempts = [];
     }
 
     async initialize() {
@@ -59,6 +60,9 @@
     
       // Monitor submissions
       this.monitorSubmissions();
+      
+      // Listen for run button clicks
+      this.observeRunButton();
     }
     
 
@@ -102,6 +106,94 @@
       this.attachSubmitButtonListener();
     }
 
+    observeRunButton() {
+      let runButtonFound = false;
+      
+      // Monitor for run button clicks
+      const checkForRunButton = () => {
+        
+        // Try multiple selectors for run button
+        const selectors = [
+          '.problems_compile_button__Lfluz',
+          '.ui.mini.button.problems_compile_button__Lfluz',
+          'button[class*="compile_button"]',
+          'button[class*="problems_compile_button"]',
+          'button:contains("Compile")',
+          'button:contains("Run")',
+          '.ui.button[class*="compile"]'
+        ];
+        
+        let runButton = null;
+        let usedSelector = '';
+        
+        for (const selector of selectors) {
+          try {
+            runButton = document.querySelector(selector);
+            if (runButton) {
+              usedSelector = selector;
+              break;
+            }
+          } catch (e) {
+            // Selector failed, try next one
+          }
+        }
+        
+        if (runButton && !runButton.hasAttribute('data-dsa-listener')) {
+          if (!runButtonFound) {
+            DSAUtils.logDebug(PLATFORM, `Run button found and listener attached`);
+            runButtonFound = true;
+          }
+          runButton.setAttribute('data-dsa-listener', 'true');
+          runButton.addEventListener('click', () => {
+            setTimeout(() => this.handleRunAttempt(), 1000);
+          });
+        }
+      };
+
+      // Check initially and on DOM changes
+      checkForRunButton();
+      
+      // Periodic check every 10 seconds for run button
+      setInterval(() => {
+        checkForRunButton();
+      }, 10000);
+      
+      const observer = new MutationObserver(() => {
+        checkForRunButton();
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    }
+
+    async handleRunAttempt() {
+      try {
+        DSAUtils.logDebug(PLATFORM, 'handleRunAttempt called');
+        const code = this.getCurrentCode();
+        const language = this.getCurrentLanguage();
+        
+        DSAUtils.logDebug(PLATFORM, `Extracted code length: ${code ? code.length : 0}, language: ${language}`);
+        
+        if (code && code.length > 10) {
+          const attempt = {
+            code,
+            language,
+            timestamp: new Date().toISOString()
+          };
+          
+          this.attempts.push(attempt);
+          DSAUtils.logDebug(PLATFORM, `Stored attempt ${this.attempts.length}. Total attempts so far: ${this.attempts.length}`);
+          DSAUtils.logDebug(PLATFORM, `Attempt preview: ${code.substring(0, 100)}...`);
+        } else {
+          DSAUtils.logDebug(PLATFORM, `Code too short or empty. Code: ${code ? '"' + code.substring(0, 50) + '"' : 'null'}`);
+        }
+      } catch (error) {
+        DSAUtils.logError(PLATFORM, 'Error storing run attempt', error);
+      }
+    }
+
     attachSubmitButtonListener() {
       // Try multiple selectors specifically for GFG submit button
       const submitSelectors = [
@@ -116,26 +208,17 @@
       for (const selector of submitSelectors) {
         submitButton = document.querySelector(selector);
         if (submitButton) {
-          DSAUtils.logDebug(PLATFORM, `Found submit button with selector: ${selector}`);
           break;
         }
       }
       
       if (submitButton && !submitButton.hasAttribute('data-gfg-listener')) {
         submitButton.setAttribute('data-gfg-listener', 'true');
-        DSAUtils.logDebug(PLATFORM, 'Added click listener to submit button');
+        DSAUtils.logDebug(PLATFORM, 'Submit button listener attached');
         
         submitButton.addEventListener('click', () => {
           DSAUtils.logDebug(PLATFORM, 'Submit button clicked!');
           this.handleSubmissionAttempt();
-        });
-      } else if (!submitButton) {
-        DSAUtils.logError(PLATFORM, 'Submit button not found with any selector');
-        // Debug all buttons on page
-        const allButtons = document.querySelectorAll('button');
-        DSAUtils.logDebug(PLATFORM, `Found ${allButtons.length} buttons on page:`);
-        allButtons.forEach((btn, i) => {
-          DSAUtils.logDebug(PLATFORM, `Button ${i}: "${btn.textContent.trim()}" (class: ${btn.className})`);
         });
       }
     }
@@ -571,6 +654,18 @@
         this.currentProblem.code = solution;
         DSAUtils.logDebug(PLATFORM, 'Problem info with code:', this.currentProblem);
 
+        // Add attempts for mistake analysis
+        DSAUtils.logDebug(PLATFORM, `Adding ${this.attempts.length} attempts to submission for analysis`);
+        this.currentProblem.attempts = this.attempts;
+        if (this.attempts.length > 0) {
+          DSAUtils.logDebug(PLATFORM, 'Attempts being sent to GitHub:', this.attempts.map(a => ({
+            language: a.language,
+            codeLength: a.code?.length || 0,
+            timestamp: a.timestamp,
+            codePreview: a.code?.substring(0, 50) + '...'
+          })));
+        }
+
         // Push to GitHub using single solution.md file
         DSAUtils.logDebug(PLATFORM, 'Pushing to GitHub...');
         const result = await githubAPI.pushSolution(this.currentProblem, PLATFORM);
@@ -578,6 +673,8 @@
         
         if (result.success) {
           DSAUtils.logDebug(PLATFORM, 'Push successful!');
+          // Clear attempts after successful submission
+          this.attempts = [];
         } else {
           DSAUtils.logError(PLATFORM, 'Push failed:', result.error);
         }

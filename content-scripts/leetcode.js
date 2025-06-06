@@ -22,6 +22,7 @@
         this.currentProblem = null;
         this.currentSolution = null;
         this.isSubmissionPage = false;
+        this.attempts = [];
       }
 
     async initialize() {
@@ -43,6 +44,9 @@
       
       // Listen for submission events
       this.observeSubmissions();
+      
+      // Listen for run button clicks
+      this.observeRunButton();
     }
 
     observeUrlChanges() {
@@ -81,6 +85,92 @@
         childList: true,
         subtree: true
       });
+    }
+
+    observeRunButton() {
+      let runButtonFound = false;
+      
+      // Monitor for run button clicks
+      const checkForRunButton = () => {
+        
+        // Try multiple selectors for run button
+        const selectors = [
+          '[data-e2e-locator="console-run-button"]',
+          'button[data-e2e-locator="console-run-button"]',
+          'button[class*="console-run-button"]',
+          'button:contains("Run")',
+          '.font-medium.items-center.whitespace-nowrap[data-e2e-locator="console-run-button"]'
+        ];
+        
+        let runButton = null;
+        let usedSelector = '';
+        
+        for (const selector of selectors) {
+          try {
+            runButton = document.querySelector(selector);
+            if (runButton) {
+              usedSelector = selector;
+              break;
+            }
+          } catch (e) {
+            // Selector failed, try next one
+          }
+        }
+        
+        if (runButton && !runButton.hasAttribute('data-dsa-listener')) {
+          if (!runButtonFound) {
+            DSAUtils.logDebug(PLATFORM, `Run button found and listener attached`);
+            runButtonFound = true;
+          }
+          runButton.setAttribute('data-dsa-listener', 'true');
+          runButton.addEventListener('click', () => {
+            setTimeout(() => this.handleRunAttempt(), 1000);
+          });
+        }
+      };
+
+      // Check initially and on DOM changes
+      checkForRunButton();
+      
+      // Periodic check every 10 seconds for run button
+      setInterval(() => {
+        checkForRunButton();
+      }, 10000);
+      
+      const observer = new MutationObserver(() => {
+        checkForRunButton();
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    }
+
+    async handleRunAttempt() {
+      try {
+        DSAUtils.logDebug(PLATFORM, 'handleRunAttempt called');
+        const code = this.getCurrentCode();
+        const language = this.getCurrentLanguage();
+        
+        DSAUtils.logDebug(PLATFORM, `Extracted code length: ${code ? code.length : 0}, language: ${language}`);
+        
+        if (code && code.length > 10) {
+          const attempt = {
+            code,
+            language,
+            timestamp: new Date().toISOString()
+          };
+          
+          this.attempts.push(attempt);
+          DSAUtils.logDebug(PLATFORM, `Stored attempt ${this.attempts.length}. Total attempts so far: ${this.attempts.length}`);
+          DSAUtils.logDebug(PLATFORM, `Attempt preview: ${code.substring(0, 100)}...`);
+        } else {
+          DSAUtils.logDebug(PLATFORM, `Code too short or empty. Code: ${code ? '"' + code.substring(0, 50) + '"' : 'null'}`);
+        }
+      } catch (error) {
+        DSAUtils.logError(PLATFORM, 'Error storing run attempt', error);
+      }
     }
     
 
@@ -319,11 +409,25 @@
         // Add performance stats
         problemInfo.stats = stats;
 
-        // Push to GitHub
+        // Add attempts for mistake analysis
+        DSAUtils.logDebug(PLATFORM, `Adding ${this.attempts.length} attempts to submission for analysis`);
+        problemInfo.attempts = this.attempts;
+        if (this.attempts.length > 0) {
+          DSAUtils.logDebug(PLATFORM, 'Attempts being sent to GitHub:', this.attempts.map(a => ({
+            language: a.language,
+            codeLength: a.code?.length || 0,
+            timestamp: a.timestamp,
+            codePreview: a.code?.substring(0, 50) + '...'
+          })));
+        }
+
+        // Push to GitHub (with mistake analysis)
         const result = await githubAPI.pushSolution(problemInfo, PLATFORM);
         
         if (result.success) {
           DSAUtils.logDebug(PLATFORM, 'Push successful!');
+          // Clear attempts after successful submission
+          this.attempts = [];
         } else {
           DSAUtils.logError(PLATFORM, 'Push failed:', result.error);
         }

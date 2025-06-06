@@ -63,11 +63,16 @@ class PopupController {
 
     // Toggle password visibility
     document.getElementById('toggle-token').addEventListener('click', () => {
-      this.togglePasswordVisibility();
+      this.togglePasswordVisibility('token', 'toggle-token');
+    });
+
+    // Toggle Gemini key visibility
+    document.getElementById('toggle-gemini').addEventListener('click', () => {
+      this.togglePasswordVisibility('gemini-key', 'toggle-gemini');
     });
 
     // Real-time validation
-    ['token', 'owner', 'repo'].forEach(id => {
+    ['token', 'owner', 'repo', 'gemini-key'].forEach(id => {
       document.getElementById(id).addEventListener('input', () => {
         this.clearMessages();
       });
@@ -87,6 +92,7 @@ class PopupController {
         'github_owner', 
         'github_repo',
         'github_branch',
+        'gemini_api_key',
         'debug_mode',
         'dsa_stats',
         'time_tracking'
@@ -96,6 +102,7 @@ class PopupController {
           owner: data.github_owner || '',
           repo: data.github_repo || '',
           branch: data.github_branch || 'main',
+          geminiKey: data.gemini_api_key || '',
           debugMode: data.debug_mode || false
         };
         this.stats = data.dsa_stats || {};
@@ -117,6 +124,7 @@ class PopupController {
     document.getElementById('owner').value = this.config.owner;
     document.getElementById('repo').value = this.config.repo;
     document.getElementById('branch').value = this.config.branch;
+    document.getElementById('gemini-key').value = this.config.geminiKey;
     document.getElementById('debug-mode').checked = this.config.debugMode;
   }
 
@@ -151,12 +159,14 @@ class PopupController {
     }
 
     try {
-      await chrome.storage.sync.set({
+      chrome.storage.sync.set({
         github_token: formData.token,
         github_owner: formData.owner,
         github_repo: formData.repo,
         github_branch: formData.branch,
+        gemini_api_key: formData.geminiKey,
         debug_mode: formData.debugMode
+      }, () => {
       });
 
       this.config = formData;
@@ -177,6 +187,7 @@ class PopupController {
       owner: document.getElementById('owner').value.trim(),
       repo: document.getElementById('repo').value.trim(),
       branch: document.getElementById('branch').value || 'main',
+      geminiKey: document.getElementById('gemini-key').value.trim(),
       debugMode: document.getElementById('debug-mode').checked
     };
   }
@@ -466,15 +477,15 @@ class PopupController {
     }
   }
 
-  togglePasswordVisibility() {
-    const tokenInput = document.getElementById('token');
-    const toggleBtn = document.getElementById('toggle-token');
-
-    if (tokenInput.type === 'password') {
-      tokenInput.type = 'text';
+  togglePasswordVisibility(inputId, buttonId) {
+    const input = document.getElementById(inputId);
+    const toggleBtn = document.getElementById(buttonId);
+    
+    if (input.type === 'password') {
+      input.type = 'text';
       toggleBtn.textContent = 'Hide';
     } else {
-      tokenInput.type = 'password';
+      input.type = 'password';
       toggleBtn.textContent = 'Show';
     }
   }
