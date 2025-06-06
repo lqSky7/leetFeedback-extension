@@ -112,31 +112,8 @@
       // Monitor for run button clicks
       const checkForRunButton = () => {
         
-        // Try multiple selectors for run button
-        const selectors = [
-          '.problems_compile_button__Lfluz',
-          '.ui.mini.button.problems_compile_button__Lfluz',
-          'button[class*="compile_button"]',
-          'button[class*="problems_compile_button"]',
-          'button:contains("Compile")',
-          'button:contains("Run")',
-          '.ui.button[class*="compile"]'
-        ];
-        
-        let runButton = null;
-        let usedSelector = '';
-        
-        for (const selector of selectors) {
-          try {
-            runButton = document.querySelector(selector);
-            if (runButton) {
-              usedSelector = selector;
-              break;
-            }
-          } catch (e) {
-            // Selector failed, try next one
-          }
-        }
+        // Use the working selector for GeeksforGeeks run button
+        const runButton = document.querySelector('button.problems_compile_button__Lfluz');
         
         if (runButton && !runButton.hasAttribute('data-dsa-listener')) {
           if (!runButtonFound) {
