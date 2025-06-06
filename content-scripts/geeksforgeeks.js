@@ -172,22 +172,8 @@
     }
 
     attachSubmitButtonListener() {
-      // Try multiple selectors specifically for GFG submit button
-      const submitSelectors = [
-        '.ui.button.problems_submit_button__6QoNQ',
-        '[class*="ui button problems_submit_button"]',
-        'button.ui.button:contains("Submit")',
-        '.submit-button',
-        'button[class*="submit"]'
-      ];
-      
-      let submitButton = null;
-      for (const selector of submitSelectors) {
-        submitButton = document.querySelector(selector);
-        if (submitButton) {
-          break;
-        }
-      }
+      // Use the working selector for GeeksforGeeks submit button
+      const submitButton = document.querySelector('button.problems_submit_button__6QoNQ');
       
       if (submitButton && !submitButton.hasAttribute('data-gfg-listener')) {
         submitButton.setAttribute('data-gfg-listener', 'true');
