@@ -72,9 +72,20 @@
               // Check for successful submission
               const successElement = node.querySelector ? 
                 node.querySelector('[data-e2e-locator="submission-result"]') : null;
-              
+      
               if (successElement && successElement.textContent.includes('Accepted')) {
                 setTimeout(() => this.handleSuccessfulSubmission(), 2000);
+              }
+      
+              // Also check for submit button clicks
+              const submitButton = node.querySelector ? 
+                node.querySelector('button[data-e2e-locator="console-submit-button"]') : null;
+      
+              if (submitButton && !submitButton.hasAttribute('data-leetcode-submit-listener')) {
+                submitButton.setAttribute('data-leetcode-submit-listener', 'true');
+                submitButton.addEventListener('click', () => {
+                  DSAUtils.logDebug(PLATFORM, 'Submit button clicked!');
+                });
               }
             }
           });
@@ -93,29 +104,8 @@
       // Monitor for run button clicks
       const checkForRunButton = () => {
         
-        // Try multiple selectors for run button
-        const selectors = [
-          '[data-e2e-locator="console-run-button"]',
-          'button[data-e2e-locator="console-run-button"]',
-          'button[class*="console-run-button"]',
-          'button:contains("Run")',
-          '.font-medium.items-center.whitespace-nowrap[data-e2e-locator="console-run-button"]'
-        ];
-        
-        let runButton = null;
-        let usedSelector = '';
-        
-        for (const selector of selectors) {
-          try {
-            runButton = document.querySelector(selector);
-            if (runButton) {
-              usedSelector = selector;
-              break;
-            }
-          } catch (e) {
-            // Selector failed, try next one
-          }
-        }
+        // Use the exact working selector for LeetCode run button
+        const runButton = document.querySelector('button[data-e2e-locator="console-run-button"]');
         
         if (runButton && !runButton.hasAttribute('data-dsa-listener')) {
           if (!runButtonFound) {
