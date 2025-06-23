@@ -60,19 +60,6 @@ LeetFeedback is an open-source browser extension that automatically tracks codin
 
 3. Configure settings through the extension popup
 
-### Development Setup
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-```
-
 ## Features
 
 <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); padding: 20px; border-radius: 10px; margin: 20px 0;">
@@ -126,41 +113,7 @@ npm run build
 
 ## Contributing
 
-### Development Workflow
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/improvement`)
-3. Implement changes with appropriate tests
-4. Commit with descriptive messages
-5. Submit pull request with detailed description
-
-### Code Standards
-
-- Follow established ESLint configuration
-- Maintain test coverage above 80%
-- Document all public APIs
-- Use semantic commit messages
-
-## Architecture
-
-<div style="background: #f8f9fa; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0;">
-
-**Extension Core**
-- Content scripts for platform integration
-- Background service for data processing
-- Popup interface for user interaction
-
-**AI Engine**
-- Pattern recognition algorithms
-- Performance analysis models
-- Recommendation system
-
-**Data Pipeline**
-- Secure local storage
-- GitHub API integration
-- Analytics processing
-
-</div>
+see CONTRIBUTING.md
 
 ## Support
 
@@ -175,8 +128,6 @@ LeetFeedback is developed by the community, for the community. All features rema
   <strong>Issues:</strong> <a href="https://github.com/QuickHasaCat/leetFeedback/issues" style="color: #a8edea;">Bug Reports & Feature Requests</a><br>
   <strong>Contact:</strong> <a href="mailto:catince@outlook.com" style="color: #a8edea;">Development Team</a>
 </p>
-
-**Support Development:** UPI `9992806683@yapl`
 
 </div>
 
