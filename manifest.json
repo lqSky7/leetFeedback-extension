@@ -3,6 +3,11 @@
     "name": "LeetFeedback",
     "version": "0.0.1",
     "description": "Automatically push your DSA solutions from LeetCode, GeeksforGeeks, and TakeUforward to GitHub",
+    "icons": {
+        "16": "icons/16.png",
+        "48": "icons/48.png",
+        "128": "icons/128.png"
+    },
     "permissions": ["storage", "scripting", "activeTab", "tabs"],
     "host_permissions": [
         "https://*.leetcode.com/*",
@@ -61,15 +66,18 @@
                 "https://*.vercel.app/*",
                 "https://*.netlify.app/*"
             ],
-            "js": [
-                "content-scripts/website-auth.js"
-            ],
+            "js": ["content-scripts/website-auth.js"],
             "run_at": "document_end"
         }
     ],
     "action": {
         "default_title": "DSA to GitHub",
-        "default_popup": "popup/popup.html"
+        "default_popup": "popup/popup.html",
+        "default_icon": {
+            "16": "icons/16.png",
+            "48": "icons/48.png",
+            "128": "icons/128.png"
+        }
     },
     "web_accessible_resources": [
         {
