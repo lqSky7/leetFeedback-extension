@@ -7,8 +7,13 @@ class GitHubAPI {
   }
 
   async initialize() {
-    this.config = await DSAUtils.getStoredConfig();
-    return DSAUtils.isConfigComplete(this.config);
+    try {
+      this.config = await DSAUtils.getStoredConfig();
+      return DSAUtils.isConfigComplete(this.config);
+    } catch (error) {
+      console.error('[GitHub API] Error during initialization:', error);
+      return false;
+    }
   }
 
   async testConnection() {
@@ -25,7 +30,7 @@ class GitHubAPI {
       });
 
       if (!response.ok) {
-        throw new Error(`GitHub API responded with ${response.status}`);
+        throw new Error(`GitHub API error: ${response.status}`);
       }
 
       const userData = await response.json();
@@ -80,7 +85,9 @@ class GitHubAPI {
 
       if (response.ok) {
         const data = await response.json();
-        return { exists: true, sha: data.sha, content: atob(data.content) };
+        // UTF-8 safe decoding
+        const content = decodeURIComponent(escape(atob(data.content)));
+        return { exists: true, sha: data.sha, content: content };
       } else if (response.status === 404) {
         return { exists: false, sha: null, content: null };
       } else {
@@ -97,10 +104,12 @@ class GitHubAPI {
     }
 
     try {
+      // UTF-8 safe encoding with better error handling
+      const encodedContent = this.encodeContentSafely(content);
+      
       const payload = {
         message: commitMessage,
-        content: btoa(unescape(encodeURIComponent(content))),
-        branch: this.config.branch
+        content: encodedContent
       };
 
       if (sha) {
@@ -121,18 +130,18 @@ class GitHubAPI {
       );
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
+        const errorData = await response.json();
+        throw new Error(`GitHub API error: ${response.status} - ${errorData.message}`);
       }
 
-      const result = await response.json();
-      return { success: true, sha: result.content.sha, url: result.content.html_url };
+      return { success: true, data: await response.json() };
     } catch (error) {
       return { success: false, error: error.message };
     }
   }
 
-  async pushSolution(problemInfo, platform) {
+  // Unified push method that handles both solutions and mistake analysis
+  async pushContent(problemInfo, platform, contentType = 'solution') {
     try {
       if (!this.config) {
         const initialized = await this.initialize();
@@ -141,239 +150,181 @@ class GitHubAPI {
         }
       }
 
-      const { title, code, language, description, difficulty, number, stats, attempts } = problemInfo;
+      const { title } = problemInfo;
+      console.log(`🔧 [GitHub API] Pushing content for: ${title}`);
 
-      // Create directory path
+      // Create directory path and always use solution.md
       const dirPath = DSAUtils.createDirectoryPath(platform, problemInfo);
+      const filePath = `${dirPath}/solution.md`;
+      
+      let content, commitMessage;
 
-      // Generate commit message
-      const commitMessage = DSAUtils.generateCommitMessage(platform, problemInfo);
+      if (contentType === 'solution') {
+        // Successful solution - just the solution
+        content = this.generateSolutionContent(problemInfo, platform);
+        commitMessage = `Add solution for ${title}`;
+        console.log(`✅ [GitHub API] Creating successful solution`);
+        
+      } else if (contentType === 'mistake-analysis') {
+        // Failed attempts - solution + mistake analysis
+        const failedAttempts = problemInfo.attempts || [];
+        
+        if (failedAttempts.length < 3) {
+          return { success: false, error: `Need at least 3 failed attempts for mistake analysis. Found: ${failedAttempts.length}` };
+        }
 
-      // Use single solution.md file for all platforms
-      const solutionFilePath = `${dirPath}/solution.md`;
-
-      // Analyze mistakes if attempts exist and Gemini API is configured
-      let mistakeAnalysis = '';
-      if (attempts && attempts.length > 0) {
-        DSAUtils.logDebug(platform, `Found ${attempts.length} attempts for analysis:`, attempts.map(a => ({
-          language: a.language,
-          codeLength: a.code?.length || 0,
-          timestamp: a.timestamp
-        })));
-
+        // Generate Gemini analysis from all attempts
         const geminiAPI = new GeminiAPI();
         const geminiConfigured = await geminiAPI.initialize();
-
-        if (geminiConfigured) {
-          DSAUtils.logDebug(platform, `Analyzing ${attempts.length} attempts with Gemini`);
-          const analysisResult = await geminiAPI.analyzeMistakes(attempts, problemInfo);
-
-          if (analysisResult.success) {
-            mistakeAnalysis = analysisResult.analysis;
-            DSAUtils.logDebug(platform, 'Mistake analysis generated successfully');
-            
-            // Extract and store mistake tags
-            const tags = this.extractMistakeTags(analysisResult.analysis);
-            if (tags.length > 0) {
-              await this.storeMistakeTags(platform, problemInfo.title, tags);
-              DSAUtils.logDebug(platform, 'Stored mistake tags:', tags);
-            }
-          } else {
-            DSAUtils.logError(platform, 'Failed to analyze mistakes:', analysisResult.error);
-          }
-        } else {
-          DSAUtils.logDebug(platform, 'Gemini API not configured, skipping mistake analysis');
+        if (!geminiConfigured) {
+          return { success: false, error: 'Gemini API key not configured' };
         }
-      } else {
-        DSAUtils.logDebug(platform, 'No attempts found for mistake analysis');
+
+        const analysisResult = await geminiAPI.analyzeMistakes(failedAttempts, problemInfo);
+        if (!analysisResult.success) {
+          return { success: false, error: 'Failed to generate mistake analysis: ' + analysisResult.error };
+        }
+
+        // Get the final (latest) solution from attempts
+        const finalAttempt = failedAttempts[failedAttempts.length - 1];
+        
+        // Create combined content: final solution + mistake analysis
+        content = this.generateSolutionWithMistakeAnalysis(problemInfo, platform, finalAttempt, analysisResult.analysis, failedAttempts);
+        commitMessage = `Add solution with mistake analysis for ${title} (${failedAttempts.length} attempts analyzed)`;
+        console.log(`📝 [GitHub API] Creating solution with mistake analysis`);
       }
 
-      // Create comprehensive solution content with mistake analysis
-      const solutionContent = this.generateComprehensiveSolutionContent(problemInfo, platform, mistakeAnalysis);
+      // Check if solution.md already exists for updates
+      let sha = null;
+      const existingFile = await this.getFileContent(filePath);
+      sha = existingFile.exists ? existingFile.sha : null;
 
-      // Check if file exists
-      const solutionFileInfo = await this.getFileContent(solutionFilePath);
+      // Push to GitHub
+      const result = await this.createOrUpdateFile(filePath, content, commitMessage, sha);
 
-      // Push solution file
-      const result = await this.createOrUpdateFile(
-        solutionFilePath,
-        solutionContent,
-        commitMessage,
-        solutionFileInfo.sha
-      );
-
-      if (!result.success) {
-        throw new Error(`Failed to push solution: ${result.error}`);
+      if (result.success) {
+        console.log(`✅ [GitHub API] Content pushed successfully: ${filePath}`);
       }
 
-      // Update statistics
-      await DSAUtils.updateStats(platform);
-
-      return {
-        success: true,
-        url: result.url,
-        message: `Successfully pushed ${title} to GitHub!`
-      };
+      return result;
 
     } catch (error) {
-      DSAUtils.logError(platform, 'Failed to push solution', error);
-      return {
-        success: false,
-        error: error.message
-      };
+      console.error(`[GitHub API] Error pushing content:`, error);
+      return { success: false, error: error.message };
     }
   }
 
-  generateComprehensiveSolutionContent(problemInfo, platform, mistakeAnalysis = '') {
-    const { title, description, number, language, code, url } = problemInfo;
-
-    this.logDebug('Generating content for platform:', platform);
-    this.logDebug('Problem info:', {
-      title,
-      number,
-      language,
-      descriptionLength: description?.length || 0,
-      codeLength: code?.length || 0,
-      url
-    });
-
-    let content = '';
-
-    // Add problem number if available
-    if (number) {
-      content += `# ${number}. ${title}\n\n`;
-    } else {
-      content += `# ${title}\n\n`;
+  // Simplified public methods
+  async pushSolution(problemInfo, platform) {
+    try {
+      return await this.pushContent(problemInfo, platform, 'solution');
+    } catch (error) {
+      console.error('[GitHub API] Error in pushSolution:', error);
+      return { success: false, error: error.message };
     }
-
-    // Add problem URL
-    if (url) {
-      content += `**Link:** ${url}\n\n`;
-    }
-
-    // Add problem description/statement
-    if (description) {
-      content += `${description}\n\n`;
-    }
-
-    // Add solution code
-    if (code) {
-      this.logDebug('Adding code block with language:', this.getLanguageForCodeBlock(language));
-      this.logDebug('Code preview:', code.substring(0, 200));
-      this.logDebug('Code has newlines:', code.includes('\n'));
-      content += `\`\`\`${this.getLanguageForCodeBlock(language)}\n`;
-      content += code;
-      content += `\n\`\`\`\n`;
-    } else {
-      this.logDebug('No code provided');
-    }
-
-    // Add mistake analysis if available
-    if (mistakeAnalysis) {
-      content += `\n## Mistake Analysis\n\n${mistakeAnalysis}\n`;
-    }
-
-    this.logDebug('Final content length:', content.length);
-    this.logDebug('Final content preview:', content.substring(0, 500));
-
-    return content;
   }
 
-  getLanguageForCodeBlock(language) {
+  async pushMistakeAnalysis(problemInfo, platform) {
+    try {
+      return await this.pushContent(problemInfo, platform, 'mistake-analysis');
+    } catch (error) {
+      console.error('[GitHub API] Error in pushMistakeAnalysis:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  generateSolutionContent(problemInfo, platform) {
+    const { title, url, difficulty, code, language } = problemInfo;
+    const timestamp = new Date().toISOString().split('T')[0]; // Just date, not full timestamp
+
+    return `# ${title}
+
+## Problem Information
+- **Platform:** ${platform.charAt(0).toUpperCase() + platform.slice(1)}
+- **Difficulty:** ${difficulty || 'Unknown'}
+- **URL:** ${url || 'N/A'}
+- **Date:** ${timestamp}
+
+## Solution
+
+\`\`\`${this.getLanguageForMarkdown(language)}
+${code || '// Code not available'}
+\`\`\`
+
+---
+*Generated automatically by LeetFeedback Extension*
+`;
+  }
+
+  generateSolutionWithMistakeAnalysis(problemInfo, platform, finalAttempt, mistakeAnalysis, allAttempts) {
+    const { title, url, difficulty } = problemInfo;
+    const timestamp = new Date().toISOString().split('T')[0]; // Just date, not full timestamp
+
+    return `# ${title}
+
+## Problem Information
+- **Platform:** ${platform.charAt(0).toUpperCase() + platform.slice(1)}
+- **Difficulty:** ${difficulty || 'Unknown'}
+- **URL:** ${url || 'N/A'}
+- **Date:** ${timestamp}
+
+## Solution
+
+\`\`\`${this.getLanguageForMarkdown(finalAttempt.language)}
+${finalAttempt.code || '// Code not available'}
+\`\`\`
+
+## AI Mistake Analysis
+
+${mistakeAnalysis}
+
+---
+*Generated automatically by LeetFeedback Extension*
+`;
+  }
+
+  getLanguageForMarkdown(language) {
+    if (!language) return 'text';
+    
     const languageMap = {
-      'C++': 'cpp',
-      'cpp': 'cpp',
-      'C': 'c',
-      'Java': 'java',
-      'java': 'java',
-      'Python': 'python',
-      'Python3': 'python',
+      'javascript': 'javascript',
       'python': 'python',
       'python3': 'python',
-      'JavaScript': 'javascript',
-      'Javascript': 'javascript',
-      'javascript': 'javascript',
-      'TypeScript': 'typescript',
-      'typescript': 'typescript',
-      'C#': 'csharp',
-      'Go': 'go',
-      'Rust': 'rust',
-      'Kotlin': 'kotlin',
-      'Swift': 'swift',
-      'Ruby': 'ruby',
-      'PHP': 'php',
-      'Scala': 'scala'
+      'java': 'java',
+      'cpp': 'cpp',
+      'c++': 'cpp',
+      'c': 'c',
+      'csharp': 'csharp',
+      'c#': 'csharp',
+      'go': 'go',
+      'kotlin': 'kotlin',
+      'rust': 'rust',
+      'typescript': 'typescript'
     };
-
-    return languageMap[language] || language.toLowerCase();
+    
+    return languageMap[language.toLowerCase()] || 'text';
   }
 
-  extractMistakeTags(analysis) {
-    // Extract tags from "TAGS: tag1, tag2, tag3" format
-    const tagMatch = analysis.match(/TAGS:\s*([^\n]+)/i);
-    if (tagMatch) {
-      return tagMatch[1]
-        .split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag.length > 0);
-    }
-    return [];
-  }
-
-  async storeMistakeTags(platform, problemTitle, tags) {
-    return new Promise((resolve) => {
-      chrome.storage.sync.get(['mistake_tags'], (data) => {
-        const mistakeTags = data.mistake_tags || {};
-        
-        // Initialize platform if not exists
-        if (!mistakeTags[platform]) {
-          mistakeTags[platform] = {};
-        }
-        
-        // Store tags for this problem
-        mistakeTags[platform][problemTitle] = {
-          tags: tags,
-          timestamp: new Date().toISOString()
-        };
-        
-        // Update global tag counts
-        if (!mistakeTags.tagCounts) {
-          mistakeTags.tagCounts = {};
-        }
-        
-        tags.forEach(tag => {
-          mistakeTags.tagCounts[tag] = (mistakeTags.tagCounts[tag] || 0) + 1;
-        });
-        
-        chrome.storage.sync.set({ mistake_tags: mistakeTags }, () => {
-          resolve();
-        });
-      });
-    });
-  }
-
-  async logDebug(message, data = null) {
-    const debugMode = await this.getDebugMode();
-    if (debugMode) {
-      console.log(`[GitHub API Debug] ${message}`, data || '');
+  // UTF-8 safe encoding helper
+  encodeContentSafely(content) {
+    try {
+      // First try the standard method
+      return btoa(unescape(encodeURIComponent(content)));
+    } catch (error) {
+      console.warn('[GitHub API] Standard encoding failed, trying alternative method:', error);
+      try {
+        // Alternative method using TextEncoder
+        const encoder = new TextEncoder();
+        const uint8Array = encoder.encode(content);
+        return btoa(String.fromCharCode(...uint8Array));
+      } catch (fallbackError) {
+        console.error('[GitHub API] All encoding methods failed:', fallbackError);
+        // Last resort: remove problematic characters
+        const cleanContent = content.replace(/[^\x00-\x7F]/g, "?");
+        return btoa(cleanContent);
+      }
     }
   }
-
-  async getDebugMode() {
-    return new Promise((resolve) => {
-      chrome.storage.sync.get(['debug_mode'], (data) => {
-        resolve(data.debug_mode || false);
-      });
-    });
-  }
-
-
-
-
-
-
-
-
 }
 
 // Make GitHubAPI available globally
