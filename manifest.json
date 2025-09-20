@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "LeetFeedback",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "description": "Automatically push your DSA solutions from LeetCode, GeeksforGeeks, and TakeUforward to GitHub",
     "icons": {
         "16": "icons/16.png",
@@ -81,7 +81,7 @@
     },
     "web_accessible_resources": [
         {
-            "resources": ["utils/interceptor.js", "testing/*"],
+            "resources": ["utils/interceptor.js", "utils/monaco-bridge.js"],
             "matches": ["<all_urls>"]
         }
     ]

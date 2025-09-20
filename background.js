@@ -1,3 +1,6 @@
+// Fixed background script
+console.log("Background script starting...");
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log("DSA to GitHub Extension installed.");
   
@@ -29,44 +32,55 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Handle messages from content scripts and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'getUserSolution') {
-    handleGetUserSolution(request, sender, sendResponse);
-    return true; // Will respond asynchronously
-  }
+  console.log("Message received:", request.type);
   
-  if (request.type === 'testGitHubConnection') {
-    handleTestGitHubConnection(request, sender, sendResponse);
-    return true;
-  }
-  
-  if (request.type === 'updateStats') {
-    handleUpdateStats(request, sender, sendResponse);
-    return true;
-  }
+  try {
+    if (request.type === 'getUserSolution') {
+      handleGetUserSolution(request, sender, sendResponse);
+      return true; // Will respond asynchronously
+    }
+    
+    if (request.type === 'testGitHubConnection') {
+      handleTestGitHubConnection(request, sender, sendResponse);
+      return true;
+    }
+    
+    if (request.type === 'updateStats') {
+      handleUpdateStats(request, sender, sendResponse);
+      return true;
+    }
 
-  if (request.type === 'initializeConfig') {
-    handleInitializeConfig(request, sender, sendResponse);
-    return true;
-  }
-  
-  if (request.type === 'updateTimeTracking') {
-    handleUpdateTimeTracking(request, sender, sendResponse);
-    return true;
-  }
-  
-  if (request.type === 'getTimeTracking') {
-    handleGetTimeTracking(request, sender, sendResponse);
-    return true;
-  }
-  
-  if (request.type === 'AUTH_STATE_CHANGED') {
-    handleAuthStateChanged(request, sender, sendResponse);
-    return true;
-  }
-  
-  if (request.type === 'CONTENT_SCRIPT_READY') {
-    handleContentScriptReady(request, sender, sendResponse);
-    return true;
+    if (request.type === 'initializeConfig') {
+      handleInitializeConfig(request, sender, sendResponse);
+      return true;
+    }
+    
+    if (request.type === 'updateTimeTracking') {
+      handleUpdateTimeTracking(request, sender, sendResponse);
+      return true;
+    }
+    
+    if (request.type === 'getTimeTracking') {
+      handleGetTimeTracking(request, sender, sendResponse);
+      return true;
+    }
+    
+    if (request.type === 'AUTH_STATE_CHANGED') {
+      handleAuthStateChanged(request, sender, sendResponse);
+      return true;
+    }
+    
+    if (request.type === 'CONTENT_SCRIPT_READY') {
+      handleContentScriptReady(request, sender, sendResponse);
+      return true;
+    }
+    
+    // Unknown message type
+    console.log("Unknown message type:", request.type);
+    sendResponse({ success: false, error: 'Unknown message type' });
+  } catch (error) {
+    console.error("Error in message listener:", error);
+    sendResponse({ success: false, error: error.message });
   }
 });
 
@@ -162,6 +176,10 @@ async function handleContentScriptReady(request, sender, sendResponse) {
           chrome.tabs.sendMessage(sender.tab.id, {
             type: 'AUTH_STATUS_REQUEST'
           }, (response) => {
+            if (chrome.runtime.lastError) {
+              console.log('Tab message failed:', chrome.runtime.lastError);
+              return;
+            }
             if (response && response.isAuthenticated) {
               console.log('[Background] Auth status confirmed from website');
             }
@@ -298,8 +316,10 @@ function extractGfGSolution(debugMode = false) {
             if (codeLines.length > 0) {
               code = codeLines.join('\n');
               if (debugMode) console.log('[GFG Debug] Extracted', codeLines.length, 'lines of code');
-              if (debugMode) console.log('[GFG Debug] Code preview:', code.substring(0, 200));
-              return code;
+              if (code.trim().length > 10) {
+                if (debugMode) console.log('[GFG Debug] Successfully extracted from DOM lines');
+                return code;
+              }
             }
           }
         }
@@ -307,137 +327,112 @@ function extractGfGSolution(debugMode = false) {
     }
     
     if (debugMode) console.log('[GFG Debug] No code found with any method');
-    return '';
+    return code || '';
   } catch (error) {
-    if (debugMode) console.error('[GFG Debug] Error extracting solution:', error);
+    if (debugMode) console.log('[GFG Debug] Error during extraction:', error);
     return '';
   }
 }
 
-// Handle GitHub connection testing
 async function handleTestGitHubConnection(request, sender, sendResponse) {
   try {
-    const { token, owner, repo } = request;
-    
-    // Test basic GitHub API access
-    const userResponse = await fetch('https://api.github.com/user', {
+    const response = await fetch('https://api.github.com/user', {
       headers: {
-        'Authorization': `token ${token}`,
+        'Authorization': `token ${request.token}`,
         'Accept': 'application/vnd.github.v3+json'
       }
     });
-    
-    if (!userResponse.ok) {
-      throw new Error(`GitHub API error: ${userResponse.status}`);
+
+    if (!response.ok) {
+      throw new Error(`GitHub API responded with ${response.status}`);
     }
-    
-    const userData = await userResponse.json();
-    
-    // Test repository access
-    const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-      headers: {
-        'Authorization': `token ${token}`,
-        'Accept': 'application/vnd.github.v3+json'
-      }
-    });
-    
-    const repoData = repoResponse.ok ? await repoResponse.json() : null;
-    
-    sendResponse({
-      success: true,
-      user: userData,
-      repo: repoData,
-      hasRepoAccess: repoResponse.ok
-    });
-    
+
+    const userData = await response.json();
+    sendResponse({ success: true, user: userData });
   } catch (error) {
-    console.error('GitHub connection test failed:', error);
-    sendResponse({
-      success: false,
-      error: error.message
-    });
+    sendResponse({ success: false, error: error.message });
   }
 }
 
-// Handle statistics updates
 async function handleUpdateStats(request, sender, sendResponse) {
   try {
-    const { platform, operation } = request;
+    const { platform, problemInfo } = request;
     
+    // Get current stats
     const result = await chrome.storage.sync.get(['dsa_stats']);
-    const stats = result.dsa_stats || {};
-    
-    if (!stats[platform]) {
-      stats[platform] = { solved: 0, lastSolved: null };
+    const stats = result.dsa_stats || {
+      total_problems: 0,
+      platforms: {
+        leetcode: { count: 0, problems: [] },
+        geeksforgeeks: { count: 0, problems: [] },
+        takeuforward: { count: 0, problems: [] }
+      },
+      last_updated: new Date().toISOString()
+    };
+
+    // Update stats
+    if (!stats.platforms[platform]) {
+      stats.platforms[platform] = { count: 0, problems: [] };
     }
-    
-    if (operation === 'increment') {
-      stats[platform].solved += 1;
-      stats[platform].lastSolved = new Date().toISOString();
+
+    // Check if problem already exists
+    const existingProblem = stats.platforms[platform].problems.find(
+      p => p.title === problemInfo.title || p.url === problemInfo.url
+    );
+
+    if (!existingProblem) {
+      stats.platforms[platform].problems.push({
+        title: problemInfo.title,
+        url: problemInfo.url,
+        difficulty: problemInfo.difficulty,
+        solved_at: new Date().toISOString()
+      });
+      stats.platforms[platform].count++;
+      stats.total_problems++;
     }
-    
+
+    stats.last_updated = new Date().toISOString();
+
+    // Save updated stats
     await chrome.storage.sync.set({ dsa_stats: stats });
-    
     sendResponse({ success: true, stats });
-    
   } catch (error) {
     console.error('Error updating stats:', error);
     sendResponse({ success: false, error: error.message });
   }
 }
 
-// Handle configuration initialization
 async function handleInitializeConfig(request, sender, sendResponse) {
   try {
-    const defaults = {
-      github_token: '',
-      github_owner: '',
-      github_repo: '',
-      dsa_stats: {},
-      time_tracking: {
-        platforms: {
-          leetcode: { totalTime: 0 },
-          geeksforgeeks: { totalTime: 0 },
-          takeuforward: { totalTime: 0 }
-        },
-        lastUpdated: new Date().toISOString()
-      }
+    const result = await chrome.storage.sync.get([
+      'github_token',
+      'github_owner',
+      'github_repo',
+      'github_branch',
+      'gemini_api_key'
+    ]);
+
+    const config = {
+      token: result.github_token || '',
+      owner: result.github_owner || '',
+      repo: result.github_repo || '',
+      branch: result.github_branch || 'main',
+      geminiApiKey: result.gemini_api_key || ''
     };
 
-    const result = await chrome.storage.sync.get(Object.keys(defaults));
-    
-    // Set defaults for missing values
-    const updates = {};
-    Object.keys(defaults).forEach(key => {
-      if (result[key] === undefined) {
-        updates[key] = defaults[key];
-      }
-    });
-
-    if (Object.keys(updates).length > 0) {
-      await chrome.storage.sync.set(updates);
-    }
-
-    
-    sendResponse({ success: true, config: { ...defaults, ...result, ...updates } });
+    sendResponse({ success: true, config });
   } catch (error) {
     console.error('Error initializing config:', error);
     sendResponse({ success: false, error: error.message });
   }
 }
 
-// Simple time tracking functions
 async function handleUpdateTimeTracking(request, sender, sendResponse) {
   try {
     const { platform, timeSpent } = request;
     
-    if (!platform || !['leetcode', 'geeksforgeeks', 'takeuforward'].includes(platform)) {
-      throw new Error('Invalid platform for time tracking');
-    }
-    
-    // Get current time tracking data
     const result = await chrome.storage.sync.get(['time_tracking']);
-    let timeTracking = result.time_tracking || {
+    const timeTracking = result.time_tracking || {
       platforms: {
         leetcode: { totalTime: 0 },
         geeksforgeeks: { totalTime: 0 },
@@ -445,15 +440,16 @@ async function handleUpdateTimeTracking(request, sender, sendResponse) {
       },
       lastUpdated: new Date().toISOString()
     };
-    
-    // Add time silently
-    if (timeSpent && timeSpent > 0) {
-      timeTracking.platforms[platform].totalTime += timeSpent;
-      timeTracking.lastUpdated = new Date().toISOString();
-      await chrome.storage.sync.set({ time_tracking: timeTracking });
+
+    if (!timeTracking.platforms[platform]) {
+      timeTracking.platforms[platform] = { totalTime: 0 };
     }
-    
-    sendResponse({ success: true });
+
+    timeTracking.platforms[platform].totalTime += timeSpent;
+    timeTracking.lastUpdated = new Date().toISOString();
+
+    await chrome.storage.sync.set({ time_tracking: timeTracking });
+    sendResponse({ success: true, timeTracking });
   } catch (error) {
     console.error('Error updating time tracking:', error);
     sendResponse({ success: false, error: error.message });
@@ -471,10 +467,12 @@ async function handleGetTimeTracking(request, sender, sendResponse) {
       },
       lastUpdated: new Date().toISOString()
     };
-    
+
     sendResponse({ success: true, timeTracking });
   } catch (error) {
-    console.error('Error getting time tracking data:', error);
+    console.error('Error getting time tracking:', error);
     sendResponse({ success: false, error: error.message });
   }
 }
+
+console.log("Background script loaded successfully");
