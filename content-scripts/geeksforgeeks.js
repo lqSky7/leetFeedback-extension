@@ -39,6 +39,9 @@
       this.currentSolution = null;
       this.isSubmissionInProgress = false;
       this.attempts = [];
+      this.runCounter = 0; // Track number of run button presses
+      this.incorrectRunCounter = 0; // Track failed runs
+      this.hasAnalyzedMistakes = false; // Prevent duplicate mistake analysis
     }
 
     async initialize() {
@@ -147,7 +150,9 @@
 
     async handleRunAttempt() {
       try {
-        DSAUtils.logDebug(PLATFORM, 'handleRunAttempt called');
+        this.runCounter++;
+        console.log(`🏃‍♂️ [GeeksforGeeks Run Counter] Run attempt #${this.runCounter}`);
+        
         const code = this.getCurrentCode();
         const language = this.getCurrentLanguage();
         
@@ -157,17 +162,140 @@
           const attempt = {
             code,
             language,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            type: 'run',
+            runNumber: this.runCounter,
+            successful: null // Will be determined by result observation
           };
           
           this.attempts.push(attempt);
-          DSAUtils.logDebug(PLATFORM, `Stored attempt ${this.attempts.length}. Total attempts so far: ${this.attempts.length}`);
-          DSAUtils.logDebug(PLATFORM, `Attempt preview: ${code.substring(0, 100)}...`);
+          console.log(`📝 [GeeksforGeeks Run Counter] Stored run attempt #${this.runCounter}`);
+          
+          // Start observing for run results
+          this.observeRunResult(attempt);
+          
         } else {
-          DSAUtils.logDebug(PLATFORM, `Code too short or empty. Code: ${code ? '"' + code.substring(0, 50) + '"' : 'null'}`);
+          console.log(`❌ [GeeksforGeeks Run Counter] Run #${this.runCounter} - Code too short or empty`);
         }
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error storing run attempt', error);
+      }
+    }
+
+    observeRunResult(attempt) {
+      // Look for run results to determine if the run was successful
+      const checkRunResult = () => {
+        // GeeksforGeeks specific selectors for run results
+        const resultSelectors = [
+          '.problems_content__kWANg',
+          '[class*="result"]',
+          '[class*="output"]',
+          '.compile_and_run',
+          '[class*="console"]'
+        ];
+        
+        for (const selector of resultSelectors) {
+          const resultElement = document.querySelector(selector);
+          if (resultElement && resultElement.textContent) {
+            const resultText = resultElement.textContent.toLowerCase();
+            
+            // Check for successful run indicators
+            if (resultText.includes('correct') || 
+                resultText.includes('passed') ||
+                resultText.includes('expected output') ||
+                (resultText.includes('output:') && !resultText.includes('expected:'))) {
+              
+              attempt.successful = true;
+              console.log(`✅ [GeeksforGeeks Run Counter] Run #${attempt.runNumber} - SUCCESS (Expected output matched)`);
+              return true;
+            }
+            
+            // Check for failure indicators
+            if (resultText.includes('wrong') ||
+                resultText.includes('incorrect') ||
+                resultText.includes('failed') ||
+                resultText.includes('error') ||
+                resultText.includes('expected:') ||
+                resultText.includes('compilation error')) {
+              
+              attempt.successful = false;
+              this.incorrectRunCounter++;
+              console.log(`❌ [GeeksforGeeks Run Counter] Run #${attempt.runNumber} - FAILED (Incorrect output)`);
+              console.log(`🔢 [GeeksforGeeks Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
+              
+              // Check if we've reached 3 failed runs
+              if (this.incorrectRunCounter >= 3 && !this.hasAnalyzedMistakes) {
+                this.handleThreeIncorrectRuns();
+              }
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+      
+      // Check immediately and then set up observer
+      if (!checkRunResult()) {
+        const observer = new MutationObserver(() => {
+          if (checkRunResult()) {
+            observer.disconnect();
+          }
+        });
+        
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+        
+        // Stop observing after 10 seconds to prevent memory leaks
+        setTimeout(() => {
+          observer.disconnect();
+          if (attempt.successful === null) {
+            console.log(`⏰ [GeeksforGeeks Run Counter] Run #${attempt.runNumber} - TIMEOUT (Could not determine result)`);
+          }
+        }, 10000);
+      }
+    }
+
+    async handleThreeIncorrectRuns() {
+      try {
+        console.log(`🚨 [GeeksforGeeks Run Counter] 3 INCORRECT RUNS DETECTED - Triggering Gemini mistake analysis`);
+        this.hasAnalyzedMistakes = true;
+        
+        // Get the 3 failed attempts
+        const failedAttempts = this.attempts.filter(a => a.successful === false);
+        console.log(`🔍 [GeeksforGeeks Run Counter] Analyzing ${failedAttempts.length} failed attempts`);
+        
+        // Get current problem info
+        const problemInfo = this.extractProblemInfo();
+        if (!problemInfo) {
+          console.log(`❌ [GeeksforGeeks Run Counter] Could not extract problem info for mistake analysis`);
+          return;
+        }
+        
+        // Add failed attempts to problem info
+        problemInfo.attempts = failedAttempts;
+        problemInfo.mistakeAnalysisOnly = true; // Flag to indicate this is just for mistake analysis
+        
+        console.log(`📤 [GeeksforGeeks Run Counter] Pushing mistake analysis to GitHub...`);
+        
+        // Initialize GitHub API
+        if (!githubAPI) {
+          githubAPI = new GitHubAPI();
+          await githubAPI.initialize();
+        }
+        
+        // Push mistake analysis to GitHub
+        const result = await githubAPI.pushMistakeAnalysis(problemInfo, PLATFORM);
+        
+        if (result.success) {
+          console.log(`✅ [GeeksforGeeks Run Counter] Mistake analysis pushed to GitHub successfully!`);
+        } else {
+          console.log(`❌ [GeeksforGeeks Run Counter] Failed to push mistake analysis:`, result.error);
+        }
+        
+      } catch (error) {
+        console.error('[GeeksforGeeks Run Counter] Error handling three incorrect runs:', error);
       }
     }
 
@@ -617,16 +745,39 @@
         this.currentProblem.code = solution;
         DSAUtils.logDebug(PLATFORM, 'Problem info with code:', this.currentProblem);
 
+        // Add final successful attempt
+        if (solution && solution.length > 10) {
+          const successfulAttempt = {
+            code: solution,
+            language: this.currentProblem.language || 'Unknown',
+            timestamp: new Date().toISOString(),
+            type: 'submission',
+            successful: true
+          };
+          this.attempts.push(successfulAttempt);
+          DSAUtils.logDebug(PLATFORM, 'Added final successful submission attempt');
+        }
+
         // Add attempts for mistake analysis
-        DSAUtils.logDebug(PLATFORM, `Adding ${this.attempts.length} attempts to submission for analysis`);
+        const incorrectAttempts = this.attempts.filter(a => !a.successful);
+        DSAUtils.logDebug(PLATFORM, `Total attempts: ${this.attempts.length}, Incorrect attempts: ${incorrectAttempts.length}`);
+        
         this.currentProblem.attempts = this.attempts;
         if (this.attempts.length > 0) {
           DSAUtils.logDebug(PLATFORM, 'Attempts being sent to GitHub:', this.attempts.map(a => ({
             language: a.language,
+            type: a.type,
+            successful: a.successful,
             codeLength: a.code?.length || 0,
             timestamp: a.timestamp,
             codePreview: a.code?.substring(0, 50) + '...'
           })));
+          
+          if (incorrectAttempts.length >= 3) {
+            DSAUtils.logDebug(PLATFORM, `🔍 Mistake analysis will be triggered (${incorrectAttempts.length} incorrect attempts >= 3 threshold)`);
+          } else {
+            DSAUtils.logDebug(PLATFORM, `ℹ️ No mistake analysis (${incorrectAttempts.length} incorrect attempts < 3 threshold)`);
+          }
         }
 
         // Push to GitHub using single solution.md file
