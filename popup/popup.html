@@ -57,6 +57,7 @@
             <nav class="tabs">
                 <button class="tab active" data-tab="config">Config</button>
                 <button class="tab" data-tab="stats">Stats</button>
+                <button class="tab" data-tab="prediction">Prediction</button>
                 <button class="tab" data-tab="settings">Settings</button>
             </nav>
 
@@ -149,87 +150,147 @@
                 </section>
 
                 <section class="tab-panel" id="stats">
-                    <div class="stats-grid">
-                        <div class="stat">
-                            <div class="stat-value" id="total-solved">0</div>
-                            <div class="stat-label">Total</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value" id="this-week">0</div>
-                            <div class="stat-label">Week</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value" id="total-time">0h</div>
-                            <div class="stat-label">Time</div>
+                    <div class="stats-redirect">
+                        <div class="stats-redirect-content">
+                            <h3>User Statistics</h3>
+                            <p>View your detailed statistics and progress</p>
+                            <button class="stats-redirect-btn" id="stats-redirect-btn">
+                                View Statistics
+                            </button>
                         </div>
                     </div>
+                </section>
 
-                    <div class="platforms">
-                        <div class="platform">
-                            <span class="platform-name">LeetCode</span>
-                            <div class="platform-stats">
-                                <span class="platform-count" id="leetcode-count"
-                                    >0</span
-                                >
-                                <span class="platform-time" id="leetcode-time"
-                                    >0h</span
-                                >
+                <section class="tab-panel" id="prediction">
+                    <div class="prediction-container">
+                        <!-- Prediction Controls -->
+                        <div class="form-section">
+                            <h3 class="section-title">
+                                <span class="title-icon">🎯</span>
+                                Smart Task Scheduler
+                            </h3>
+                            <div class="prediction-controls">
+                                <div class="control-group">
+                                    <label class="form-label">
+                                        <span class="label-text">Tasks to Schedule</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        class="form-input"
+                                        id="target-count"
+                                        value="10"
+                                        min="1"
+                                        max="50"
+                                        step="1"
+                                    />
+                                </div>
+                                <div class="control-group">
+                                    <label class="form-label">
+                                        <span class="label-text">Focus Mode</span>
+                                    </label>
+                                    <select class="form-select" id="focus-mode">
+                                        <option value="0">Only Revise (100% revision)</option>
+                                        <option value="1" selected>Focus Revision (70% revision, 30% new)</option>
+                                        <option value="2">Focus New (30% revision, 70% new)</option>
+                                        <option value="3">Only New (100% new)</option>
+                                    </select>
+                                    <div class="focus-description" id="focus-description">
+                                        70% revision problems, 30% new problems
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <label class="form-label">
+                                        <span class="label-text">Grandparent Filter</span>
+                                    </label>
+                                    <select class="form-select" id="grandparent-filter" multiple size="3">
+                                        <option value="">All Categories</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <label class="form-label">
+                                        <span class="label-text">Parent Topic Filter</span>
+                                    </label>
+                                    <select class="form-select" id="parent-filter">
+                                        <option value="">All Topics</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <div class="button-group">
+                                        <button type="button" class="btn btn-primary" id="generate-schedule">
+                                            <span class="btn-icon">🔮</span>
+                                            Generate Schedule
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" id="clear-schedule" title="Clear saved schedule">
+                                            <span class="btn-icon">🗑️</span>
+                                            Clear Schedule
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="platform">
-                            <span class="platform-name">GeeksforGeeks</span>
-                            <div class="platform-stats">
-                                <span
-                                    class="platform-count"
-                                    id="geeksforgeeks-count"
-                                    >0</span
-                                >
-                                <span
-                                    class="platform-time"
-                                    id="geeksforgeeks-time"
-                                    >0h</span
-                                >
-                            </div>
-                        </div>
-                        <div class="platform">
-                            <span class="platform-name">TakeUforward</span>
-                            <div class="platform-stats">
-                                <span
-                                    class="platform-count"
-                                    id="takeuforward-count"
-                                    >0</span
-                                >
-                                <span
-                                    class="platform-time"
-                                    id="takeuforward-time"
-                                    >0h</span
-                                >
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="recent">
-                        <h3>Recent Activity</h3>
-                        <div class="activity-list" id="activity-list">
-                            <div class="activity-empty">No recent activity</div>
-                        </div>
-                    </div>
-
-                    <div class="time-tracking">
-                        <h3>Time Tracking</h3>
-                        <div class="time-chart" id="time-chart">
-                            <div class="time-chart-empty">
-                                Tracking time spent on DSA platforms
+                        <!-- Statistics Section -->
+                        <div class="form-section" id="prediction-stats" style="display: none">
+                            <h3 class="section-title">
+                                <span class="title-icon">📊</span>
+                                Statistics
+                            </h3>
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-number" id="total-tasks">-</div>
+                                    <div class="stat-label">Total</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-number" id="active-tasks">-</div>
+                                    <div class="stat-label">Active</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-number" id="solved-tasks">-</div>
+                                    <div class="stat-label">Solved</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-number" id="unsolved-tasks">-</div>
+                                    <div class="stat-label">Unsolved</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-number" id="ignored-tasks">-</div>
+                                    <div class="stat-label">Ignored</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-number" id="scheduled-count">-</div>
+                                    <div class="stat-label">Scheduled</div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="mistake-tags">
-                        <h3>Common Mistakes</h3>
-                        <div class="tags-chart" id="tags-chart">
-                            <div class="tags-empty">
-                                No mistake analysis data yet
+                        <!-- Results Section -->
+                        <div class="form-section" id="prediction-results" style="display: none">
+                            <h3 class="section-title">
+                                <span class="title-icon">📋</span>
+                                Today's Schedule
+                                <span class="schedule-timestamp" id="schedule-timestamp"></span>
+                            </h3>
+                            <div class="task-schedule" id="task-list">
+                                <!-- Tasks will be populated here -->
                             </div>
+                            <div class="schedule-actions" style="margin-top: 12px">
+                                <button type="button" class="btn btn-secondary" id="manage-ignored" style="display: none; font-size: 10px; padding: 6px 12px;">
+                                    <span class="btn-icon">👁️</span>
+                                    Manage Ignored Tasks
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div class="loading-state" id="prediction-loading" style="display: none">
+                            <div class="loading-spinner"></div>
+                            <span class="loading-text">Generating smart schedule...</span>
+                        </div>
+
+                        <!-- Error State -->
+                        <div class="error-message" id="prediction-error" style="display: none">
+                            <span class="error-icon">⚠️</span>
+                            <span class="error-text"></span>
                         </div>
                     </div>
                 </section>
@@ -271,6 +332,7 @@
         </div>
 
         <script src="../utils/auth.js"></script>
+        <script src="prediction.js"></script>
         <script src="popup.js"></script>
     </body>
 </html>

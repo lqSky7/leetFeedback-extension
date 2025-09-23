@@ -1,0 +1,5579 @@
+[
+  {
+    "name": "CPP Setup",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Language Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/language-basics/cpp-setup"
+  },
+  {
+    "name": "Cpp Basics",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Language Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/language-basics/cpp"
+  },
+  {
+    "name": "Java Setup",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Language Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/language-basics/java-setup"
+  },
+  {
+    "name": "Java Basics",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Language Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/language-basics/java-basics"
+  },
+  {
+    "name": "Java OOPs Basic",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Language Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/language-basics/java-oops-basics"
+  },
+  {
+    "name": "Input Output",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Language Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/language-basics/input-output"
+  },
+  {
+    "name": "If Else Adult Teen Problem",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Language Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/language-basics/if-else-adult-teen-problem"
+  },
+  {
+    "name": "If ElseIf",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Language Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/language-basics/if-elseif"
+  },
+  {
+    "name": "Switch Case",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Language Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/language-basics/switch-case"
+  },
+  {
+    "name": "Sum of first last element in array",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Language Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/language-basics/sum-of-first-last-element-in-array"
+  },
+  {
+    "name": "Print X N numbers of times",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Language Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/language-basics/print-x-n-numbers-of-times"
+  },
+  {
+    "name": "Print last character of string",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Language Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/language-basics/print-last-character-of-string"
+  },
+  {
+    "name": "Easy and Medium",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/logic-building-patterns/easy-and-medium"
+  },
+  {
+    "name": "Hard",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/logic-building-patterns/hard"
+  },
+  {
+    "name": "Pattern 1",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-1"
+  },
+  {
+    "name": "Pattern 2",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-2"
+  },
+  {
+    "name": "Pattern 3",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-3"
+  },
+  {
+    "name": "Pattern 4",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-4"
+  },
+  {
+    "name": "Pattern 5",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-5"
+  },
+  {
+    "name": "Pattern 6",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-6"
+  },
+  {
+    "name": "Pattern 7",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-7"
+  },
+  {
+    "name": "Pattern 8",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-8"
+  },
+  {
+    "name": "Pattern 9",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-9"
+  },
+  {
+    "name": "Pattern 10",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-10"
+  },
+  {
+    "name": "Pattern 11",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-11"
+  },
+  {
+    "name": "Pattern 12",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-12"
+  },
+  {
+    "name": "Pattern 13",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-13"
+  },
+  {
+    "name": "Pattern 14",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-14"
+  },
+  {
+    "name": "Pattern 15",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-15"
+  },
+  {
+    "name": "Pattern 16",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-16"
+  },
+  {
+    "name": "Pattern 17",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-17"
+  },
+  {
+    "name": "Pattern 18",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-18"
+  },
+  {
+    "name": "Pattern 19",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-19"
+  },
+  {
+    "name": "Pattern 20",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-20"
+  },
+  {
+    "name": "Pattern 21",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-21"
+  },
+  {
+    "name": "Pattern 22",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Patterns",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/patterns/pattern-22"
+  },
+  {
+    "name": "Theory with examples",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Time Complexity",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/time-complexity/theory-with-examples"
+  },
+  {
+    "name": "STL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "STL And Collections",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/stl-and-collections/stl"
+  },
+  {
+    "name": "Java Collections",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "STL And Collections",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/stl-and-collections/java-collections"
+  },
+  {
+    "name": "Basic Maths",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Concept Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/concept-basics/basic-maths"
+  },
+  {
+    "name": "Basic Arrays",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Concept Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/concept-basics/basic-arrays-hashing-and-strings"
+  },
+  {
+    "name": "Basic Hashing",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Concept Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/concept-basics/basic-hashing"
+  },
+  {
+    "name": "Basic String",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Concept Basics",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/concept-basics/basic-string"
+  },
+  {
+    "name": "Count all Digits of a Number",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Maths",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-maths/count-all-digits-of-a-number"
+  },
+  {
+    "name": "Count number of odd digits in a number",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Maths",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-maths/count-number-of-odd-digits-in-a-number"
+  },
+  {
+    "name": "Reverse a number",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Maths",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-maths/reverse-a-number"
+  },
+  {
+    "name": "Palindrome Number",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Maths",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-maths/palindrome-number"
+  },
+  {
+    "name": "Return the Largest Digit in a Number",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Maths",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-maths/return-the-largest-digit-in-a-number"
+  },
+  {
+    "name": "Factorial of a given number",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Maths",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-maths/factorial-of-a-given-number-i"
+  },
+  {
+    "name": "Check if the Number is Armstrong",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Maths",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-maths/check-if-the-number-if-armstrong"
+  },
+  {
+    "name": "Check for Perfect Number",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Maths",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-maths/check-for-perfect-number"
+  },
+  {
+    "name": "Check for Prime Number",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Maths",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-maths/check-for-prime-number"
+  },
+  {
+    "name": "Count of Prime Numbers till N",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Maths",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-maths/count-of-prime-numbers-till-n"
+  },
+  {
+    "name": "GCD of Two Numbers",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Maths",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-maths/gcd-of-two-numbers"
+  },
+  {
+    "name": "LCM of two numbers",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Maths",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-maths/lcm-of-two-numbers"
+  },
+  {
+    "name": "Divisors of a Number",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Maths",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-maths/divisors-of-a-number"
+  },
+  {
+    "name": "Sum of Array Elements",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Arrays",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-arrays/sum-of-array-elements"
+  },
+  {
+    "name": "Count of odd numbers in array",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Arrays",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-arrays/count-of-odd-numbers-in-array"
+  },
+  {
+    "name": "Check if the Array is Sorted I",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Arrays",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-arrays/check-if-the-array-is-sorted-i"
+  },
+  {
+    "name": "Reverse an array",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Arrays",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-arrays/reverse-an-array"
+  },
+  {
+    "name": "Highest Occurring Element in an Array",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Hashing",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-hashing/highest-occurring-element-in-an-array"
+  },
+  {
+    "name": "Second Highest Occurring Element",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Hashing",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-hashing/second-highest-occurring-element"
+  },
+  {
+    "name": "Sum of Highest and Lowest Frequency",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Hashing",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-hashing/sum-of-highest-and-lowest-frequency"
+  },
+  {
+    "name": "Reverse a String II",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Strings",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-strings/reverse-a-string-ii"
+  },
+  {
+    "name": "Palindrome Check",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Strings",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-strings/palindrome-check"
+  },
+  {
+    "name": "Largest Odd Number in a String",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Strings",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-strings/largest-odd-number-in-a-string"
+  },
+  {
+    "name": "Longest Common Prefix",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Strings",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-strings/longest-common-prefix"
+  },
+  {
+    "name": "Isomorphic String",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Strings",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-strings/isomorphic-string"
+  },
+  {
+    "name": "Rotate String",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Strings",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-strings/rotate-string"
+  },
+  {
+    "name": "Valid Anagram",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Strings",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-strings/valid-anagram"
+  },
+  {
+    "name": "Sort Characters by Frequency",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Strings",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-strings/sort-characters-by-frequency"
+  },
+  {
+    "name": "Recursion Theory",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Recursion",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-recursion/recursion-theory"
+  },
+  {
+    "name": "Recursion Concepts with Parameters",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Recursion",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-recursion/recursion-concepts-with-parameters"
+  },
+  {
+    "name": "Sum of First N Numbers",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Recursion",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-recursion/sum-of-first-n-numbers"
+  },
+  {
+    "name": "Factorial of a Given Number",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Recursion",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-recursion/factorial-of-a-given-number-ii"
+  },
+  {
+    "name": "Sum of Array Elements",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Recursion",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-recursion/sum-of-array-elements-ii"
+  },
+  {
+    "name": "Reverse a String I",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Recursion",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-recursion/reverse-a-string-i"
+  },
+  {
+    "name": "Check if String is Palindrome or Not",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Recursion",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-recursion/check-if-string-is-palindrome-or-not-"
+  },
+  {
+    "name": "Check if a Number is Prime or Not",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Recursion",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-recursion/check-if-a-number-is-prime-or-not"
+  },
+  {
+    "name": "Reverse an array",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Recursion",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-recursion/reverse-an-array-ii"
+  },
+  {
+    "name": "Check if the Array is Sorted II",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Recursion",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-recursion/check-if-the-array-is-sorted-ii"
+  },
+  {
+    "name": "Sum of Digits in a Given Number",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Recursion",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-recursion/sum-of-digits-in-a-given-number"
+  },
+  {
+    "name": "Fibonacci Number",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Basic Recursion",
+    "grandparent": "Beginner Problem",
+    "problem_link": "https://takeuforward.org/plus/dsa/beginner-problem/basic-recursion/fibonacci-number"
+  },
+  {
+    "name": "Selection Sort",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Algorithms",
+    "grandparent": "Sorting",
+    "problem_link": "https://takeuforward.org/plus/dsa/sorting/algorithms/selection-sort"
+  },
+  {
+    "name": "Bubble Sort",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Algorithms",
+    "grandparent": "Sorting",
+    "problem_link": "https://takeuforward.org/plus/dsa/sorting/algorithms/bubble-sort"
+  },
+  {
+    "name": "Insertion Sorting",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Algorithms",
+    "grandparent": "Sorting",
+    "problem_link": "https://takeuforward.org/plus/dsa/sorting/algorithms/insertion-sorting"
+  },
+  {
+    "name": "Merge Sorting",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Algorithms",
+    "grandparent": "Sorting",
+    "problem_link": "https://takeuforward.org/plus/dsa/sorting/algorithms/merge-sorting"
+  },
+  {
+    "name": "Quick Sorting",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Algorithms",
+    "grandparent": "Sorting",
+    "problem_link": "https://takeuforward.org/plus/dsa/sorting/algorithms/quick-sorting"
+  },
+  {
+    "name": "Linear Search",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/fundamentals/linear-search"
+  },
+  {
+    "name": "Largest Element",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/fundamentals/largest-element"
+  },
+  {
+    "name": "Second Largest Element",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/fundamentals/second-largest-element"
+  },
+  {
+    "name": "Maximum Consecutive Ones",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/fundamentals/maximum-consecutive-ones"
+  },
+  {
+    "name": "Left Rotate Array by One",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/fundamentals/left-rotate-array-by-one"
+  },
+  {
+    "name": "Left Rotate Array by K Places",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/fundamentals/left-rotate-array"
+  },
+  {
+    "name": "Move Zeros to End",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/logic-building/move-zeros-to-end"
+  },
+  {
+    "name": "Remove duplicates from sorted array",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/logic-building/remove-duplicates-from-sorted-array"
+  },
+  {
+    "name": "Find missing number",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/logic-building/find-missing-number"
+  },
+  {
+    "name": "Union of two sorted arrays",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/logic-building/union-of-two-sorted-arrays"
+  },
+  {
+    "name": "Intersection of two sorted arrays",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/logic-building/intersection-of-two-sorted-arrays"
+  },
+  {
+    "name": "Leaders in an Array",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-medium/leaders-in-an-array"
+  },
+  {
+    "name": "Rearrange array elements by sign",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-medium/rearrange-array-elements-by-sign"
+  },
+  {
+    "name": "Print the matrix in spiral manner",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-medium/print-the-matrix-in-spiral-manner"
+  },
+  {
+    "name": "Pascal's Triangle I",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-medium/pascals-triangle-i"
+  },
+  {
+    "name": "Pascal's Triangle II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-medium/pascals-triangle-ii"
+  },
+  {
+    "name": "Pascal's Triangle III",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-medium/pascals-triangle-iii"
+  },
+  {
+    "name": "Rotate matrix by 90 degrees",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-medium/rotate-matrix-by-90-degrees"
+  },
+  {
+    "name": "Two Sum",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-medium/two-sum"
+  },
+  {
+    "name": "3 Sum",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-medium/3-sum"
+  },
+  {
+    "name": "4 Sum",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-medium/4-sum"
+  },
+  {
+    "name": "Sort an array of 0's 1's and 2's",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-medium/sort-an-array-of-0's-1's-and-2's"
+  },
+  {
+    "name": "Kadane's Algorithm",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-medium/kadane's-algorithm"
+  },
+  {
+    "name": "Next Permutation",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-medium/next-permutation"
+  },
+  {
+    "name": "Majority Element-I",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Hard",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-hard/majority-element-i"
+  },
+  {
+    "name": "Majority Element-II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Hard",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-hard/majority-element-ii"
+  },
+  {
+    "name": "Find the repeating and missing number",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Hard",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-hard/find-the-repeating-and-missing-number"
+  },
+  {
+    "name": "Count Inversions",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Hard",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-hard/count-inversions"
+  },
+  {
+    "name": "Reverse Pairs",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Hard",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-hard/reverse-pairs"
+  },
+  {
+    "name": "Maximum Product Subarray in an Array",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Hard",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-hard/maximum-product-subarray-in-an-array"
+  },
+  {
+    "name": "Merge two sorted arrays without extra space",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Hard",
+    "grandparent": "Arrays",
+    "problem_link": "https://takeuforward.org/plus/dsa/arrays/faqs-hard/merge-two-sorted-arrays-without-extra-space"
+  },
+  {
+    "name": "Basic Hashing",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory",
+    "grandparent": "Hashing",
+    "problem_link": "https://takeuforward.org/plus/dsa/hashing/theory/basic-hashing"
+  },
+  {
+    "name": "Longest Consecutive Sequence in an Array",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Hashing",
+    "problem_link": "https://takeuforward.org/plus/dsa/hashing/faqs/longest-consecutive-sequence-in-an-array"
+  },
+  {
+    "name": "Longest subarray with sum K",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Hashing",
+    "problem_link": "https://takeuforward.org/plus/dsa/hashing/faqs/longest-subarray-with-sum-k"
+  },
+  {
+    "name": "Count subarrays with given sum",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Hashing",
+    "problem_link": "https://takeuforward.org/plus/dsa/hashing/faqs/count-subarrays-with-given-sum"
+  },
+  {
+    "name": "Count subarrays with given xor K",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Hashing",
+    "problem_link": "https://takeuforward.org/plus/dsa/hashing/faqs/count-subarrays-with-given-xor-k"
+  },
+  {
+    "name": "Search X in sorted array",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/fundamentals/search-x-in-sorted-array"
+  },
+  {
+    "name": "Lower Bound",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/fundamentals/lower-bound-"
+  },
+  {
+    "name": "Upper Bound",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/fundamentals/upper-bound"
+  },
+  {
+    "name": "Search insert position",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/logic-building/search-insert-position"
+  },
+  {
+    "name": "Floor and Ceil in Sorted Array",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/logic-building/floor-and-ceil-in-sorted-array"
+  },
+  {
+    "name": "First and last occurrence",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/logic-building/first-and-last-occurrence"
+  },
+  {
+    "name": "Search in rotated sorted array-I",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/logic-building/search-in-rotated-sorted-array-i"
+  },
+  {
+    "name": "Search in rotated sorted array-II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/logic-building/search-in-rotated-sorted-array-2"
+  },
+  {
+    "name": "Find minimum in Rotated Sorted Array",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/logic-building/find-minimum-in-rotated-sorted-array"
+  },
+  {
+    "name": "Find out how many times the array is rotated",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/logic-building/find-out-how-many-times-the-array-is-rotated"
+  },
+  {
+    "name": "Single element in sorted array",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/logic-building/single-element-in-sorted-array"
+  },
+  {
+    "name": "Find square root of a number",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "On Answers",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/on-answers/find-square-root-of-a-number"
+  },
+  {
+    "name": "Find Nth root of a number",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "On Answers",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/on-answers/find-nth-root-of-a-number"
+  },
+  {
+    "name": "Find the smallest divisor",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "On Answers",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/on-answers/find-the-smallest-divisor"
+  },
+  {
+    "name": "Koko eating bananas",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "On Answers",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/on-answers/koko-eating-bananas"
+  },
+  {
+    "name": "Minimum days to make M bouquets",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "On Answers",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/on-answers/minimum-days-to-make-m-bouquets"
+  },
+  {
+    "name": "Aggressive Cows",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/faqs/aggressive-cows"
+  },
+  {
+    "name": "Book Allocation Problem",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/faqs/book-allocation-problem"
+  },
+  {
+    "name": "Find peak element",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/faqs/find-peak-element"
+  },
+  {
+    "name": "Median of 2 sorted arrays",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/faqs/median-of-2-sorted-arrays"
+  },
+  {
+    "name": "Kth element of 2 sorted arrays",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/faqs/kth-element-of-2-sorted-arrays"
+  },
+  {
+    "name": "Minimize Max Distance to Gas Station",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/faqs/minimise-max-distance-to-gas-stations"
+  },
+  {
+    "name": "Split array - largest sum",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/faqs/split-array---largest-sum"
+  },
+  {
+    "name": "Find row with maximum 1's",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "2d Arrays",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/2d-arrays/find-row-with-maximum-1's"
+  },
+  {
+    "name": "Search in a 2D matrix",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "2d Arrays",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/2d-arrays/search-in-a-2d-matrix"
+  },
+  {
+    "name": "Search in 2D matrix - II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "2d Arrays",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/2d-arrays/search-in-2d-matrix-ii"
+  },
+  {
+    "name": "Find Peak Element - II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "2d Arrays",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/2d-arrays/find-peak-element-ii"
+  },
+  {
+    "name": "Matrix Median",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "2d Arrays",
+    "grandparent": "Binary Search",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search/2d-arrays/matrix-median"
+  },
+  {
+    "name": "Pow(x,n)",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Implementation Problems",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/implementation-problems/pow(x,n)"
+  },
+  {
+    "name": "Generate Parentheses",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Implementation Problems",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/implementation-problems/generate-parentheses"
+  },
+  {
+    "name": "Power Set",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Implementation Problems",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/implementation-problems/power-set"
+  },
+  {
+    "name": "Check if there exists a subsequence with sum K",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Subsequence Pattern Problems",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/subsequence-pattern-problems/check-if-there-exists-a-subsequence-with-sum-k"
+  },
+  {
+    "name": "Count all subsequences with sum K",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Subsequence Pattern Problems",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/subsequence-pattern-problems/count-all-subsequences-with-sum-k"
+  },
+  {
+    "name": "Combination Sum",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/faqs-medium/combination-sum"
+  },
+  {
+    "name": "Combination Sum II",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/faqs-medium/combination-sum-ii"
+  },
+  {
+    "name": "Subsets I",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/faqs-medium/subsets-i"
+  },
+  {
+    "name": "Subsets II",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/faqs-medium/subsets-ii"
+  },
+  {
+    "name": "Combination Sum III",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Medium",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/faqs-medium/combination-sum-iii"
+  },
+  {
+    "name": "Letter Combinations of a Phone Number",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/hard/letter-combinations-of-a-phone-number"
+  },
+  {
+    "name": "Palindrome partitioning",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Hard",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/faqs-hard/palindrome-partitioning"
+  },
+  {
+    "name": "Word Search",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Hard",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/faqs-hard/word-search"
+  },
+  {
+    "name": "N Queen",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Hard",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/faqs-hard/n-queen"
+  },
+  {
+    "name": "Rat in a Maze",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Hard",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/faqs-hard/rat-in-a-maze"
+  },
+  {
+    "name": "M Coloring Problem",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Hard",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/faqs-hard/m-coloring-problem"
+  },
+  {
+    "name": "Sudoku Solver",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs Hard",
+    "grandparent": "Recursion",
+    "problem_link": "https://takeuforward.org/plus/dsa/recursion/faqs-hard/sudoko-solver"
+  },
+  {
+    "name": "Introduction to Singly LinkedList",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Single Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-single-ll/introduction-to-singly-linkedlist"
+  },
+  {
+    "name": "Traversal in Linked List",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Single Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-single-ll/traversal-in-linked-list"
+  },
+  {
+    "name": "Deletion in Linked List",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Single Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-single-ll/deletion-in-linked-list"
+  },
+  {
+    "name": "Insertion in Linked List",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Single Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-single-ll/insertion-in-linked-list"
+  },
+  {
+    "name": "Deletion of the head of LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Single Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-single-ll/deletion-of-the-head-of-ll"
+  },
+  {
+    "name": "Deletion of the tail of LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Single Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-single-ll/deletion-of-the-tail-of-ll"
+  },
+  {
+    "name": "Deletion of the Kth element of LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Single Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-single-ll/deletion-of-the-kth-element-of-ll"
+  },
+  {
+    "name": "Delete the element with value X",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Single Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-single-ll/delete-the-element-with-value-x"
+  },
+  {
+    "name": "Insertion at the head of LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Single Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-single-ll/insertion-at-the-head-of-ll"
+  },
+  {
+    "name": "Insertion at the tail of LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Single Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-single-ll/insertion-at-the-tail-of-ll"
+  },
+  {
+    "name": "Insertion at the Kth position of LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Single Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-single-ll/insertion-at-the-kth-position-of-ll"
+  },
+  {
+    "name": "Insertion before the value X in LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Single Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-single-ll/insertion-before-the-value-x-in-ll"
+  },
+  {
+    "name": "Introduction to Doubly LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Doubly Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-doubly-ll/introduction-to-doubly-ll"
+  },
+  {
+    "name": "Deletion in Doubly LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Doubly Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-doubly-ll/deletion-in-doubly-ll"
+  },
+  {
+    "name": "Insertion in DLL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Doubly Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-doubly-ll/insertion-in-dll"
+  },
+  {
+    "name": "Convert Array to DLL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Doubly Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-doubly-ll/convert-array-to-dll"
+  },
+  {
+    "name": "Delete head of DLL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Doubly Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-doubly-ll/delete-head-of-dll"
+  },
+  {
+    "name": "Delete Tail of DLL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Doubly Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-doubly-ll/delete-tail-of-dll"
+  },
+  {
+    "name": "Delete Kth Element of DLL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Doubly Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-doubly-ll/delete-kth-element-of-dll"
+  },
+  {
+    "name": "Removing given node in DLL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Doubly Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-doubly-ll/removing-given-node-in-dll"
+  },
+  {
+    "name": "Insert node before head in DLL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Doubly Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-doubly-ll/insert-node-before-head-in-dll"
+  },
+  {
+    "name": "Insert node before tail in DLL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Doubly Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-doubly-ll/insert-node-before-tail-in-dll"
+  },
+  {
+    "name": "Insert node before (kth node) in DLL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Doubly Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-doubly-ll/insert-node-before-kth-node-in-dll"
+  },
+  {
+    "name": "Insert before given node in DLL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Fundamentals Doubly Ll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/fundamentals-doubly-ll/insert-before-given-node-in-dll"
+  },
+  {
+    "name": "Add two numbers in LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/logic-building/add-two-numbers-in-ll"
+  },
+  {
+    "name": "Segregate odd and even nodes in LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/logic-building/segregate-odd-and-even-nodes-in-ll"
+  },
+  {
+    "name": "Sort a LL of 0's 1's and 2's",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/logic-building/sort-a-ll-of-0's-1's-and-2's"
+  },
+  {
+    "name": "Remove Nth node from the back of the LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/logic-building/remove-nth-node-from-the-back-of-the-ll"
+  },
+  {
+    "name": "Reverse a LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Logic Building",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/logic-building/reverse-a-ll"
+  },
+  {
+    "name": "Add one to a number represented by LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Medium",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--medium/add-one-to-a-number-represented-by-ll"
+  },
+  {
+    "name": "Find Middle of Linked List",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Medium",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--medium/find-middle-of-linked-list"
+  },
+  {
+    "name": "Delete the middle node in LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Medium",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--medium/delete-the-middle-node-in-ll"
+  },
+  {
+    "name": "Check if LL is palindrome or not",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Medium",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--medium/check-if-ll-is-palindrome-or-not"
+  },
+  {
+    "name": "Find the intersection point of Y LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Medium",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--medium/find-the-intersection-point-of-y-ll"
+  },
+  {
+    "name": "Detect a loop in LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Medium",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--medium/detect-a-loop-in-ll"
+  },
+  {
+    "name": "Find the starting point in LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Medium",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--medium/find-the-starting-point-in-ll"
+  },
+  {
+    "name": "Length of loop in LL",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Medium",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--medium/length-of-loop-in-ll"
+  },
+  {
+    "name": "Reverse LL in group of given size K",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Hard",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--hard/reverse-ll-in-group-of-given-size-k"
+  },
+  {
+    "name": "Rotate a LL",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Hard",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--hard/rotate-a-ll"
+  },
+  {
+    "name": "Merge two Sorted Lists",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Hard",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--hard/merge-sorted-lists-"
+  },
+  {
+    "name": "Flattening of LL",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Hard",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--hard/flattening-of-ll"
+  },
+  {
+    "name": "Sort LL",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Hard",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--hard/sort-ll"
+  },
+  {
+    "name": "Clone a LL with random and next pointer",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Hard",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--hard/clone-a-ll-with-random-and-next-pointer"
+  },
+  {
+    "name": "Delete all occurrences of a key in DLL",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Dll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--dll/delete-all-occurrences-of-a-key-in-dll"
+  },
+  {
+    "name": "Remove duplicated from sorted DLL",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs  Dll",
+    "grandparent": "Linked List",
+    "problem_link": "https://takeuforward.org/plus/dsa/linked-list/faqs--dll/remove-duplicated-from-sorted-dll"
+  },
+  {
+    "name": "Introduction to Bits and Tricks",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory",
+    "grandparent": "Bit Manipulation",
+    "problem_link": "https://takeuforward.org/plus/dsa/bit-manipulation/theory/introduction-to-bits-and-tricks"
+  },
+  {
+    "name": "Minimum Bit Flips to Convert Number",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Problems",
+    "grandparent": "Bit Manipulation",
+    "problem_link": "https://takeuforward.org/plus/dsa/bit-manipulation/problems/minimum-bit-flips-to-convert-number"
+  },
+  {
+    "name": "Single Number - I",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Problems",
+    "grandparent": "Bit Manipulation",
+    "problem_link": "https://takeuforward.org/plus/dsa/bit-manipulation/problems/single-number---i"
+  },
+  {
+    "name": "Single Number - II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Problems",
+    "grandparent": "Bit Manipulation",
+    "problem_link": "https://takeuforward.org/plus/dsa/bit-manipulation/problems/single-number---ii"
+  },
+  {
+    "name": "Single Number - III",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Problems",
+    "grandparent": "Bit Manipulation",
+    "problem_link": "https://takeuforward.org/plus/dsa/bit-manipulation/problems/single-number---iii"
+  },
+  {
+    "name": "Divide two numbers without multiplication and division",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Problems",
+    "grandparent": "Bit Manipulation",
+    "problem_link": "https://takeuforward.org/plus/dsa/bit-manipulation/problems/divide-two-numbers-without-multiplication-and-division"
+  },
+  {
+    "name": "Power Set Bit Manipulation",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Problems",
+    "grandparent": "Bit Manipulation",
+    "problem_link": "https://takeuforward.org/plus/dsa/bit-manipulation/problems/power-set-bit-manipulation"
+  },
+  {
+    "name": "XOR of numbers in a given range",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Problems",
+    "grandparent": "Bit Manipulation",
+    "problem_link": "https://takeuforward.org/plus/dsa/bit-manipulation/problems/xor-of-numbers-in-a-given-range"
+  },
+  {
+    "name": "Assign Cookies",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Easy",
+    "grandparent": "Greedy Algorithms",
+    "problem_link": "https://takeuforward.org/plus/dsa/greedy-algorithms/easy/assign-cookies"
+  },
+  {
+    "name": "Lemonade Change",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Easy",
+    "grandparent": "Greedy Algorithms",
+    "problem_link": "https://takeuforward.org/plus/dsa/greedy-algorithms/easy/lemonade-change"
+  },
+  {
+    "name": "Jump Game - I",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Easy",
+    "grandparent": "Greedy Algorithms",
+    "problem_link": "https://takeuforward.org/plus/dsa/greedy-algorithms/easy/jump-game---i"
+  },
+  {
+    "name": "Shortest Job First",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Scheduling And Interval Problems",
+    "grandparent": "Greedy Algorithms",
+    "problem_link": "https://takeuforward.org/plus/dsa/greedy-algorithms/scheduling-and-interval-problems/shortest-job-first"
+  },
+  {
+    "name": "Job sequencing Problem",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Scheduling And Interval Problems",
+    "grandparent": "Greedy Algorithms",
+    "problem_link": "https://takeuforward.org/plus/dsa/greedy-algorithms/scheduling-and-interval-problems/job-sequencing-problem"
+  },
+  {
+    "name": "N meetings in one room",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Scheduling And Interval Problems",
+    "grandparent": "Greedy Algorithms",
+    "problem_link": "https://takeuforward.org/plus/dsa/greedy-algorithms/scheduling-and-interval-problems/n-meetings-in-one-room"
+  },
+  {
+    "name": "Non-overlapping Intervals",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Scheduling And Interval Problems",
+    "grandparent": "Greedy Algorithms",
+    "problem_link": "https://takeuforward.org/plus/dsa/greedy-algorithms/scheduling-and-interval-problems/non-overlapping-intervals"
+  },
+  {
+    "name": "Insert Interval",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Scheduling And Interval Problems",
+    "grandparent": "Greedy Algorithms",
+    "problem_link": "https://takeuforward.org/plus/dsa/greedy-algorithms/scheduling-and-interval-problems/insert-interval"
+  },
+  {
+    "name": "Minimum number of platforms required for a railway",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Scheduling And Interval Problems",
+    "grandparent": "Greedy Algorithms",
+    "problem_link": "https://takeuforward.org/plus/dsa/greedy-algorithms/scheduling-and-interval-problems/minimum-number-of-platforms-required-for-a-railway"
+  },
+  {
+    "name": "Valid Paranthesis Checker",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard",
+    "grandparent": "Greedy Algorithms",
+    "problem_link": "https://takeuforward.org/plus/dsa/greedy-algorithms/hard/valid-paranthesis-checker"
+  },
+  {
+    "name": "Candy",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard",
+    "grandparent": "Greedy Algorithms",
+    "problem_link": "https://takeuforward.org/plus/dsa/greedy-algorithms/hard/candy"
+  },
+  {
+    "name": "Theory",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Pattern And Template",
+    "grandparent": "Sliding Window And 2 Pointer",
+    "problem_link": "https://takeuforward.org/plus/dsa/sliding-window-and-2-pointer/pattern-and-template/theory"
+  },
+  {
+    "name": "Maximum Points You Can Obtain from Cards",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Constant Window",
+    "grandparent": "Sliding Window And 2 Pointer",
+    "problem_link": "https://takeuforward.org/plus/dsa/sliding-window-and-2-pointer/constant-window/maximum-points-you-can-obtain-from-cards-"
+  },
+  {
+    "name": "Longest Substring Without Repeating Characters",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Longest And Smallest Window Problems",
+    "grandparent": "Sliding Window And 2 Pointer",
+    "problem_link": "https://takeuforward.org/plus/dsa/sliding-window-and-2-pointer/longest-and-smallest-window-problems/longest-substring-without-repeating-characters"
+  },
+  {
+    "name": "Max Consecutive Ones III",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Longest And Smallest Window Problems",
+    "grandparent": "Sliding Window And 2 Pointer",
+    "problem_link": "https://takeuforward.org/plus/dsa/sliding-window-and-2-pointer/longest-and-smallest-window-problems/max-consecutive-ones-iii"
+  },
+  {
+    "name": "Fruit Into Baskets",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Longest And Smallest Window Problems",
+    "grandparent": "Sliding Window And 2 Pointer",
+    "problem_link": "https://takeuforward.org/plus/dsa/sliding-window-and-2-pointer/longest-and-smallest-window-problems/fruit-into-baskets"
+  },
+  {
+    "name": "Longest Substring With At Most K Distinct Characters",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Longest And Smallest Window Problems",
+    "grandparent": "Sliding Window And 2 Pointer",
+    "problem_link": "https://takeuforward.org/plus/dsa/sliding-window-and-2-pointer/longest-and-smallest-window-problems/longest-substring-with-at-most-k-distinct-characters"
+  },
+  {
+    "name": "Longest Repeating Character Replacement",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Longest And Smallest Window Problems",
+    "grandparent": "Sliding Window And 2 Pointer",
+    "problem_link": "https://takeuforward.org/plus/dsa/sliding-window-and-2-pointer/longest-and-smallest-window-problems/longest-repeating-character-replacement"
+  },
+  {
+    "name": "Minimum Window Substring",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Longest And Smallest Window Problems",
+    "grandparent": "Sliding Window And 2 Pointer",
+    "problem_link": "https://takeuforward.org/plus/dsa/sliding-window-and-2-pointer/longest-and-smallest-window-problems/minimum-window-substring-"
+  },
+  {
+    "name": "Number of Substrings Containing All Three Characters",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Counting Subarrays And Substrings Problems",
+    "grandparent": "Sliding Window And 2 Pointer",
+    "problem_link": "https://takeuforward.org/plus/dsa/sliding-window-and-2-pointer/counting-subarrays-and-substrings-problems/number-of-substrings-containing-all-three-characters"
+  },
+  {
+    "name": "Binary Subarrays With Sum",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Counting Subarrays And Substrings Problems",
+    "grandparent": "Sliding Window And 2 Pointer",
+    "problem_link": "https://takeuforward.org/plus/dsa/sliding-window-and-2-pointer/counting-subarrays-and-substrings-problems/binary-subarrays-with-sum"
+  },
+  {
+    "name": "Count number of Nice subarrays",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Counting Subarrays And Substrings Problems",
+    "grandparent": "Sliding Window And 2 Pointer",
+    "problem_link": "https://takeuforward.org/plus/dsa/sliding-window-and-2-pointer/counting-subarrays-and-substrings-problems/count-number-of-nice-subarrays"
+  },
+  {
+    "name": "Implementation using different DS",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Implementation",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/implementation/implementation-using-different-ds"
+  },
+  {
+    "name": "Implement Stack using Arrays",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Implementation",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/implementation/implement-stack-using-arrays"
+  },
+  {
+    "name": "Implement Queue using Arrays",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Implementation",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/implementation/implement-queue-using-arrays"
+  },
+  {
+    "name": "Implement Stack using Queue",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Implementation",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/implementation/implement-stack-using-queue"
+  },
+  {
+    "name": "Implement Queue using Stack",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Implementation",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/implementation/implement-queue-using-stack"
+  },
+  {
+    "name": "Implement stack using Linkedlist",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Implementation",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/implementation/implement-stack-using-linkedlist"
+  },
+  {
+    "name": "Implement queue using Linkedlist",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Implementation",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/implementation/implement-queue-using-linkedlist"
+  },
+  {
+    "name": "Balanced Paranthesis",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Implementation",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/implementation/balanced-paranthesis"
+  },
+  {
+    "name": "Next Greater Element",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Monotonic Stack",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/monotonic-stack/next-greater-element"
+  },
+  {
+    "name": "Next Greater Element - 2",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Monotonic Stack",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/monotonic-stack/next-greater-element---2"
+  },
+  {
+    "name": "Asteroid Collision",
+    "difficulty": 0,
+    "solved": {
+      "value": true,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Monotonic Stack",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/monotonic-stack/asteroid-collision"
+  },
+  {
+    "name": "Sum of Subarray Minimums",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Monotonic Stack",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/monotonic-stack/sum-of-subarray-minimums"
+  },
+  {
+    "name": "Sum of Subarray Ranges",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Monotonic Stack",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/monotonic-stack/sum-of-subarray-ranges"
+  },
+  {
+    "name": "Remove K Digits",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Monotonic Stack",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/monotonic-stack/remove-k-digits"
+  },
+  {
+    "name": "Implement Min Stack",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/faqs/implement-min-stack"
+  },
+  {
+    "name": "Sliding Window Maximum",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/faqs/sliding-window-maximum"
+  },
+  {
+    "name": "Trapping Rainwater",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/faqs/trapping-rainwater"
+  },
+  {
+    "name": "Largest rectangle in a histogram",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/faqs/largest-rectangle-in-a-histogram"
+  },
+  {
+    "name": "Maximum Rectangles",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/faqs/maximum-rectangles"
+  },
+  {
+    "name": "Stock span problem",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/faqs/stock-span-problem"
+  },
+  {
+    "name": "Celebrity Problem",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/faqs/celebrity-problem"
+  },
+  {
+    "name": "LRU Cache",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/faqs/lru-cache"
+  },
+  {
+    "name": "LFU Cache",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Stack And Queues",
+    "problem_link": "https://takeuforward.org/plus/dsa/stack-and-queues/faqs/lfu-cache"
+  },
+  {
+    "name": "Introduction",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Traversals",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/theory-and-traversals/introduction-"
+  },
+  {
+    "name": "Inorder Traversal",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Traversals",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/theory-and-traversals/inorder-traversal"
+  },
+  {
+    "name": "Preorder Traversal",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Traversals",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/theory-and-traversals/preorder-traversal"
+  },
+  {
+    "name": "Postorder Traversal",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Traversals",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/theory-and-traversals/postorder-traversal"
+  },
+  {
+    "name": "Level Order Traversal",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Traversals",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/theory-and-traversals/level-order-traversal"
+  },
+  {
+    "name": "Pre, Post, Inorder in one traversal",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Traversals",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/theory-and-traversals/pre,-post,-inorder-in-one-traversal"
+  },
+  {
+    "name": "Maximum Depth in BT",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium Problems",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/medium-problems/maximum-depth-in-bt"
+  },
+  {
+    "name": "Check if two trees are identical or not",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium Problems",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/medium-problems/check-if-two-trees-are-identical-or-not"
+  },
+  {
+    "name": "Check for balanced binary tree",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium Problems",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/medium-problems/check-for-balanced-binary-tree"
+  },
+  {
+    "name": "Diameter of Binary Tree",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium Problems",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/medium-problems/diameter-of-binary-tree"
+  },
+  {
+    "name": "Maximum path sum",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium Problems",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/medium-problems/maximum-path-sum-"
+  },
+  {
+    "name": "Check for symmetrical BTs",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium Problems",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/medium-problems/check-for-symmetrical-bts"
+  },
+  {
+    "name": "Zig Zag or Spiral Traversal",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/faqs/zig-zag-or-spiral-traversal"
+  },
+  {
+    "name": "Boundary Traversal",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/faqs/boundary-traversal"
+  },
+  {
+    "name": "Vertical Order Traversal",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/faqs/vertical-order-traversal"
+  },
+  {
+    "name": "Top View of BT",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/faqs/top-view-of-bt"
+  },
+  {
+    "name": "Bottom view of BT",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/faqs/bottom-view-of-bt"
+  },
+  {
+    "name": "Right/Left View of BT",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/faqs/right-left-view-of-bt"
+  },
+  {
+    "name": "Print root to node path in BT",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/faqs/print-root-to-note-path-in-bt"
+  },
+  {
+    "name": "LCA in BT",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/faqs/lca-in-bt"
+  },
+  {
+    "name": "Maximum Width of BT",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/faqs/maximum-width-of-bt"
+  },
+  {
+    "name": "Print all nodes at a distance of K in BT",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/faqs/print-all-nodes-at-a-distance-of-k-in-bt"
+  },
+  {
+    "name": "Minimum time taken to burn the BT from a given Node",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/faqs/minimum-time-taken-to-burn-the-bt-from-a-given-node"
+  },
+  {
+    "name": "Count total nodes in a complete BT",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/faqs/count-total-nodes-in-a-complete-bt"
+  },
+  {
+    "name": "Requirements needed to construct a unique BT",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Construction Problems",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/construction-problems/requirements-needed-to-construct-a-unique-bt"
+  },
+  {
+    "name": "Construct a BT from Preorder and Inorder",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Construction Problems",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/construction-problems/construct-a-bt-from-preorder-and-inorder"
+  },
+  {
+    "name": "Construct a BT from Postorder and Inorder",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Construction Problems",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/construction-problems/construct-a-bt-from-postorder-and-inorder"
+  },
+  {
+    "name": "Serialize and De-serialize BT",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Construction Problems",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/construction-problems/serialize-and-de-serialize-bt"
+  },
+  {
+    "name": "Morris Inorder Traversal",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Traversal In Constant Space",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/traversal-in-constant-space/morris-inorder-traversal-"
+  },
+  {
+    "name": "Morris Preorder Traversal",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Traversal In Constant Space",
+    "grandparent": "Binary Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-trees/traversal-in-constant-space/morris-preorder-traversal-"
+  },
+  {
+    "name": "Introduction to BST",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Basics",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/theory-and-basics/introduction-to-bst"
+  },
+  {
+    "name": "Search in BST",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Basics",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/theory-and-basics/search-in-bst"
+  },
+  {
+    "name": "Floor and Ceil in a BST",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Basics",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/theory-and-basics/floor-and-ceil-in-a-bst"
+  },
+  {
+    "name": "Insert a given node in BST",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/medium/insert-a-given-node-in-bst"
+  },
+  {
+    "name": "Delete a node in BST",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/medium/delete-a-node-in-bst"
+  },
+  {
+    "name": "Kth Smallest and Largest element in BST",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/medium/kth-smallest-and-largest-element-in-bst"
+  },
+  {
+    "name": "Check if a tree is a BST or not",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/medium/check-if-a-tree-is-a-bst-or-not"
+  },
+  {
+    "name": "LCA in BST",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/medium/lca-in-bst"
+  },
+  {
+    "name": "Construct a BST from a preorder traversal",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/medium/construct-a-bst-from-a-preorder-traversal"
+  },
+  {
+    "name": "Inorder successor and predecessor in BST",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/medium/inorder-successor-and-predecessor-in-bst"
+  },
+  {
+    "name": "BST iterator",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/faqs/bst-iterator"
+  },
+  {
+    "name": "Two sum in BST",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/faqs/two-sum-in-bst"
+  },
+  {
+    "name": "Correct BST with two nodes swapped",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/faqs/correct-bst-with-two-nodes-swapped"
+  },
+  {
+    "name": "Largest BST in Binary Tree",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Binary Search Trees",
+    "problem_link": "https://takeuforward.org/plus/dsa/binary-search-trees/faqs/largest-bst-in-binary-tree"
+  },
+  {
+    "name": "Heaps (Theory Video)",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Implementation",
+    "grandparent": "Heaps",
+    "problem_link": "https://takeuforward.org/plus/dsa/heaps/theory-and-implementation/heaps-theory"
+  },
+  {
+    "name": "Heapify Algorithm",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Implementation",
+    "grandparent": "Heaps",
+    "problem_link": "https://takeuforward.org/plus/dsa/heaps/theory-and-implementation/heapify-algorithm"
+  },
+  {
+    "name": "Build heap from a given Array",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Implementation",
+    "grandparent": "Heaps",
+    "problem_link": "https://takeuforward.org/plus/dsa/heaps/theory-and-implementation/build-heap-from-a-given-array"
+  },
+  {
+    "name": "Implement Min Heap",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Implementation",
+    "grandparent": "Heaps",
+    "problem_link": "https://takeuforward.org/plus/dsa/heaps/theory-and-implementation/implement-min-heap"
+  },
+  {
+    "name": "Implement Max Heap",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Implementation",
+    "grandparent": "Heaps",
+    "problem_link": "https://takeuforward.org/plus/dsa/heaps/theory-and-implementation/implement-max-heap"
+  },
+  {
+    "name": "Check if an array represents a min heap",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Implementation",
+    "grandparent": "Heaps",
+    "problem_link": "https://takeuforward.org/plus/dsa/heaps/theory-and-implementation/check-if-an-array-represents-a-min-heap-"
+  },
+  {
+    "name": "Convert Min Heap to Max Heap",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Implementation",
+    "grandparent": "Heaps",
+    "problem_link": "https://takeuforward.org/plus/dsa/heaps/theory-and-implementation/convert-min-heap-to-max-heap"
+  },
+  {
+    "name": "Heap Sort",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Implementation",
+    "grandparent": "Heaps",
+    "problem_link": "https://takeuforward.org/plus/dsa/heaps/theory-and-implementation/heap-sort"
+  },
+  {
+    "name": "K-th Largest element in an array",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Implementation",
+    "grandparent": "Heaps",
+    "problem_link": "https://takeuforward.org/plus/dsa/heaps/theory-and-implementation/k-th-largest-element-in-an-array"
+  },
+  {
+    "name": "Kth largest element in a stream of running integers",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Faqs",
+    "grandparent": "Heaps",
+    "problem_link": "https://takeuforward.org/plus/dsa/heaps/faqs/kth-largest-element-in-a-stream-of-running-integers"
+  },
+  {
+    "name": "Introduction to Graph",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Traversals",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/theory-and-traversals/introduction-to-graph"
+  },
+  {
+    "name": "Connected Components",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Traversals",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/theory-and-traversals/connected-components"
+  },
+  {
+    "name": "Traversal Techniques",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Theory And Traversals",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/theory-and-traversals/traversal-techniques"
+  },
+  {
+    "name": "Number of provinces",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Traversal Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/traversal-problems/number-of-provinces"
+  },
+  {
+    "name": "Number of islands",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Traversal Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/traversal-problems/number-of-islands"
+  },
+  {
+    "name": "Flood fill algorithm",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Traversal Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/traversal-problems/flood-fill-algorithm"
+  },
+  {
+    "name": "Number of enclaves",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Traversal Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/traversal-problems/number-of-enclaves"
+  },
+  {
+    "name": "Rotten Oranges",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Traversal Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/traversal-problems/rotten-oranges"
+  },
+  {
+    "name": "Distance of nearest cell having one",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Traversal Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/traversal-problems/distance-of-nearest-cell-having-one"
+  },
+  {
+    "name": "Surrounded Regions",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Traversal Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/traversal-problems/surrounded-regions"
+  },
+  {
+    "name": "Number of distinct islands",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Traversal Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/traversal-problems/number-of-distinct-islands"
+  },
+  {
+    "name": "Detect a cycle in an undirected graph",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Cycles",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/cycles/detect-a-cycle-in-an-undirected-graph"
+  },
+  {
+    "name": "Bipartite graph",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Cycles",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/cycles/bipartite-graph"
+  },
+  {
+    "name": "Topological sort or Kahn's algorithm",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Cycles",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/cycles/topological-sort-or-kahns-algorithm"
+  },
+  {
+    "name": "Detect a cycle in a directed graph",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Cycles",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/cycles/detect-a-cycle-in-a-directed-graph"
+  },
+  {
+    "name": "Find eventual safe states",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/hard-problems/find-eventual-safe-states"
+  },
+  {
+    "name": "Course Schedule I",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/hard-problems/course-schedule-i"
+  },
+  {
+    "name": "Course Schedule II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/hard-problems/course-schedule-ii"
+  },
+  {
+    "name": "Alien Dictionary",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/hard-problems/alient-dictionary"
+  },
+  {
+    "name": "Shortest path in DAG",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/hard-problems/shortest-path-in-dag"
+  },
+  {
+    "name": "Shortest path in undirected graph with unit weights",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/hard-problems/shortest-path-in-undirected-graph-with-unit-weights"
+  },
+  {
+    "name": "Word ladder I",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/hard-problems/word-ladder-i"
+  },
+  {
+    "name": "Word ladder II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard Problems",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/hard-problems/word-ladder-ii"
+  },
+  {
+    "name": "Dijkstra's algorithm",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Shortest Path Algorithms",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/shortest-path-algorithms/dijkstra's-algorithm"
+  },
+  {
+    "name": "Print Shortest Path",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Shortest Path Algorithms",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/shortest-path-algorithms/print-shortest-path-"
+  },
+  {
+    "name": "Shortest Distance in a Binary Maze",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Shortest Path Algorithms",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/shortest-path-algorithms/shortest-path-with-minimum-effort"
+  },
+  {
+    "name": "Path with minimum effort",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Shortest Path Algorithms",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/shortest-path-algorithms/path-with-minimum-effort"
+  },
+  {
+    "name": "Cheapest flight within K stops",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Shortest Path Algorithms",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/shortest-path-algorithms/cheapest-flight-within-k-stops"
+  },
+  {
+    "name": "Minimum multiplications to reach end",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Shortest Path Algorithms",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/shortest-path-algorithms/minimum-multiplications-to-reach-end"
+  },
+  {
+    "name": "Number of ways to arrive at destination",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Shortest Path Algorithms",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/shortest-path-algorithms/number-of-ways-to-arrive-at-destination"
+  },
+  {
+    "name": "Bellman ford algorithm",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Shortest Path Algorithms",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/shortest-path-algorithms/bellman-ford-algorithm"
+  },
+  {
+    "name": "Floyd warshall algorithm",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Shortest Path Algorithms",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/shortest-path-algorithms/floyd-warshall-algorithm"
+  },
+  {
+    "name": "Find the city with the smallest number of neighbors",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Shortest Path Algorithms",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/shortest-path-algorithms/find-the-city-with-the-smallest-number-of-neighbors"
+  },
+  {
+    "name": "MST theory",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Minimum Spanning Tree",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/minimum-spanning-tree/mst-theory"
+  },
+  {
+    "name": "Disjoint Set",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Minimum Spanning Tree",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/minimum-spanning-tree/disjoint-set-"
+  },
+  {
+    "name": "Find the MST weight",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Minimum Spanning Tree",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/minimum-spanning-tree/find-the-mst-weight"
+  },
+  {
+    "name": "Number of operations to make network connected",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard Problems Ii",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/hard-problems-ii/number-of-operations-to-make-network-connected"
+  },
+  {
+    "name": "Accounts merge",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard Problems Ii",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/hard-problems-ii/accounts-merge"
+  },
+  {
+    "name": "Number of islands II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard Problems Ii",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/hard-problems-ii/number-of-islands-ii"
+  },
+  {
+    "name": "Making a large island",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard Problems Ii",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/hard-problems-ii/making-a-large-island"
+  },
+  {
+    "name": "Most stones removed with same row or column",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Hard Problems Ii",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/hard-problems-ii/most-stones-removed-with-same-row-or-column"
+  },
+  {
+    "name": "Kosaraju's algorithm",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Additional Algorithms",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/additional-algorithms/kosaraju's-algorithm"
+  },
+  {
+    "name": "Bridges in graph",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Additional Algorithms",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/additional-algorithms/bridges-in-graph"
+  },
+  {
+    "name": "Articulation point in graph",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Additional Algorithms",
+    "grandparent": "Graph",
+    "problem_link": "https://takeuforward.org/plus/dsa/graph/additional-algorithms/articulation-point-in-graph"
+  },
+  {
+    "name": "Introduction to DP",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Introduction",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/introduction/introduction-to-dp"
+  },
+  {
+    "name": "Climbing stairs",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "1d Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/1d-dp/climbing-stairs"
+  },
+  {
+    "name": "Frog Jump",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "1d Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/1d-dp/frog-jump"
+  },
+  {
+    "name": "Frog jump with K distances",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "1d Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/1d-dp/frog-jump-with-k-distances"
+  },
+  {
+    "name": "Maximum sum of non adjacent elements",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "1d Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/1d-dp/maximum-sum-of-non-adjacent-elements"
+  },
+  {
+    "name": "House robber",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "1d Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/1d-dp/house-robber"
+  },
+  {
+    "name": "Ninja's training",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "2d Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/2d-dp/ninja's-training"
+  },
+  {
+    "name": "Grid unique paths",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Grids",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-grids/grid-unique-paths"
+  },
+  {
+    "name": "Unique paths II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Grids",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-grids/unique-paths-ii"
+  },
+  {
+    "name": "Minimum Falling Path Sum",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Grids",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-grids/minimum-falling-path-sum"
+  },
+  {
+    "name": "Triangle",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Grids",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-grids/triangle"
+  },
+  {
+    "name": "Cherry pickup II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Grids",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-grids/cherry-pickup-ii"
+  },
+  {
+    "name": "Best time to buy and sell stock",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Stocks",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-stocks/best-time-to-buy-and-sell-stock"
+  },
+  {
+    "name": "Best time to buy and sell stock II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Stocks",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-stocks/best-time-to-buy-and-sell-stock-ii"
+  },
+  {
+    "name": "Best time to buy and sell stock III",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Stocks",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-stocks/best-time-to-buy-and-sell-stock-iii"
+  },
+  {
+    "name": "Best time to buy and sell stock IV",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Stocks",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-stocks/best-time-to-buy-and-sell-stock-iv"
+  },
+  {
+    "name": "Best time to buy and sell stock with transaction fees",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Stocks",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-stocks/best-time-to-buy-and-sell-stock-with-cooldown-and-transaction-fees"
+  },
+  {
+    "name": "Subset sum equals to target",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Subsequences",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-subsequences/subset-sum-equals-to-target"
+  },
+  {
+    "name": "Partition equal subset sum",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Subsequences",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-subsequences/partition-equal-subset-sum"
+  },
+  {
+    "name": "Partition a set into two subsets with minimum absolute sum difference",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Subsequences",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-subsequences/partition-a-set-into-two-subsets-with-minimum-absolute-sum-difference"
+  },
+  {
+    "name": "Count subsets with sum K",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Subsequences",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-subsequences/count-subsets-with-sum-k"
+  },
+  {
+    "name": "Count partitions with given difference",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Subsequences",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-subsequences/count-partitions-with-given-difference"
+  },
+  {
+    "name": "0 and 1 Knapsack",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Subsequences",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-subsequences/0-and-1-knapsack"
+  },
+  {
+    "name": "Minimum coins",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Subsequences",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-subsequences/minimum-coins"
+  },
+  {
+    "name": "Target sum",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Subsequences",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-subsequences/target-sum"
+  },
+  {
+    "name": "Coin change II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Subsequences",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-subsequences/coin-change-ii"
+  },
+  {
+    "name": "Unbounded knapsack",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Subsequences",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-subsequences/unbounded-knapsack"
+  },
+  {
+    "name": "Rod cutting problem",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Subsequences",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-subsequences/rod-cutting-problem"
+  },
+  {
+    "name": "Longest Increasing Subsequence",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Lis Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/lis-dp/longest-increasing-subsequence"
+  },
+  {
+    "name": "Print Longest Increasing Subsequence",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Lis Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/lis-dp/print-longest-increasing-subsequence"
+  },
+  {
+    "name": "Largest Divisible Subset",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Lis Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/lis-dp/largest-divisible-subset"
+  },
+  {
+    "name": "Longest String Chain",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Lis Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/lis-dp/longest-string-chain"
+  },
+  {
+    "name": "Longest Bitonic Subsequence",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Lis Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/lis-dp/longest-bitonic-subsequence"
+  },
+  {
+    "name": "Number of Longest Increasing Subsequences",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Lis Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/lis-dp/number-of-longest-increasing-subsequences"
+  },
+  {
+    "name": "Longest common subsequence",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Strings",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-strings/longest-common-subsequence"
+  },
+  {
+    "name": "Longest common substring",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Strings",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-strings/longest-common-substring"
+  },
+  {
+    "name": "Longest palindromic subsequence",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Strings",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-strings/longest-palindromic-subsequence"
+  },
+  {
+    "name": "Minimum insertions to make string palindrome",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Strings",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-strings/minimum-insertions-to-make-string-palindrome"
+  },
+  {
+    "name": "Minimum insertions or deletions to convert string A to B",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Strings",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-strings/minimum-insertions-or-deletions-to-convert-string-a-to-b"
+  },
+  {
+    "name": "Shortest common supersequence",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Strings",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-strings/shortest-common-supersequence"
+  },
+  {
+    "name": "Distinct subsequences",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Strings",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-strings/distinct-subsequences"
+  },
+  {
+    "name": "Edit distance",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Strings",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-strings/edit-distance"
+  },
+  {
+    "name": "Wildcard matching",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Dp On Strings",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/dp-on-strings/wildcard-matching"
+  },
+  {
+    "name": "Matrix chain multiplication",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Mcm Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/mcm-dp/matrix-chain-multiplication"
+  },
+  {
+    "name": "Minimum cost to cut the stick",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Mcm Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/mcm-dp/minimum-cost-to-cut-the-stick"
+  },
+  {
+    "name": "Burst balloons",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Mcm Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/mcm-dp/burst-balloons"
+  },
+  {
+    "name": "Palindrome partitioning II",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Mcm Dp",
+    "grandparent": "Dynamic Programming",
+    "problem_link": "https://takeuforward.org/plus/dsa/dynamic-programming/mcm-dp/palindrome-partitioning-ii-"
+  },
+  {
+    "name": "Trie Implementation and Operations",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Triessubc",
+    "grandparent": "Tries",
+    "problem_link": "https://takeuforward.org/plus/dsa/tries/triessubc/trie-implementation-and-operations"
+  },
+  {
+    "name": "Trie Implementation and Advanced Operations",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Triessubc",
+    "grandparent": "Tries",
+    "problem_link": "https://takeuforward.org/plus/dsa/tries/triessubc/trie-implementation-and-advanced-operations"
+  },
+  {
+    "name": "Longest word with all prefixes",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Problems",
+    "grandparent": "Tries",
+    "problem_link": "https://takeuforward.org/plus/dsa/tries/problems/longest-word-with-all-prefixes"
+  },
+  {
+    "name": "Number of distinct substrings in a string",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Problems",
+    "grandparent": "Tries",
+    "problem_link": "https://takeuforward.org/plus/dsa/tries/problems/number-of-distinct-substrings-in-a-string"
+  },
+  {
+    "name": "Maximum XOR of two numbers in an array",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Problems",
+    "grandparent": "Tries",
+    "problem_link": "https://takeuforward.org/plus/dsa/tries/problems/maximum-xor-of-two-numbers-in-an-array"
+  },
+  {
+    "name": "Maximum Xor with an element from an array",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Problems",
+    "grandparent": "Tries",
+    "problem_link": "https://takeuforward.org/plus/dsa/tries/problems/maximum-xor-with-an-element-from-an-array"
+  },
+  {
+    "name": "Reverse every word in a string",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium Problems",
+    "grandparent": "Strings  Advanced Algo",
+    "problem_link": "https://takeuforward.org/plus/dsa/strings--advanced-algo/medium-problems/reverse-every-word-in-a-string"
+  },
+  {
+    "name": "Minimum number of bracket reversals to make an expression balanced",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium Problems",
+    "grandparent": "Strings  Advanced Algo",
+    "problem_link": "https://takeuforward.org/plus/dsa/strings--advanced-algo/medium-problems/minimum-number-of-bracket-reversals-to-make-an-expression-balanced"
+  },
+  {
+    "name": "Count and say",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Medium Problems",
+    "grandparent": "Strings  Advanced Algo",
+    "problem_link": "https://takeuforward.org/plus/dsa/strings--advanced-algo/medium-problems/count-and-say"
+  },
+  {
+    "name": "Rabin Karp Algorithm",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Advanced Problems (less Asked)",
+    "grandparent": "Strings  Advanced Algo",
+    "problem_link": "https://takeuforward.org/plus/dsa/strings--advanced-algo/advanced-problems-(less-asked)/rabin-karp-algorithm"
+  },
+  {
+    "name": "Z function",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Advanced Problems (less Asked)",
+    "grandparent": "Strings  Advanced Algo",
+    "problem_link": "https://takeuforward.org/plus/dsa/strings--advanced-algo/advanced-problems-(less-asked)/z-function"
+  },
+  {
+    "name": "KMP Algorithm or LPS array",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Advanced Problems (less Asked)",
+    "grandparent": "Strings  Advanced Algo",
+    "problem_link": "https://takeuforward.org/plus/dsa/strings--advanced-algo/advanced-problems-(less-asked)/kmp-algorithm-or-lps-array"
+  },
+  {
+    "name": "Shortest Palindrome",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Advanced Problems (less Asked)",
+    "grandparent": "Strings  Advanced Algo",
+    "problem_link": "https://takeuforward.org/plus/dsa/strings--advanced-algo/advanced-problems-(less-asked)/shortest-palindrome"
+  },
+  {
+    "name": "Longest happy prefix",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Advanced Problems (less Asked)",
+    "grandparent": "Strings  Advanced Algo",
+    "problem_link": "https://takeuforward.org/plus/dsa/strings--advanced-algo/advanced-problems-(less-asked)/longest-happy-prefix"
+  },
+  {
+    "name": "Print all primes till N",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Sieve Of Eratosthenes",
+    "grandparent": "Maths",
+    "problem_link": "https://takeuforward.org/plus/dsa/maths/sieve-of-eratosthenes/print-all-primes-till-n"
+  },
+  {
+    "name": "Prime factorisation of a Number",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Sieve Of Eratosthenes",
+    "grandparent": "Maths",
+    "problem_link": "https://takeuforward.org/plus/dsa/maths/sieve-of-eratosthenes/prime-factorisation-of-a-number"
+  },
+  {
+    "name": "Count primes in range L to R",
+    "difficulty": 0,
+    "solved": {
+      "value": false,
+      "date": 0,
+      "tries": 0
+    },
+    "ignored": false,
+    "parent_topic": "Sieve Of Eratosthenes",
+    "grandparent": "Maths",
+    "problem_link": "https://takeuforward.org/plus/dsa/maths/sieve-of-eratosthenes/count-primes-in-range-l-to-r"
+  }
+]
