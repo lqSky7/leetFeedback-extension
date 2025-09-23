@@ -5,6 +5,8 @@ class PopupController {
     this.timeTracking = {};
     this.connectionStatus = false;
     this.authStatus = { isAuthenticated: false, user: null };
+    this.tasks = [];
+    this.scheduledTasks = [];
     this.initialize();
   }
 
@@ -14,14 +16,7 @@ class PopupController {
     this.setupEventListeners();
     this.updateUI();
     this.updateConnectionStatus();
-    this.loadStatistics();
-    this.loadTimeTracking();
     this.initializePlatformIcons();
-
-    // Set up timer to refresh time tracking data
-    this.timeTrackingInterval = setInterval(() => {
-      this.loadTimeTracking();
-    }, 30000); // Update every 30 seconds
   }
 
   initializePlatformIcons() {
@@ -76,6 +71,35 @@ class PopupController {
       e.preventDefault();
       chrome.tabs.create({ url: e.target.href });
     });
+
+    // Stats redirect button
+    const statsRedirectBtn = document.getElementById("stats-redirect-btn");
+    if (statsRedirectBtn) {
+      statsRedirectBtn.addEventListener("click", () => {
+        chrome.tabs.create({ url: "https://leet-feedback.vercel.app/profile/stats" });
+      });
+    }
+
+    // Prediction functionality
+    const generateBtn = document.getElementById("generate-schedule");
+    if (generateBtn) {
+      generateBtn.addEventListener("click", () => this.generateSchedule());
+    }
+
+    const clearBtn = document.getElementById("clear-schedule");
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => this.clearScheduledTasks());
+    }
+
+    const focusModeSelect = document.getElementById("focus-mode");
+    if (focusModeSelect) {
+      focusModeSelect.addEventListener("change", () => this.updateFocusModeDescription());
+    }
+
+    const grandparentFilter = document.getElementById("grandparent-filter");
+    if (grandparentFilter) {
+      grandparentFilter.addEventListener("change", () => this.updateParentTopicOptions());
+    }
   }
 
   debounce(func, wait) {
@@ -152,8 +176,8 @@ class PopupController {
     });
     document.getElementById(tabName).classList.add("active");
 
-    if (tabName === "stats") {
-      this.loadStatistics();
+    if (tabName === "prediction") {
+      this.loadTaskData();
     } else if (tabName === "settings") {
       // Ensure debug checkbox is properly loaded with current value
       document.getElementById("debug-mode").checked =
@@ -712,6 +736,455 @@ class PopupController {
         "Failed to sign out from website, but cleared local session.",
         "warning",
       );
+    }
+  }
+
+  // Prediction functionality methods
+  async loadTaskData() {
+    try {
+      const response = await fetch("../data.json");
+      if (!response.ok) {
+        throw new Error(`Failed to load tasks: ${response.status}`);
+      }
+      this.tasks = await response.json();
+
+      // Load saved ignore status
+      await this.loadTaskIgnoreStatus();
+
+      console.log(`Loaded ${this.tasks.length} tasks for prediction`);
+      this.updateTaskStatistics();
+      this.populateFilterOptions();
+
+      // Load and display saved scheduled tasks if they exist
+      const hasSavedTasks = await this.loadScheduledTasks();
+      if (hasSavedTasks && this.scheduledTasks.length > 0) {
+        await this.displayScheduledTasks();
+        this.updateScheduledCount();
+        this.showPredictionResults(true);
+      }
+
+      // Update button text based on whether we have saved tasks
+      this.updateGenerateButtonText();
+    } catch (error) {
+      console.error("Error loading task data:", error);
+      this.showPredictionError(`Failed to load tasks: ${error.message}`);
+    }
+  }
+
+  populateFilterOptions() {
+    const grandparentSelect = document.getElementById("grandparent-filter");
+    const parentSelect = document.getElementById("parent-filter");
+    if (!grandparentSelect || !parentSelect) return;
+
+    // Get unique grandparents and parent topics
+    const grandparents = [...new Set(this.tasks.map(task => task.grandparent))].sort();
+    const parentTopics = [...new Set(this.tasks.map(task => task.parent_topic))].sort();
+
+    // Populate grandparent filter
+    grandparentSelect.innerHTML = '<option value="">All Categories</option>';
+    grandparents.forEach(gp => {
+      const option = document.createElement("option");
+      option.value = gp;
+      option.textContent = gp;
+      grandparentSelect.appendChild(option);
+    });
+
+    // Populate parent topic filter
+    parentSelect.innerHTML = '<option value="">All Topics</option>';
+    parentTopics.forEach(pt => {
+      const option = document.createElement("option");
+      option.value = pt;
+      option.textContent = pt;
+      parentSelect.appendChild(option);
+    });
+  }
+
+  updateParentTopicOptions() {
+    const grandparentSelect = document.getElementById("grandparent-filter");
+    const parentSelect = document.getElementById("parent-filter");
+    if (!grandparentSelect || !parentSelect) return;
+
+    const selectedGrandparents = Array.from(grandparentSelect.selectedOptions)
+      .map(option => option.value)
+      .filter(value => value !== "");
+
+    let availableParents;
+    if (selectedGrandparents.length > 0) {
+      availableParents = [...new Set(
+        this.tasks
+          .filter(task => selectedGrandparents.includes(task.grandparent))
+          .map(task => task.parent_topic)
+      )].sort();
+    } else {
+      availableParents = [...new Set(this.tasks.map(task => task.parent_topic))].sort();
+    }
+
+    const currentValue = parentSelect.value;
+    parentSelect.innerHTML = '<option value="">All Topics</option>';
+    
+    availableParents.forEach(pt => {
+      const option = document.createElement("option");
+      option.value = pt;
+      option.textContent = pt;
+      if (pt === currentValue) option.selected = true;
+      parentSelect.appendChild(option);
+    });
+  }
+
+  updateTaskStatistics() {
+    if (typeof window.PredictionAlgorithm !== "object") return;
+
+    const stats = window.PredictionAlgorithm.getTaskStatistics(this.tasks);
+    
+    document.getElementById("total-tasks").textContent = stats.total;
+    document.getElementById("active-tasks").textContent = stats.active;
+    document.getElementById("solved-tasks").textContent = stats.solved;
+    document.getElementById("unsolved-tasks").textContent = stats.unsolved;
+    document.getElementById("ignored-tasks").textContent = stats.ignored;
+
+    const statsSection = document.getElementById("prediction-stats");
+    if (statsSection) {
+      statsSection.style.display = "block";
+    }
+  }
+
+  updateFocusModeDescription() {
+    const focusMode = parseInt(document.getElementById("focus-mode").value) || 1;
+    const descElement = document.getElementById("focus-description");
+    if (!descElement) return;
+
+    const descriptions = {
+      0: "100% revision problems",
+      1: "70% revision problems, 30% new problems",
+      2: "30% revision problems, 70% new problems",
+      3: "100% new problems"
+    };
+
+    descElement.textContent = descriptions[focusMode] || descriptions[1];
+  }
+
+  async generateSchedule() {
+    if (!this.tasks.length) {
+      this.showPredictionError("No tasks loaded. Please try refreshing the extension.");
+      return;
+    }
+
+    // Check if prediction functions are available
+    if (typeof window.PredictionAlgorithm !== "object" || 
+        typeof window.PredictionAlgorithm.scheduleToday !== "function") {
+      this.showPredictionError("Prediction algorithm not loaded. Please try refreshing.");
+      return;
+    }
+
+    try {
+      this.showPredictionLoading(true);
+      this.hidePredictionError();
+
+      const targetCount = parseInt(document.getElementById("target-count").value) || 10;
+      const focusMode = parseInt(document.getElementById("focus-mode").value) || 1;
+
+      // Add small delay to show loading state
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Generate schedule using the prediction algorithm
+      const grandparentSelect = document.getElementById("grandparent-filter");
+      const selectedGrandparents = Array.from(grandparentSelect.selectedOptions)
+        .map(option => option.value)
+        .filter(value => value !== "");
+
+      const filters = {
+        grandparent: selectedGrandparents.length > 0 ? selectedGrandparents : null,
+        parent_topic: document.getElementById("parent-filter").value || null,
+      };
+
+      this.scheduledTasks = window.PredictionAlgorithm.scheduleToday(
+        this.tasks,
+        targetCount,
+        focusMode,
+        filters
+      );
+
+      // Save the generated schedule to storage
+      await this.saveScheduledTasks();
+
+      // Update button text to indicate schedule is saved
+      this.updateGenerateButtonText();
+
+      await this.displayScheduledTasks();
+      this.updateScheduledCount();
+    } catch (error) {
+      console.error("Error generating schedule:", error);
+      this.showPredictionError(`Schedule generation failed: ${error.message}`);
+    } finally {
+      this.showPredictionLoading(false);
+    }
+  }
+
+  async displayScheduledTasks() {
+    const taskList = document.getElementById("task-list");
+    const timestampElement = document.getElementById("schedule-timestamp");
+    if (!taskList) return;
+
+    taskList.innerHTML = "";
+
+    if (this.scheduledTasks.length === 0) {
+      taskList.innerHTML = `
+        <div class="task-item">
+          <span class="task-name">No tasks to schedule with current settings.</span>
+        </div>
+      `;
+      if (timestampElement) timestampElement.textContent = "";
+      this.showPredictionResults(true);
+      return;
+    }
+
+    // Show timestamp if we have saved schedule data
+    if (timestampElement) {
+      try {
+        const data = await chrome.storage.local.get(["scheduledTasksData"]);
+        if (data.scheduledTasksData && data.scheduledTasksData.generatedAt) {
+          const generatedAt = new Date(data.scheduledTasksData.generatedAt);
+          const now = new Date();
+          const diffMs = now - generatedAt;
+          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+          const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+          let timeString = "";
+          if (diffHours > 0) {
+            timeString = `${diffHours}h ${diffMinutes}m ago`;
+          } else if (diffMinutes > 0) {
+            timeString = `${diffMinutes}m ago`;
+          } else {
+            timeString = "just now";
+          }
+
+          timestampElement.textContent = `(generated ${timeString})`;
+        } else {
+          timestampElement.textContent = "";
+        }
+      } catch (error) {
+        console.error("Error loading timestamp:", error);
+        timestampElement.textContent = "";
+      }
+    }
+
+    this.scheduledTasks.forEach((task, index) => {
+      const taskItem = document.createElement("div");
+      taskItem.className = "task-item";
+
+      const originalIndex = this.tasks.findIndex(t => 
+        t.name === task.name && 
+        t.grandparent === task.grandparent && 
+        t.parent_topic === task.parent_topic
+      );
+
+      const difficultyBadge = task.difficulty === 0 ? "easy" : 
+                             task.difficulty === 1 ? "medium" : "hard";
+      const typeBadge = task.solved.value ? "revision" : "new";
+
+      taskItem.innerHTML = `
+        <span class="task-name">${task.name}</span>
+        <div class="task-meta">
+          <span class="task-badge badge-${difficultyBadge}">
+            ${task.difficulty === 0 ? "Easy" : task.difficulty === 1 ? "Medium" : "Hard"}
+          </span>
+          <span class="task-badge badge-${typeBadge}">
+            ${task.solved.value ? "Revision" : "New"}
+          </span>
+          ${task.problem_link ? 
+            `<button class="link-button" data-link="${task.problem_link}" title="Open problem link">🔗</button>` : ""
+          }
+          <button class="ignore-button" data-task-index="${originalIndex}" title="Ignore this task">−</button>
+        </div>
+      `;
+
+      // Add event listener for ignore button
+      const ignoreBtn = taskItem.querySelector(".ignore-button");
+      ignoreBtn.addEventListener("click", () => {
+        this.ignoreTask(originalIndex);
+      });
+
+      // Add event listener for link button
+      const linkBtn = taskItem.querySelector(".link-button");
+      if (linkBtn) {
+        linkBtn.addEventListener("click", () => {
+          window.open(task.problem_link, "_blank");
+        });
+      }
+
+      taskList.appendChild(taskItem);
+    });
+
+    this.showPredictionResults(true);
+  }
+
+  updateScheduledCount() {
+    const scheduledCount = document.getElementById("scheduled-count");
+    if (scheduledCount) {
+      scheduledCount.textContent = this.scheduledTasks.length;
+    }
+  }
+
+  showPredictionLoading(show) {
+    const loadingElement = document.getElementById("prediction-loading");
+    if (loadingElement) {
+      loadingElement.style.display = show ? "flex" : "none";
+    }
+  }
+
+  showPredictionResults(show) {
+    const resultsElement = document.getElementById("prediction-results");
+    if (resultsElement) {
+      resultsElement.style.display = show ? "block" : "none";
+    }
+  }
+
+  showPredictionError(message) {
+    const errorElement = document.getElementById("prediction-error");
+    const errorText = errorElement?.querySelector(".error-text");
+
+    if (errorElement && errorText) {
+      errorText.textContent = message;
+      errorElement.style.display = "flex";
+    }
+  }
+
+  hidePredictionError() {
+    const errorElement = document.getElementById("prediction-error");
+    if (errorElement) {
+      errorElement.style.display = "none";
+    }
+  }
+
+  async ignoreTask(taskIndex) {
+    if (taskIndex < 0 || taskIndex >= this.tasks.length) return;
+
+    try {
+      // Toggle ignore status
+      this.tasks[taskIndex].ignored = !this.tasks[taskIndex].ignored;
+      
+      // Save to storage
+      await this.saveTasksData();
+      
+      // Update statistics
+      this.updateTaskStatistics();
+      
+      // Regenerate and display schedule
+      await this.generateSchedule();
+    } catch (error) {
+      console.error("Error ignoring task:", error);
+    }
+  }
+
+  async clearScheduledTasks() {
+    try {
+      await chrome.storage.local.remove(["scheduledTasksData"]);
+      this.scheduledTasks = [];
+      this.updateScheduledCount();
+      this.showPredictionResults(false);
+      this.updateGenerateButtonText();
+    } catch (error) {
+      console.error("Error clearing scheduled tasks:", error);
+    }
+  }
+
+  updateGenerateButtonText() {
+    const button = document.getElementById("generate-schedule");
+    if (!button) return;
+
+    const hasSavedTasks = this.scheduledTasks && this.scheduledTasks.length > 0;
+
+    if (hasSavedTasks) {
+      button.innerHTML = `
+        <span class="btn-icon">🔄</span>
+        Update Schedule
+      `;
+      button.title = "Update your saved schedule with new settings";
+    } else {
+      button.innerHTML = `
+        <span class="btn-icon">🔮</span>
+        Generate Schedule
+      `;
+      button.title = "Generate a new schedule";
+    }
+  }
+
+  async loadScheduledTasks() {
+    try {
+      const data = await chrome.storage.local.get(["scheduledTasksData"]);
+      if (data.scheduledTasksData) {
+        const scheduleData = data.scheduledTasksData;
+        this.scheduledTasks = scheduleData.scheduledTasks || [];
+
+        // Restore filter settings if they exist
+        if (scheduleData.targetCount) {
+          const targetInput = document.getElementById("target-count");
+          if (targetInput) targetInput.value = scheduleData.targetCount;
+        }
+
+        if (scheduleData.focusMode !== undefined) {
+          const focusSelect = document.getElementById("focus-mode");
+          if (focusSelect) focusSelect.value = scheduleData.focusMode;
+          this.updateFocusModeDescription();
+        }
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error loading scheduled tasks:", error);
+      return false;
+    }
+  }
+
+  async saveScheduledTasks() {
+    try {
+      const targetCount = parseInt(document.getElementById("target-count").value) || 10;
+      const focusMode = parseInt(document.getElementById("focus-mode").value) || 1;
+
+      const grandparentSelect = document.getElementById("grandparent-filter");
+      const selectedGrandparents = Array.from(grandparentSelect.selectedOptions)
+        .map(option => option.value)
+        .filter(value => value !== "");
+
+      const scheduleData = {
+        scheduledTasks: this.scheduledTasks,
+        generatedAt: new Date().toISOString(),
+        targetCount,
+        focusMode,
+        filters: {
+          grandparent: selectedGrandparents,
+          parent_topic: document.getElementById("parent-filter").value || null,
+        }
+      };
+
+      await chrome.storage.local.set({ scheduledTasksData: scheduleData });
+    } catch (error) {
+      console.error("Error saving scheduled tasks:", error);
+    }
+  }
+
+  async saveTasksData() {
+    try {
+      await chrome.storage.local.set({ tasksData: this.tasks });
+    } catch (error) {
+      console.error("Error saving tasks data:", error);
+    }
+  }
+
+  async loadTaskIgnoreStatus() {
+    try {
+      const data = await chrome.storage.local.get(["tasksData"]);
+      if (data.tasksData && Array.isArray(data.tasksData)) {
+        // Merge ignore status from saved data
+        data.tasksData.forEach((savedTask, index) => {
+          if (this.tasks[index] && savedTask.ignored !== undefined) {
+            this.tasks[index].ignored = savedTask.ignored;
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error loading task ignore status:", error);
     }
   }
 }
