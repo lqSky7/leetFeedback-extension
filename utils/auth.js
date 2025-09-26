@@ -1,274 +1,407 @@
-// Authentication utility for Chrome extension to communicate with website
+'use strict';
+
 class ExtensionAuth {
-  constructor() {
-    this.websiteUrl = this.getWebsiteUrl();
+  constructor(options = {}) {
+    this.apiBaseUrl = options.baseUrl || this.getApiBaseUrl();
     this.user = null;
+    this.token = null;
     this.isAuthenticated = false;
     this.authStatusCallbacks = [];
+    this.fetchImpl =
+      options.fetch ||
+      (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
   }
 
-  getWebsiteUrl() {
-    // Always use production URL
-    return 'https://leet-feedback.vercel.app';
+  getApiBaseUrl() {
+    return 'https://leetfeedback-backend.onrender.com';
   }
 
-  // Initialize auth system
   async init() {
-    try {
-      // Check local storage for cached auth data
-      const result = await chrome.storage.local.get(['firebase_user', 'auth_timestamp']);
-      
-      if (result.firebase_user && result.auth_timestamp) {
-        // Check if cached data is not too old (24 hours)
-        const now = Date.now();
-        const cacheAge = now - result.auth_timestamp;
-        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-        
-        if (cacheAge < maxAge) {
-          this.user = result.firebase_user;
-          this.isAuthenticated = true;
-          this.notifyAuthStatus();
-          return;
-        }
-      }
-
-      // Request fresh auth status from website
-      await this.requestAuthStatus();
-    } catch (error) {
-      console.error('Error initializing auth:', error);
-    }
+    await this.syncFromStorage();
   }
 
-  // Request auth status from the website
-  async requestAuthStatus() {
+  async syncFromStorage() {
+    if (typeof chrome === 'undefined' || !chrome.storage?.local) {
+      return;
+    }
+
     try {
-      // Try production URL
-      const urls = [
-        'https://leet-feedback.vercel.app/*',
-        'https://*.vercel.app/*',
-        'https://*.netlify.app/*'
-      ];
-      
-      let foundTab = null;
-      for (const url of urls) {
-        const tabs = await chrome.tabs.query({ url });
-        if (tabs.length > 0) {
-          foundTab = tabs[0];
-          this.websiteUrl = new URL(foundTab.url).origin;
-          break;
-        }
-      }
-      
-      if (foundTab) {
-        // Website is open, request auth status
-        chrome.tabs.sendMessage(foundTab.id, {
-          type: 'AUTH_STATUS_REQUEST'
-        }, (response) => {
-          if (chrome.runtime.lastError) {
-            console.log('Content script not loaded yet, checking storage...');
-            this.checkLocalStorage();
-            return;
-          }
-          if (response && response.type === 'AUTH_STATUS_RESPONSE') {
-            this.updateAuthStatus(response.isAuthenticated, response.user);
-          }
+      const data = await chrome.storage.local.get([
+        'auth_user',
+        'auth_token',
+        'auth_timestamp',
+        'firebase_user',
+      ]);
+
+      const hasNewSession = Boolean(data.auth_user && data.auth_token);
+      if (hasNewSession) {
+        await this.updateAuthStatus(true, data.auth_user, data.auth_token, {
+          persist: false,
+          silent: true,
         });
-      } else {
-        // Website is not open, check local storage
-        this.checkLocalStorage();
+        return;
       }
-    } catch (error) {
-      console.error('Error requesting auth status:', error);
-      this.checkLocalStorage();
-    }
-  }
 
-  // Check local storage for cached auth data
-  async checkLocalStorage() {
-    try {
-      const result = await chrome.storage.local.get(['firebase_user', 'auth_timestamp']);
-      
-      if (result.firebase_user && result.auth_timestamp) {
-        const now = Date.now();
-        const cacheAge = now - result.auth_timestamp;
-        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-        
-        if (cacheAge < maxAge) {
-          this.updateAuthStatus(true, result.firebase_user);
-          return;
-        }
+      const hasLegacySession = Boolean(data.firebase_user);
+      if (hasLegacySession) {
+        await this.updateAuthStatus(true, data.firebase_user, data.auth_token || null, {
+          persist: false,
+          silent: true,
+        });
+        return;
       }
-      
-      // No valid cached data
-      this.updateAuthStatus(false, null);
-    } catch (error) {
-      console.error('Error checking local storage:', error);
-      this.updateAuthStatus(false, null);
-    }
-  }
 
-  // Update authentication status
-  updateAuthStatus(isAuthenticated, user) {
-    this.isAuthenticated = isAuthenticated;
-    this.user = user;
-
-    // Cache the auth data
-    if (isAuthenticated && user) {
-      chrome.storage.local.set({
-        firebase_user: user,
-        auth_timestamp: Date.now()
+      await this.updateAuthStatus(false, null, null, {
+        persist: false,
+        silent: true,
       });
-    } else {
-      chrome.storage.local.remove(['firebase_user', 'auth_timestamp']);
+    } catch (error) {
+      console.error('[ExtensionAuth] Error syncing auth state:', error);
+      await this.updateAuthStatus(false, null, null, {
+        persist: false,
+        silent: true,
+      });
+    }
+  }
+
+  static pickToken(response) {
+    if (!response || typeof response !== 'object') return null;
+    return (
+      response.token ||
+      response.access_token ||
+      response.authToken ||
+      response.jwt ||
+      response.data?.token ||
+      response.data?.access_token ||
+      response.data?.authToken ||
+      null
+    );
+  }
+
+  static pickUser(response, fallback = null) {
+    if (!response || typeof response !== 'object') {
+      return fallback;
     }
 
-    // Notify all callbacks
+    return (
+      response.user ||
+      response.profile ||
+      response.data?.user ||
+      response.data?.profile ||
+      fallback
+    );
+  }
+
+  static pickMessage(response, fallback) {
+    if (!response || typeof response !== 'object') return fallback;
+    return (
+      response.message ||
+      response.error ||
+      response.detail ||
+      response.status ||
+      response.info ||
+      fallback
+    );
+  }
+
+  buildHeaders(includeAuth = false) {
+    const headers = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
+
+    if (includeAuth && this.token) {
+      headers.Authorization = `Bearer ${this.token}`;
+    }
+
+    return headers;
+  }
+
+  async request(path, { method = 'GET', body = undefined, includeAuth = false } = {}) {
+    if (!this.fetchImpl) {
+      throw new Error('fetch is not available in this environment');
+    }
+
+    const url = `${this.apiBaseUrl}${path}`;
+    const init = {
+      method,
+      headers: this.buildHeaders(includeAuth),
+    };
+
+    if (body !== undefined) {
+      init.body = JSON.stringify(body);
+    }
+
+    let response;
+    try {
+      response = await this.fetchImpl(url, init);
+    } catch (networkError) {
+      console.error('[ExtensionAuth] Network error:', networkError);
+      throw new Error('Unable to reach authentication service. Check your connection.');
+    }
+
+    let parsed;
+    const text = await response.text();
+    if (text) {
+      try {
+        parsed = JSON.parse(text);
+      } catch (parseError) {
+        parsed = { raw: text };
+      }
+    } else {
+      parsed = {};
+    }
+
+    if (!response.ok) {
+      const message = ExtensionAuth.pickMessage(
+        parsed,
+        `Request failed with status ${response.status}`,
+      );
+      throw new Error(message);
+    }
+
+    return parsed;
+  }
+
+  async login(credentials = {}) {
+    const payload = {
+      email: credentials.email?.trim(),
+      password: credentials.password,
+    };
+
+    if (!payload.email || !payload.password) {
+      throw new Error('Email and password are required.');
+    }
+
+    const data = await this.request('/api/auth/login', {
+      method: 'POST',
+      body: payload,
+    });
+
+    const token = ExtensionAuth.pickToken(data);
+    const user =
+      ExtensionAuth.pickUser(data, {
+        email: payload.email,
+      }) || {
+        email: payload.email,
+      };
+
+    if (!token) {
+      console.warn('[ExtensionAuth] Login succeeded but token missing from response.');
+    }
+
+    await this.updateAuthStatus(true, user, token || null);
+
+    return { token: token || null, user, data };
+  }
+
+  async register(payload = {}) {
+    const body = {
+      username: payload.username?.trim(),
+      email: payload.email?.trim(),
+      password: payload.password,
+      github_username: payload.github_username?.trim(),
+      github_repo: payload.github_repo?.trim(),
+      github_branch: (payload.github_branch || 'main').trim(),
+    };
+
+    if (!body.username || !body.email || !body.password) {
+      throw new Error('All required fields must be provided.');
+    }
+
+    const data = await this.request('/api/auth/register', {
+      method: 'POST',
+      body,
+    });
+
+    const token = ExtensionAuth.pickToken(data);
+    const user =
+      ExtensionAuth.pickUser(data, {
+        username: body.username,
+        email: body.email,
+        github_username: body.github_username,
+        github_repo: body.github_repo,
+        github_branch: body.github_branch,
+      }) || {
+        username: body.username,
+        email: body.email,
+        github_username: body.github_username,
+        github_repo: body.github_repo,
+        github_branch: body.github_branch,
+      };
+
+    if (token) {
+      await this.updateAuthStatus(true, user, token || null);
+    } else {
+      await this.updateAuthStatus(false, null, null);
+    }
+
+    return { token: token || null, user, data };
+  }
+
+  async signOut() {
+    await this.updateAuthStatus(false, null, null);
+  }
+
+  async requestAuthStatus() {
+    await this.syncFromStorage();
     this.notifyAuthStatus();
   }
 
-  // Add callback for auth status changes
+  async storeSession(user, token) {
+    if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
+
+    const payload = {
+      auth_timestamp: Date.now(),
+    };
+
+    if (user) {
+      payload.auth_user = user;
+      payload.firebase_user = user;
+    }
+
+    if (token) {
+      payload.auth_token = token;
+    }
+
+    await chrome.storage.local.set(payload);
+  }
+
+  async clearSession() {
+    if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
+
+    await chrome.storage.local.remove([
+      'auth_user',
+      'auth_token',
+      'auth_timestamp',
+      'firebase_user',
+    ]);
+  }
+
+  async updateAuthStatus(isAuthenticated, user, token, options = {}) {
+    this.isAuthenticated = Boolean(isAuthenticated);
+    this.user = this.isAuthenticated ? user : null;
+    this.token = this.isAuthenticated ? token || null : null;
+
+    if (options.persist !== false) {
+      if (this.isAuthenticated && this.user) {
+        await this.storeSession(this.user, this.token);
+      } else {
+        await this.clearSession();
+      }
+    }
+
+    if (!options.silent) {
+      this.notifyAuthStatus();
+    }
+  }
+
   onAuthStatusChange(callback) {
+    if (typeof callback !== 'function') {
+      return () => {};
+    }
+
     this.authStatusCallbacks.push(callback);
-    
-    // Immediately call with current status
+
     callback({
       isAuthenticated: this.isAuthenticated,
-      user: this.user
+      user: this.user,
+      token: this.token,
     });
 
-    // Return unsubscribe function
     return () => {
       const index = this.authStatusCallbacks.indexOf(callback);
-      if (index > -1) {
+      if (index >= 0) {
         this.authStatusCallbacks.splice(index, 1);
       }
     };
   }
 
-  // Notify all callbacks of auth status
   notifyAuthStatus() {
-    this.authStatusCallbacks.forEach(callback => {
+    const snapshot = {
+      isAuthenticated: this.isAuthenticated,
+      user: this.user,
+      token: this.token,
+    };
+
+    this.authStatusCallbacks.forEach((callback) => {
       try {
-        callback({
-          isAuthenticated: this.isAuthenticated,
-          user: this.user
-        });
+        callback(snapshot);
       } catch (error) {
-        console.error('Error in auth status callback:', error);
+        console.error('[ExtensionAuth] Auth callback failed:', error);
       }
     });
   }
 
-  // Open website for sign in
-  async openSignIn() {
-    try {
-      // Try to find existing tab first
-      const existingTabs = await chrome.tabs.query({ 
-        url: [
-          'https://leet-feedback.vercel.app/*'
-        ]
-      });
-      
-      if (existingTabs.length > 0) {
-        // Focus existing tab
-        await chrome.tabs.update(existingTabs[0].id, { active: true });
-        await chrome.windows.update(existingTabs[0].windowId, { focused: true });
-        
-        // Check auth status after focusing
-        setTimeout(() => {
-          this.requestAuthStatus();
-        }, 1000);
-        
-        return existingTabs[0];
-      } else {
-        // Create new tab
-        const tab = await chrome.tabs.create({
-          url: this.websiteUrl,
-          active: true
-        });
-
-        // Listen for auth changes after opening the website
-        setTimeout(() => {
-          this.requestAuthStatus();
-        }, 3000); // Give more time for page to load
-
-        return tab;
-      }
-    } catch (error) {
-      console.error('Error opening sign in:', error);
-      throw error;
-    }
-  }
-
-  // Sign out
-  async signOut() {
-    try {
-      // Clear local auth data
-      await chrome.storage.local.remove(['firebase_user', 'auth_timestamp']);
-      
-      // Update status
-      this.updateAuthStatus(false, null);
-
-      // If website is open, try to sign out there too
-      const tabs = await chrome.tabs.query({ url: `${this.websiteUrl}/*` });
-      if (tabs.length > 0) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          type: 'SIGN_OUT_REQUEST'
-        });
-      }
-    } catch (error) {
-      console.error('Error signing out:', error);
-      throw error;
-    }
-  }
-
-  // Get current user
   getCurrentUser() {
     return this.user;
   }
 
-  // Check if authenticated
   isUserAuthenticated() {
     return this.isAuthenticated;
   }
 
-  // Get user display name
+  getAuthHeaders() {
+    if (!this.token) return {};
+    return { Authorization: `Bearer ${this.token}` };
+  }
+
   getUserDisplayName() {
     if (!this.user) return null;
-    return this.user.displayName || this.user.email || 'User';
+    return (
+      this.user.username ||
+      this.user.displayName ||
+      this.user.name ||
+      this.user.email ||
+      'User'
+    );
   }
 
-  // Get user profile picture
-  getUserProfilePicture() {
-    if (!this.user) return null;
-    return this.user.photoURL;
-  }
-
-  // Get user email
   getUserEmail() {
     if (!this.user) return null;
-    return this.user.email;
+    return this.user.email || null;
   }
 
-  // Get auth provider
+  getUserProfilePicture() {
+    if (!this.user) return null;
+    return this.user.photoURL || this.user.avatar || null;
+  }
+
   getAuthProvider() {
     if (!this.user) return null;
-    const provider = this.user.provider;
-    if (provider === 'google.com') return 'Google';
-    if (provider === 'apple.com') return 'Apple';
-    return provider;
+    return this.user.provider || 'backend';
+  }
+
+  async openSignIn() {
+    if (typeof chrome === 'undefined' || !chrome.tabs?.create) {
+      throw new Error('Cannot open sign-in page outside of Chrome extension context.');
+    }
+
+    try {
+      await chrome.tabs.create({
+        url: this.apiBaseUrl,
+        active: true,
+      });
+    } catch (error) {
+      console.error('[ExtensionAuth] Failed to open sign-in page:', error);
+      throw error;
+    }
   }
 }
 
-// Create singleton instance
 const extensionAuth = new ExtensionAuth();
 
-// Initialize on load
-extensionAuth.init();
+if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+  extensionAuth
+    .init()
+    .catch((error) =>
+      console.error('[ExtensionAuth] Failed to initialize auth:', error),
+    );
+}
 
-// Export for use in other files
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = extensionAuth;
+  module.exports.ExtensionAuth = ExtensionAuth;
 } else {
   window.extensionAuth = extensionAuth;
 }

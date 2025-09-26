@@ -60,6 +60,36 @@ LeetFeedback is an open-source browser extension that automatically tracks codin
 
 3. Configure settings through the extension popup
 
+## Authentication Backend
+
+The popup now supports logging in and registering directly with the LeetFeedback backend. The extension targets the hosted API at `https://leet-feedback.vercel.app` and persists the returned session token locally.
+
+### Endpoints
+
+- `POST /api/auth/login`
+  ```json
+  {
+    "username": "admin",
+    "email": "admin@example.com",
+    "password": "admin"
+  }
+  ```
+- `POST /api/auth/register`
+  ```json
+  {
+    "username": "admin",
+    "email": "admin@example.com",
+    "password": "admin",
+    "github_username": "lqsky7",
+    "github_repo": "gfg",
+    "github_branch": "main"
+  }
+  ```
+
+The extension stores the returned `token` and user profile to keep the session active for 24 hours. You can re-run `node tests/auth.test.js` to execute the companion smoke tests that exercise these flows against mocked responses.
+
+GitHub metadata for registration (username, repository, branch) is sourced directly from the Config tab—set it once there and the backend auth flow will reuse it automatically.
+
 ## Features
 
 <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); padding: 20px; border-radius: 10px; margin: 20px 0;">

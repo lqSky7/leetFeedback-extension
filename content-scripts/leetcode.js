@@ -1,6 +1,6 @@
 // LeetCode content script for DSA to GitHub extension
 
-(function() {
+(function () {
   'use strict';
 
   const PLATFORM = DSA_PLATFORMS.LEETCODE;
@@ -20,30 +20,33 @@
 
   class LeetCodeExtractor {
     constructor() {
-        this.currentProblem = null;
-        this.currentSolution = null;
-        this.isSubmissionPage = false;
-        this.attempts = [];
-        this.runCounter = 0; // Track number of run button presses
-        this.incorrectRunCounter = 0; // Track failed runs
-        this.hasAnalyzedMistakes = false; // Prevent duplicate mistake analysis
-        this.currentProblemUrl = null; // Track current problem to detect problem changes
-        this.bridgeReady = false;
-        this.pendingCodeRequests = new Map();
-      }
+      this.currentProblem = null;
+      this.currentSolution = null;
+      this.isSubmissionPage = false;
+      this.attempts = [];
+      this.runCounter = 0; // Track number of run button presses
+      this.incorrectRunCounter = 0; // Track failed runs
+      this.hasAnalyzedMistakes = false; // Prevent duplicate mistake analysis
+      this.currentProblemUrl = null; // Track current problem to detect problem changes
+      this.bridgeReady = false;
+      this.pendingCodeRequests = new Map();
+      this.submissionInProgress = false;
+      this.submitCounter = 0;
+      this.currentSubmissionAttempt = null;
+    }
 
     async initialize() {
       try {
         // Load persisted state from Chrome storage
         await this.loadPersistedState();
-        
-  githubAPI = new GitHubAPI();
+
+        githubAPI = new GitHubAPI();
         await githubAPI.initialize();
-  this.injectMonacoBridge();
-  this.setupBridgeListener();
+        this.injectMonacoBridge();
+        this.setupBridgeListener();
         this.setupEventListeners();
         this.checkPageType();
-        
+
         // Detect if we've changed problems - reset counters if so
         const currentUrl = this.getCurrentProblemUrl();
         if (this.currentProblemUrl !== currentUrl) {
@@ -52,7 +55,7 @@
           this.currentProblemUrl = currentUrl;
           await this.savePersistedState();
         }
-        
+
         DSAUtils.logDebug(PLATFORM, 'LeetCode extractor initialized');
         isInitialized = true;
       } catch (error) {
@@ -117,81 +120,177 @@
       }
     }
 
+    getTopics() {
+      try {
+        const topicElements = document.querySelectorAll('div.mt-2.flex.flex-wrap.gap-1.pl-7 a');
+        const topics = Array.from(topicElements)
+          .map(element => element.textContent.trim())
+          .filter(topic => topic.length > 0); // Filter out empty topics
+
+        DSAUtils.logDebug(PLATFORM, `Found ${topics.length} topics:`, topics);
+        return topics;
+      } catch (error) {
+        DSAUtils.logError(PLATFORM, 'Error extracting topics', error);
+        return [];
+      }
+    }
     // Persistence methods to maintain state across page reloads
     async loadPersistedState() {
       try {
         const currentUrl = this.getCurrentProblemUrl();
-        const result = await chrome.storage.local.get([`leetcode_state_${currentUrl}`]);
-        const state = result[`leetcode_state_${currentUrl}`];
-        
-        if (state) {
-          console.log(`📥 [LeetCode Run Counter] Loaded persisted state:`, state);
-          this.attempts = state.attempts || [];
-          this.runCounter = state.runCounter || 0;
-          this.incorrectRunCounter = state.incorrectRunCounter || 0;
-          this.hasAnalyzedMistakes = state.hasAnalyzedMistakes || false;
-          this.currentProblemUrl = state.currentProblemUrl || currentUrl;
+        const result = await chrome.storage.local.get([`problem_data_${currentUrl}`]);
+        const problemData = result[`problem_data_${currentUrl}`];
+
+        if (problemData) {
+          console.log(`📥 [LeetCode] Loaded problem data:`, problemData);
           
-          console.log(`🔢 [LeetCode Run Counter] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/${3}, Analyzed: ${this.hasAnalyzedMistakes}`);
+          // Extract tracking info from problem data if available
+          this.attempts = problemData.attempts || [];
+          this.runCounter = problemData.runCounter || 0;
+          this.incorrectRunCounter = problemData.incorrectRunCounter || 0;
+          this.hasAnalyzedMistakes = problemData.hasAnalyzedMistakes || false;
+          this.currentProblemUrl = problemData.currentProblemUrl || currentUrl;
+          this.topics = problemData.parent_topic || [];
+          this.submitCounter = problemData.submitCounter || 0;
+
+          console.log(`🔢 [LeetCode] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}`);
         } else {
-          console.log(`🆕 [LeetCode Run Counter] No persisted state found - starting fresh`);
+          console.log(`🆕 [LeetCode] No problem data found - starting fresh`);
         }
       } catch (error) {
-        console.error('[LeetCode Run Counter] Error loading persisted state:', error);
+        console.error('[LeetCode] Error loading problem data:', error);
       }
     }
 
-    async savePersistedState() {
+    async savePersistedState(overrides = {}) {
       try {
         const currentUrl = this.getCurrentProblemUrl();
-        const state = {
-          attempts: this.attempts,
-          runCounter: this.runCounter,
-          incorrectRunCounter: this.incorrectRunCounter,
-          hasAnalyzedMistakes: this.hasAnalyzedMistakes,
-          currentProblemUrl: this.currentProblemUrl,
-          timestamp: new Date().toISOString()
-        };
         
-        await chrome.storage.local.set({[`leetcode_state_${currentUrl}`]: state});
-        console.log(`💾 [LeetCode Run Counter] Saved state for problem: ${currentUrl}`);
+        // Load existing problem data to merge with tracking state
+        const result = await chrome.storage.local.get([`problem_data_${currentUrl}`]);
+        let problemData = result[`problem_data_${currentUrl}`] || {};
+
+        // Merge tracking state into problem data
+        problemData = {
+          ...problemData,
+          ...overrides,
+          attempts: overrides.attempts ?? this.attempts,
+          runCounter: overrides.runCounter ?? this.runCounter,
+          incorrectRunCounter: overrides.incorrectRunCounter ?? this.incorrectRunCounter,
+          hasAnalyzedMistakes: overrides.hasAnalyzedMistakes ?? this.hasAnalyzedMistakes,
+          currentProblemUrl: overrides.currentProblemUrl ?? this.currentProblemUrl,
+          parent_topic: overrides.parent_topic ?? this.topics,
+          submitCounter: overrides.submitCounter ?? this.submitCounter,
+          timestamp: overrides.timestamp ?? new Date().toISOString()
+        };
+
+        await chrome.storage.local.set({ [`problem_data_${currentUrl}`]: problemData });
+        console.log(`💾 [LeetCode] Saved problem data for: ${currentUrl}`);
       } catch (error) {
-        console.error('[LeetCode Run Counter] Error saving persisted state:', error);
+        console.error('[LeetCode] Error saving problem data:', error);
       }
     }
 
+    // Utility methods for new problem data format
+    async storeProblemData(problemInfo, solved = false, tries = 0) {
+      try {
+        const currentUrl = this.getCurrentProblemUrl();
+        const storageKey = `problem_data_${currentUrl}`;
+        const existingResult = await chrome.storage.local.get([storageKey]);
+        const existingData = existingResult[storageKey] || {};
+        const previousSolved = existingData.solved || { value: false, date: 0, tries: 0 };
+
+        const triesValue = typeof tries === 'number' ? tries : (previousSolved.tries ?? 0);
+
+        let solvedData;
+        if (previousSolved.value) {
+          solvedData = previousSolved;
+        } else if (solved) {
+          solvedData = {
+            value: true,
+            date: previousSolved.date && previousSolved.date > 0 ? previousSolved.date : Date.now(),
+            tries: triesValue
+          };
+        } else {
+          solvedData = {
+            value: false,
+            date: 0,
+            tries: triesValue
+          };
+        }
+
+        const problemData = {
+          ...existingData,
+          name: problemInfo.title || existingData.name || 'Unknown Problem',
+          platform: 'leetcode',
+          difficulty: this.normalizeDifficulty(problemInfo.difficulty),
+          solved: solvedData,
+          ignored: existingData.ignored ?? false,
+          parent_topic: problemInfo.topics || existingData.parent_topic || [],
+          problem_link: problemInfo.url || existingData.problem_link || window.location.href.split('?')[0],
+          
+          // Include tracking state
+          attempts: this.attempts || [],
+          runCounter: this.runCounter || 0,
+          incorrectRunCounter: this.incorrectRunCounter || 0,
+          hasAnalyzedMistakes: this.hasAnalyzedMistakes || false,
+          currentProblemUrl: this.currentProblemUrl || currentUrl,
+          submitCounter: this.submitCounter || 0,
+          timestamp: new Date().toISOString()
+        };
+
+        await chrome.storage.local.set({ [storageKey]: problemData });
+        console.log(`💾 [LeetCode] Stored problem data:`, problemData);
+        return problemData;
+      } catch (error) {
+        console.error('[LeetCode] Error storing problem data:', error);
+      }
+    }
+
+    normalizeDifficulty(difficulty) {
+      if (!difficulty) return 1; // Default to Easy
+      const diff = difficulty.toLowerCase();
+      if (diff.includes('easy')) return 1; // Easy
+      if (diff.includes('medium')) return 2; // Medium
+      if (diff.includes('hard')) return 3; // Hard
+      return 1; // Default to Easy
+    }
     getCurrentProblemUrl() {
       const url = window.location.href;
       const match = url.match(/\/problems\/([^\/]+)/);
       return match ? match[1] : 'unknown';
     }
 
+
     resetCounters() {
       this.attempts = [];
       this.runCounter = 0;
       this.incorrectRunCounter = 0;
       this.hasAnalyzedMistakes = false;
-      console.log(`🔄 [LeetCode Run Counter] Counters reset for new problem`);
-      
-      // Clean up any stored state for this problem
-      const currentUrl = this.getCurrentProblemUrl();
-      chrome.storage.local.remove([`leetcode_state_${currentUrl}`]).catch(console.error);
-    }
+      this.topics = []; // Reset topics array
+      this.submitCounter = 0;
+      this.submissionInProgress = false;
+      this.currentSubmissionAttempt = null;
+      console.log(`🔄 [LeetCode] Counters reset for new problem`);
 
+      // Clean up any stored problem data for this problem
+      const currentUrl = this.getCurrentProblemUrl();
+      chrome.storage.local.remove([`problem_data_${currentUrl}`]).catch(console.error);
+    }
     setupEventListeners() {
       // Listen for URL changes (LeetCode is SPA)
       this.observeUrlChanges();
-      
+
       // Listen for submission events
       this.observeSubmissions();
-      
+
       // Listen for run button clicks
       this.observeRunButton();
     }
 
     observeUrlChanges() {
       let currentUrl = location.href;
-      
+
       new MutationObserver(() => {
         if (location.href !== currentUrl) {
           currentUrl = location.href;
@@ -204,29 +303,24 @@
     }
 
     observeSubmissions() {
-      // Observer for submission results
+      const attachSubmitListener = (root) => {
+        const submitButton = root.querySelector ?
+          root.querySelector('button[data-e2e-locator="console-submit-button"]') : null;
+
+        if (submitButton && !submitButton.hasAttribute('data-leetcode-submit-listener')) {
+          submitButton.setAttribute('data-leetcode-submit-listener', 'true');
+          submitButton.addEventListener('click', () => {
+            DSAUtils.logDebug(PLATFORM, 'Submit button clicked!');
+            this.handleSubmissionAttempt();
+          });
+        }
+      };
+
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           mutation.addedNodes.forEach((node) => {
             if (node.nodeType === Node.ELEMENT_NODE) {
-              // Check for successful submission
-              const successElement = node.querySelector ? 
-                node.querySelector('[data-e2e-locator="submission-result"]') : null;
-      
-              if (successElement && successElement.textContent.includes('Accepted')) {
-                setTimeout(() => this.handleSuccessfulSubmission(), 2000);
-              }
-      
-              // Also check for submit button clicks
-              const submitButton = node.querySelector ? 
-                node.querySelector('button[data-e2e-locator="console-submit-button"]') : null;
-      
-              if (submitButton && !submitButton.hasAttribute('data-leetcode-submit-listener')) {
-                submitButton.setAttribute('data-leetcode-submit-listener', 'true');
-                submitButton.addEventListener('click', () => {
-                  DSAUtils.logDebug(PLATFORM, 'Submit button clicked!');
-                });
-              }
+              attachSubmitListener(node);
             }
           });
         });
@@ -236,17 +330,19 @@
         childList: true,
         subtree: true
       });
+
+      attachSubmitListener(document);
     }
 
     observeRunButton() {
       let runButtonFound = false;
-      
+
       // Monitor for run button clicks
       const checkForRunButton = () => {
-        
+
         // Use the exact working selector for LeetCode run button
         const runButton = document.querySelector('button[data-e2e-locator="console-run-button"]');
-        
+
         if (runButton && !runButton.hasAttribute('data-dsa-listener')) {
           if (!runButtonFound) {
             DSAUtils.logDebug(PLATFORM, `Run button found and listener attached`);
@@ -261,12 +357,12 @@
 
       // Check initially and on DOM changes
       checkForRunButton();
-      
+
       // Periodic check every 10 seconds for run button
       setInterval(() => {
         checkForRunButton();
       }, 10000);
-      
+
       const observer = new MutationObserver(() => {
         checkForRunButton();
       });
@@ -277,16 +373,121 @@
       });
     }
 
+    async handleSubmissionAttempt() {
+      if (this.submissionInProgress) {
+        DSAUtils.logDebug(PLATFORM, 'Submission already in progress - ignoring duplicate click');
+        return;
+      }
+
+      this.submissionInProgress = true;
+      this.submitCounter = (this.submitCounter || 0) + 1;
+
+      try {
+        const code = await this.getCurrentCode();
+        const language = await this.getCurrentLanguage();
+
+        const attempt = {
+          code,
+          language,
+          timestamp: new Date().toISOString(),
+          type: 'submit',
+          submissionNumber: this.submitCounter,
+          successful: null
+        };
+
+        this.attempts.push(attempt);
+        this.currentSubmissionAttempt = attempt;
+
+        DSAUtils.logDebug(PLATFORM, `Recorded submission attempt #${this.submitCounter}`);
+
+        await this.savePersistedState();
+
+        this.monitorSubmissionResult(attempt);
+      } catch (error) {
+        this.submissionInProgress = false;
+        DSAUtils.logError(PLATFORM, 'Error handling submission attempt', error);
+      }
+    }
+
+    monitorSubmissionResult(attempt) {
+      let checks = 0;
+      const maxChecks = 30;
+      const intervalMs = 1000;
+
+      const checkResult = async () => {
+        if (!this.submissionInProgress) {
+          return;
+        }
+
+        try {
+          const resultElement = document.querySelector('[data-e2e-locator="submission-result"]');
+
+          if (resultElement && resultElement.textContent) {
+            const resultText = resultElement.textContent.toLowerCase();
+
+            if (resultText.includes('accepted')) {
+              attempt.successful = true;
+              DSAUtils.logDebug(PLATFORM, 'Submission result detected: ACCEPTED');
+              await this.savePersistedState();
+              this.submissionInProgress = false;
+              this.currentSubmissionAttempt = null;
+              await this.handleSuccessfulSubmission(attempt);
+              return;
+            }
+
+            if (resultText.includes('wrong answer') ||
+              resultText.includes('runtime error') ||
+              resultText.includes('time limit exceeded') ||
+              resultText.includes('memory limit exceeded') ||
+              resultText.includes('compile error') ||
+              resultText.includes('compilation error') ||
+              resultText.includes('output limit exceeded') ||
+              resultText.includes('failed')) {
+              attempt.successful = false;
+              DSAUtils.logDebug(PLATFORM, `Submission result detected: ${resultText}`);
+              await this.savePersistedState();
+              this.submissionInProgress = false;
+              this.currentSubmissionAttempt = null;
+              return;
+            }
+          }
+
+          checks++;
+          if (checks < maxChecks) {
+            setTimeout(() => checkResult().catch((error) => {
+              DSAUtils.logError(PLATFORM, 'Error while polling submission result', error);
+            }), intervalMs);
+          } else {
+            attempt.successful = false;
+            DSAUtils.logDebug(PLATFORM, 'Submission result not detected within timeout - marking as failed');
+            await this.savePersistedState();
+            this.submissionInProgress = false;
+            this.currentSubmissionAttempt = null;
+          }
+        } catch (error) {
+          DSAUtils.logError(PLATFORM, 'Unexpected error while checking submission result', error);
+          this.submissionInProgress = false;
+          this.currentSubmissionAttempt = null;
+        }
+      };
+
+      setTimeout(() => checkResult().catch((error) => {
+        DSAUtils.logError(PLATFORM, 'Error while initiating submission result polling', error);
+        this.submissionInProgress = false;
+        this.currentSubmissionAttempt = null;
+      }), intervalMs);
+    }
+
     async handleRunAttempt() {
       try {
         this.runCounter++;
         console.log(`🏃‍♂️ [LeetCode Run Counter] Run attempt #${this.runCounter}`);
-        
-  const code = await this.getCurrentCode();
-  const language = await this.getCurrentLanguage();
-        
+
+        const code = await this.getCurrentCode();
+        const language = await this.getCurrentLanguage();
+
         DSAUtils.logDebug(PLATFORM, `Extracted code length: ${code ? code.length : 0}, language: ${language}`);
-        
+
         if (code && code.length > 10) {
           const attempt = {
             code,
@@ -296,16 +497,16 @@
             runNumber: this.runCounter,
             successful: null // Will be determined by result observation
           };
-          
+
           this.attempts.push(attempt);
           console.log(`📝 [LeetCode Run Counter] Stored run attempt #${this.runCounter}`);
-          
+
           // Save state after adding attempt
           await this.savePersistedState();
-          
+
           // Start observing for run results
           await this.observeRunResult(attempt);
-          
+
         } else {
           console.log(`❌ [LeetCode Run Counter] Run #${this.runCounter} - Code too short or empty`);
         }
@@ -329,56 +530,56 @@
           '.code-output',
           '.execution-result'
         ];
-        
+
         for (const selector of resultSelectors) {
           const resultElement = document.querySelector(selector);
           if (resultElement && resultElement.textContent) {
             const resultText = resultElement.textContent.toLowerCase();
             DSAUtils.logDebug(PLATFORM, `Checking result text: "${resultText.substring(0, 100)}..."`);
-            
+
             // Check for successful run indicators
-            if (resultText.includes('accepted') || 
-                resultText.includes('success') ||
-                resultText.includes('correct') ||
-                resultText.includes('case passed') ||
-                (resultText.includes('runtime:') && resultText.includes('memory:')) ||
-                (resultText.includes('output') && !resultText.includes('expected') && !resultText.includes('wrong'))) {
-              
+            if (resultText.includes('accepted') ||
+              resultText.includes('success') ||
+              resultText.includes('correct') ||
+              resultText.includes('case passed') ||
+              (resultText.includes('runtime:') && resultText.includes('memory:')) ||
+              (resultText.includes('output') && !resultText.includes('expected') && !resultText.includes('wrong'))) {
+
               // Guard against multiple increments for the same attempt
               if (attempt.successful !== true) {
                 attempt.successful = true;
                 console.log(`✅ [LeetCode Run Counter] Run #${attempt.runNumber} - SUCCESS (Expected output matched)`);
-                
+
                 // Save state after successful attempt
                 await this.savePersistedState();
               } else {
                 DSAUtils.logDebug(PLATFORM, `Run #${attempt.runNumber} already marked as successful - skipping`);
               }
-              
+
               return true;
             }
-            
+
             // Check for failure indicators
             if (resultText.includes('wrong answer') ||
-                resultText.includes('time limit exceeded') ||
-                resultText.includes('runtime error') ||
-                resultText.includes('compilation error') ||
-                resultText.includes('expected:') ||
-                resultText.includes('output:') && resultText.includes('expected:') ||
-                resultText.includes('failed') ||
-                resultText.includes('error') ||
-                resultText.includes('incorrect')) {
-              
+              resultText.includes('time limit exceeded') ||
+              resultText.includes('runtime error') ||
+              resultText.includes('compilation error') ||
+              resultText.includes('expected:') ||
+              resultText.includes('output:') && resultText.includes('expected:') ||
+              resultText.includes('failed') ||
+              resultText.includes('error') ||
+              resultText.includes('incorrect')) {
+
               // Guard against multiple increments for the same attempt
               if (attempt.successful !== false) {
                 attempt.successful = false;
                 this.incorrectRunCounter++;
                 console.log(`❌ [LeetCode Run Counter] Run #${attempt.runNumber} - FAILED (Incorrect output)`);
                 console.log(`🔢 [LeetCode Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
-                
+
                 // Save state after failed attempt
                 await this.savePersistedState();
-                
+
                 // Check if we've reached 3 failed runs
                 if (this.incorrectRunCounter >= 3 && !this.hasAnalyzedMistakes) {
                   this.handleThreeIncorrectRuns();
@@ -392,7 +593,7 @@
         }
         return false;
       };
-      
+
       // Check immediately and then set up observer
       const initialResult = await checkRunResult();
       if (!initialResult) {
@@ -405,12 +606,12 @@
             observer.disconnect();
           }
         });
-        
+
         observer.observe(document.body, {
           childList: true,
           subtree: true
         });
-        
+
         // Also check periodically in case mutation observer misses changes
         const periodicCheck = setInterval(async () => {
           if (await checkRunResult()) {
@@ -419,7 +620,7 @@
             observer.disconnect();
           }
         }, 1000);
-        
+
         // Stop observing after 15 seconds to prevent memory leaks
         setTimeout(async () => {
           observer.disconnect();
@@ -430,10 +631,10 @@
             this.incorrectRunCounter++;
             console.log(`⏰ [LeetCode Run Counter] Run #${attempt.runNumber} - TIMEOUT → Counted as FAILED (safety measure)`);
             console.log(`🔢 [LeetCode Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
-            
+
             // Save state after failed attempt
             await this.savePersistedState();
-            
+
             // Check if we've reached 3 failed runs
             if (this.incorrectRunCounter >= 3 && !this.hasAnalyzedMistakes) {
               this.handleThreeIncorrectRuns();
@@ -447,38 +648,38 @@
       try {
         console.log(`🚨 [LeetCode Run Counter] 3 INCORRECT RUNS DETECTED - Triggering Gemini mistake analysis`);
         this.hasAnalyzedMistakes = true;
-        
+
         // Save state immediately after setting analysis flag
         await this.savePersistedState();
-        
+
         // Get the failed attempts (should be exactly 3 by now)
         const failedAttempts = this.attempts.filter(a => a.successful === false);
         console.log(`🔍 [LeetCode Run Counter] Analyzing ${failedAttempts.length} failed attempts`);
-        
+
         // Debug: Log attempt details for verification
         console.log(`📋 [LeetCode Debug] Failed attempts:`, failedAttempts.map(a => ({
           runNumber: a.runNumber,
           successful: a.successful,
           timestamp: a.timestamp
         })));
-        
+
         // Ensure we have at least 3 failed attempts
         if (failedAttempts.length < 3) {
           console.log(`⚠️ [LeetCode Run Counter] Expected 3 failed attempts, found ${failedAttempts.length}. Counter: ${this.incorrectRunCounter}`);
           return;
         }
-        
+
         // Get current problem info
         const problemInfo = await this.extractProblemInfo();
         if (!problemInfo) {
           console.log(`❌ [LeetCode Run Counter] Could not extract problem info for mistake analysis`);
           return;
         }
-        
+
         // Add failed attempts to problem info
         problemInfo.attempts = failedAttempts;
         problemInfo.mistakeAnalysisOnly = true; // Flag to indicate this is just for mistake analysis
-        
+
         console.log(`� [LeetCode Debug] Sending to GitHub:`, {
           attempts: problemInfo.attempts.length,
           mistakeAnalysisOnly: problemInfo.mistakeAnalysisOnly,
@@ -488,35 +689,35 @@
             hasCode: !!a.code
           }))
         });
-        
+
         console.log(`�📤 [LeetCode Run Counter] Pushing mistake analysis to GitHub...`);
-        
+
         // Initialize GitHub API
         if (!githubAPI) {
           githubAPI = new GitHubAPI();
           await githubAPI.initialize();
         }
-        
+
         // Push mistake analysis to GitHub
         const result = await githubAPI.pushMistakeAnalysis(problemInfo, PLATFORM);
-        
+
         if (result.success) {
           console.log(`✅ [LeetCode Run Counter] Mistake analysis pushed to GitHub successfully!`);
         } else {
           console.log(`❌ [LeetCode Run Counter] Failed to push mistake analysis:`, result.error);
         }
-        
+
       } catch (error) {
         console.error('[LeetCode Run Counter] Error handling three incorrect runs:', error);
       }
     }
-    
+
 
 
     checkPageType() {
       const url = window.location.href;
       this.isSubmissionPage = url.includes('/submissions/');
-      
+
       if (url.includes('/problems/')) {
         setTimeout(() => this.extractProblemInfo(), 1000);
       }
@@ -525,7 +726,15 @@
     async extractProblemInfo() {
       try {
         DSAUtils.logDebug(PLATFORM, 'Starting LeetCode problem extraction...');
-        
+
+        // Extract topics
+        const extractedTopics = this.getTopics();
+
+        // Update the instance topics if new ones are found
+        if (extractedTopics.length > 0) {
+          this.topics = extractedTopics;
+          await this.savePersistedState(); // Save updated topics
+        }
         const problemInfo = {
           title: this.getProblemTitle(),
           number: this.getProblemNumber(),
@@ -533,7 +742,8 @@
           difficulty: this.getDifficulty(),
           url: window.location.href.split('?')[0],
           language: await this.getCurrentLanguage(),
-          code: await this.getCurrentCode()
+          code: await this.getCurrentCode(),
+          topics: this.topics
         };
 
         DSAUtils.logDebug(PLATFORM, 'Extracted data:', {
@@ -544,6 +754,8 @@
           difficulty: problemInfo.difficulty,
           language: problemInfo.language,
           codeLength: problemInfo.code?.length || 0,
+          topicsCount: problemInfo.topics.length,
+          topics: problemInfo.topics
         });
 
         // Validate required fields
@@ -558,7 +770,10 @@
 
         this.currentProblem = problemInfo;
         DSAUtils.logDebug(PLATFORM, 'Problem info extracted successfully', problemInfo);
-        
+
+        // Store problem data as unsolved when first encountered
+        await this.storeProblemData(problemInfo, false, 0);
+
         return problemInfo;
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error extracting problem info', error);
@@ -590,42 +805,42 @@
 
     getProblemDescription() {
       const selectors = ['[data-track-load="description_content"]', '[class*="description"]'];
-      
+
       for (let selector of selectors) {
         const element = document.querySelector(selector);
         if (element && element.textContent.trim()) {
           let description = element.textContent.trim();
-          
+
           // Extract only the main problem statement (before examples)
           const lines = description.split('\n');
           const mainStatement = [];
-          
+
           for (let line of lines) {
             const cleanLine = line.trim();
-            
+
             if (cleanLine.toLowerCase().includes('example') ||
-                cleanLine.toLowerCase().includes('constraint') ||
-                cleanLine.toLowerCase().includes('follow up') ||
-                cleanLine.toLowerCase().includes('note:') ||
-                cleanLine.startsWith('Input:') ||
-                cleanLine.startsWith('Output:') ||
-                cleanLine.startsWith('Explanation:')) {
+              cleanLine.toLowerCase().includes('constraint') ||
+              cleanLine.toLowerCase().includes('follow up') ||
+              cleanLine.toLowerCase().includes('note:') ||
+              cleanLine.startsWith('Input:') ||
+              cleanLine.startsWith('Output:') ||
+              cleanLine.startsWith('Explanation:')) {
               break;
             }
-            
+
             if (cleanLine.length > 0) {
               mainStatement.push(cleanLine);
             }
           }
-          
+
           const finalDescription = mainStatement.join(' ').trim();
-          
+
           if (finalDescription.length > 20) {
             return finalDescription;
           }
         }
       }
-      
+
       return '';
     }
 
@@ -639,21 +854,21 @@
         '.bg-fill-secondary',
         'div[class*="bg-fill-secondary"]'
       ];
-      
+
       for (let selector of difficultySelectors) {
         const element = document.querySelector(selector);
         if (element && element.textContent.trim()) {
           const difficultyText = element.textContent.trim();
-          
+
           // Normalize difficulty levels
           if (difficultyText.toLowerCase().includes('easy')) return 'Easy';
           if (difficultyText.toLowerCase().includes('medium')) return 'Medium';
           if (difficultyText.toLowerCase().includes('hard')) return 'Hard';
-          
+
           return difficultyText;
         }
       }
-      
+
       return null;
     }
 
@@ -725,17 +940,17 @@
       return null;
     }
 
-    async handleSuccessfulSubmission() {
+    async handleSuccessfulSubmission(submissionAttempt = null) {
       try {
         console.log(`🎉 [LeetCode Submission] SUCCESSFUL SUBMISSION DETECTED`);
         console.log(`📊 [LeetCode Stats] Total runs: ${this.runCounter}, Failed runs: ${this.incorrectRunCounter}`);
-        
+
         // Wait a bit for performance data to load
         await DSAUtils.sleep(2000);
-        
+
         // Extract performance metrics
         const stats = this.extractPerformanceStats();
-        
+
         // Get updated problem info
         const problemInfo = await this.extractProblemInfo();
         if (!problemInfo) {
@@ -748,21 +963,51 @@
 
         // Case 1: Normal successful submission (push solution to GitHub)
         console.log(`📤 [LeetCode Submission] Pushing successful solution to GitHub...`);
-        
-        // Don't include failed attempts in successful submission
-        problemInfo.attempts = []; // Clear attempts for successful submission
+
+        const attemptsToPersist = [...this.attempts];
+        if (submissionAttempt) {
+          const latestAttempt = attemptsToPersist[attemptsToPersist.length - 1];
+          if (latestAttempt && latestAttempt === submissionAttempt) {
+            latestAttempt.successful = true;
+          }
+        } else if (attemptsToPersist.length > 0) {
+          // Mark the last attempt as successful if we triggered from observer fallback
+          const lastAttempt = attemptsToPersist[attemptsToPersist.length - 1];
+          if (lastAttempt && lastAttempt.type === 'submit') {
+            lastAttempt.successful = true;
+          }
+        }
+
+        problemInfo.attempts = [];
         problemInfo.mistakeAnalysisOnly = false;
 
         // Push to GitHub (normal solution)
         const result = await githubAPI.pushSolution(problemInfo, PLATFORM);
-        
+
         if (result.success) {
           console.log(`✅ [LeetCode Submission] Solution pushed to GitHub successfully!`);
+          
+          // Store problem data as solved
+          this.hasAnalyzedMistakes = false;
+          const submissionCount = attemptsToPersist.filter(a => a.type === 'submit').length;
+          const totalTries = (submissionCount > 0 ? submissionCount : this.runCounter + 1);
+          await this.storeProblemData(problemInfo, true, totalTries);
+          
           // Reset counters after successful submission
           this.runCounter = 0;
           this.incorrectRunCounter = 0;
           this.attempts = [];
           this.hasAnalyzedMistakes = false;
+          this.submitCounter = 0;
+          this.currentSubmissionAttempt = null;
+
+          await this.savePersistedState({
+            attempts: attemptsToPersist,
+            runCounter: 0,
+            incorrectRunCounter: 0,
+            hasAnalyzedMistakes: false,
+            submitCounter: 0
+          });
         } else {
           console.log(`❌ [LeetCode Submission] Failed to push solution:`, result.error);
         }
@@ -774,7 +1019,7 @@
 
     extractPerformanceStats() {
       const stats = {};
-      
+
       const runtimeElement = document.querySelector('[class*="runtime"]');
       if (runtimeElement) {
         stats.runtime = runtimeElement.textContent.trim();
@@ -819,7 +1064,7 @@
     } else {
       console.log(`♻️ [LeetCode Run Counter] Reusing existing extractor instance`);
     }
-    
+
     await extractorInstance.initialize();
   }
 

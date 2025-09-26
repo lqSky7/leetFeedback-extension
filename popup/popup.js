@@ -4,7 +4,7 @@ class PopupController {
     this.stats = {};
     this.timeTracking = {};
     this.connectionStatus = false;
-    this.authStatus = { isAuthenticated: false, user: null };
+  this.authStatus = { isAuthenticated: false, user: null, token: null };
     this.tasks = [];
     this.scheduledTasks = [];
     this.initialize();
@@ -102,6 +102,226 @@ class PopupController {
     }
   }
 
+  setupAuthForms(authSection) {
+    const toggleButtons = authSection.querySelectorAll(".auth-toggle-btn");
+    const forms = authSection.querySelectorAll(".auth-form");
+
+    const setActiveForm = (target) => {
+      toggleButtons.forEach((btn) => {
+        if (btn.dataset.target === target) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+
+      forms.forEach((form) => {
+        form.classList.toggle("active", form.dataset.form === target);
+      });
+    };
+
+    toggleButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.classList.contains("active")) return;
+        setActiveForm(button.dataset.target);
+        this.showAuthFeedback();
+      });
+    });
+
+    const loginForm = authSection.querySelector("#auth-login-form");
+    if (loginForm) {
+      loginForm.addEventListener("submit", (event) =>
+        this.handleLoginSubmit(event),
+      );
+    }
+
+    const registerForm = authSection.querySelector("#auth-register-form");
+    if (registerForm) {
+      registerForm.addEventListener("submit", (event) =>
+        this.handleRegisterSubmit(event),
+      );
+    }
+
+    const configEditBtn = authSection.querySelector("#auth-config-edit");
+    if (configEditBtn) {
+      configEditBtn.addEventListener("click", () => {
+        this.switchTab("config");
+        this.showAuthFeedback(
+          "info",
+          "Update your GitHub details in the Config tab.",
+        );
+      });
+    }
+
+    this.refreshAuthConfigSummary();
+  }
+
+  activateAuthForm(target) {
+    const authSection = document.getElementById("auth-section");
+    if (!authSection) return;
+
+    const toggleButtons = authSection.querySelectorAll(".auth-toggle-btn");
+    const forms = authSection.querySelectorAll(".auth-form");
+
+    toggleButtons.forEach((button) => {
+      if (button.dataset.target === target) {
+        button.classList.add("active");
+      } else {
+        button.classList.remove("active");
+      }
+    });
+
+    forms.forEach((form) => {
+      form.classList.toggle("active", form.dataset.form === target);
+    });
+  }
+
+  async handleLoginSubmit(event) {
+    event.preventDefault();
+
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const formData = new FormData(form);
+
+    const payload = {
+      email: formData.get("email")?.toString().trim(),
+      password: formData.get("password"),
+    };
+
+    if (!payload.email || !payload.password) {
+      this.showAuthFeedback("error", "Please fill in all login fields.");
+      return;
+    }
+
+    try {
+      this.toggleAuthLoading(submitBtn, true, "Logging in...");
+      const result = await extensionAuth.login(payload);
+      const welcomeName =
+        result?.user?.username || result?.user?.email || "User";
+      this.showAuthFeedback("success", `Welcome back, ${welcomeName}!`);
+      form.reset();
+    } catch (error) {
+      this.showAuthFeedback(
+        "error",
+        error?.message || "Login failed. Please try again.",
+      );
+    } finally {
+      this.toggleAuthLoading(submitBtn, false);
+    }
+  }
+
+  async handleRegisterSubmit(event) {
+    event.preventDefault();
+
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const formData = new FormData(form);
+    const config = this.collectFormData();
+
+    const payload = {
+      username: formData.get("username")?.toString().trim(),
+      email: formData.get("email")?.toString().trim(),
+      password: formData.get("password"),
+      github_username: config.owner?.trim(),
+      github_repo: config.repo?.trim(),
+      github_branch: config.branch?.trim() || "main",
+    };
+
+    if (!payload.username || !payload.email || !payload.password) {
+      this.showAuthFeedback("error", "Please complete all required fields.");
+      return;
+    }
+
+    if (!payload.github_username || !payload.github_repo) {
+      this.showAuthFeedback(
+        "error",
+        "Set your GitHub username and repository in the Config tab before registering.",
+      );
+      this.refreshAuthConfigSummary();
+      return;
+    }
+
+    try {
+      this.toggleAuthLoading(submitBtn, true, "Creating account...");
+      const result = await extensionAuth.register(payload);
+
+      if (result?.token) {
+        const displayName =
+          result.user?.username || result.user?.email || "User";
+        this.showAuthFeedback(
+          "success",
+          `Account ready, ${displayName}! You're signed in.`,
+        );
+      } else {
+        this.showAuthFeedback(
+          "info",
+          "Account created. Please log in with your new credentials.",
+        );
+        this.activateAuthForm("login");
+      }
+
+      form.reset();
+    } catch (error) {
+      this.showAuthFeedback(
+        "error",
+        error?.message || "Registration failed. Please try again.",
+      );
+    } finally {
+      this.toggleAuthLoading(submitBtn, false);
+    }
+  }
+
+  toggleAuthLoading(button, isLoading, loadingText = "Working...") {
+    if (!button) return;
+
+    if (isLoading) {
+      button.dataset.originalText = button.textContent;
+      button.textContent = loadingText;
+      button.disabled = true;
+    } else {
+      const original = button.dataset.originalText;
+      if (original) {
+        button.textContent = original;
+        delete button.dataset.originalText;
+      }
+      button.disabled = false;
+    }
+  }
+
+  showAuthFeedback(type = "", message = "") {
+    const messageElement = document.getElementById("auth-form-message");
+    if (!messageElement) return;
+
+    messageElement.textContent = message || "";
+    messageElement.className = "auth-form-message";
+
+    if (type && message) {
+      messageElement.classList.add(type);
+    }
+  }
+
+  refreshAuthConfigSummary() {
+    const summaryEl = document.getElementById("auth-config-summary");
+    if (!summaryEl) return;
+
+    const config = this.collectFormData();
+    const owner = config.owner?.trim() || "";
+    const repo = config.repo?.trim() || "";
+    const branch = config.branch?.trim() || "main";
+
+    const updateValue = (elementId, value, fallback = "Not set") => {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const isEmpty = !value;
+      el.textContent = isEmpty ? fallback : value;
+      el.classList.toggle("empty", isEmpty);
+    };
+
+    updateValue("auth-config-username", owner);
+    updateValue("auth-config-repo", repo);
+    updateValue("auth-config-branch", branch);
+  }
+
   debounce(func, wait) {
     let timeout;
     return function (...args) {
@@ -161,6 +381,8 @@ class PopupController {
     document.getElementById("branch").value = this.config.branch;
     document.getElementById("gemini-key").value = this.config.geminiKey;
     document.getElementById("debug-mode").checked = this.config.debugMode;
+
+    this.refreshAuthConfigSummary();
   }
 
   switchTab(tabName) {
@@ -204,6 +426,8 @@ class PopupController {
       );
 
       this.config = formData;
+
+      this.refreshAuthConfigSummary();
 
       setTimeout(() => {
         this.updateConnectionStatus();
@@ -528,19 +752,34 @@ class PopupController {
 
       // Check local storage for cached auth data first
       const result = await chrome.storage.local.get([
-        "firebase_user",
+        "auth_user",
+        "auth_token",
         "auth_timestamp",
+        "firebase_user",
       ]);
-      if (result.firebase_user && result.auth_timestamp) {
-        const now = Date.now();
-        const cacheAge = now - result.auth_timestamp;
-        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
 
+      const now = Date.now();
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+
+      if (result.auth_user && result.auth_timestamp) {
+        const cacheAge = now - result.auth_timestamp;
         if (cacheAge < maxAge) {
-          console.log("[Popup] Found valid cached auth data");
+          console.log("[Popup] Found cached backend auth data");
+          this.authStatus = {
+            isAuthenticated: true,
+            user: result.auth_user,
+            token: result.auth_token || null,
+          };
+          this.updateAuthSection();
+        }
+      } else if (result.firebase_user && result.auth_timestamp) {
+        const cacheAge = now - result.auth_timestamp;
+        if (cacheAge < maxAge) {
+          console.log("[Popup] Found legacy cached auth data");
           this.authStatus = {
             isAuthenticated: true,
             user: result.firebase_user,
+            token: result.auth_token || null,
           };
           this.updateAuthSection();
         }
@@ -551,7 +790,11 @@ class PopupController {
         console.log("[Popup] Setting up extension auth listener");
         extensionAuth.onAuthStatusChange((authStatus) => {
           console.log("[Popup] Auth status changed:", authStatus);
-          this.authStatus = authStatus;
+          this.authStatus = {
+            isAuthenticated: authStatus.isAuthenticated,
+            user: authStatus.user || null,
+            token: authStatus.token || null,
+          };
           this.updateAuthSection();
         });
 
@@ -571,6 +814,7 @@ class PopupController {
           this.authStatus = {
             isAuthenticated: message.isAuthenticated,
             user: message.user,
+            token: this.authStatus.token || null,
           };
           this.updateAuthSection();
         }
@@ -584,35 +828,83 @@ class PopupController {
     const authSection = document.getElementById("auth-section");
     if (!authSection) return;
 
-    if (this.authStatus.isAuthenticated && this.authStatus.user) {
-      // User is signed in
-      const user = this.authStatus.user;
-      const displayName = user.displayName || user.email || "User";
-      const provider = this.getProviderName(user.provider);
+    const isAuthenticated =
+      this.authStatus?.isAuthenticated && this.authStatus.user;
+
+    if (isAuthenticated) {
+      const user = this.authStatus.user || {};
+      const displayName =
+        user.username ||
+        user.displayName ||
+        user.name ||
+        user.email ||
+        "User";
+      const emailRow = user.email
+        ? `<div class="auth-user-email">${user.email}</div>`
+        : "";
+      const avatarMarkup = user.photoURL
+        ? `<img src="${user.photoURL}" alt="${displayName}" />`
+        : `<div class="default-avatar">👤</div>`;
+
+      const metaItems = [];
+      const githubUsername = user.github_username || user.githubUsername;
+      const githubRepo = user.github_repo || user.githubRepo;
+      const githubBranch = user.github_branch || user.githubBranch;
+
+      if (githubUsername || githubRepo) {
+        metaItems.push(`
+          <div class="auth-meta-item">
+            <span class="auth-meta-label">GitHub</span>
+            <span class="auth-meta-value">${githubUsername || "N/A"}${githubRepo ? `/${githubRepo}` : ""}</span>
+          </div>
+        `);
+      }
+
+      if (githubBranch) {
+        metaItems.push(`
+          <div class="auth-meta-item">
+            <span class="auth-meta-label">Branch</span>
+            <span class="auth-meta-value">${githubBranch}</span>
+          </div>
+        `);
+      }
+
+      const tokenPreview =
+        this.authStatus.token && this.authStatus.token.length > 12
+          ? `${this.authStatus.token.slice(0, 6)}…${this.authStatus.token.slice(-4)}`
+          : this.authStatus.token || "Active";
+
+      metaItems.push(`
+        <div class="auth-meta-item">
+          <span class="auth-meta-label">Session</span>
+          <span class="auth-meta-value">${tokenPreview}</span>
+        </div>
+      `);
+
+      const metaHtml =
+        metaItems.length > 0
+          ? `<div class="auth-meta">${metaItems.join("")}</div>`
+          : "";
 
       authSection.innerHTML = `
         <div class="auth-user">
           <div class="auth-avatar">
-            ${
-              user.photoURL
-                ? `<img src="${user.photoURL}" alt="${displayName}" />`
-                : `<div class="default-avatar">👤</div>`
-            }
+            ${avatarMarkup}
           </div>
           <div class="auth-user-info">
             <div class="auth-user-name">${displayName}</div>
-            <div class="auth-user-email">${user.email || ""}</div>
-            <div class="auth-provider">via ${provider}</div>
+            ${emailRow}
+            <div class="auth-provider">Backend session active</div>
           </div>
         </div>
+        ${metaHtml}
         <div class="auth-actions">
           <button class="btn btn-primary" id="website-btn">Website</button>
           <button class="btn sign-out" id="sign-out-btn">Sign Out</button>
         </div>
-        <div class="sync-status synced">✓ Synced with website</div>
+        <div class="sync-status synced">✓ Connected to LeetFeedback backend</div>
       `;
 
-      // Add event listeners for the buttons
       const websiteBtn = document.getElementById("website-btn");
       const signOutBtn = document.getElementById("sign-out-btn");
 
@@ -623,22 +915,62 @@ class PopupController {
         signOutBtn.addEventListener("click", () => this.signOut());
       }
     } else {
-      // User is not signed in
       authSection.innerHTML = `
-        <div class="auth-sign-in">
-          <div class="auth-sign-in-text">
-            Sign in to sync your progress across devices and access premium features.
+        <div class="auth-card">
+          <div class="auth-toggle">
+            <button class="auth-toggle-btn active" data-target="login">Login</button>
+            <button class="auth-toggle-btn" data-target="register">Register</button>
           </div>
-          <button class="btn btn-primary" id="sign-in-btn">Sign In</button>
-          <div class="sync-status">Not synced</div>
+          <form class="auth-form active" id="auth-login-form" data-form="login">
+            <div class="field">
+              <label for="auth-login-email">Email</label>
+              <input type="email" id="auth-login-email" name="email" placeholder="admin@example.com" autocomplete="email" required />
+            </div>
+            <div class="field">
+              <label for="auth-login-password">Password</label>
+              <input type="password" id="auth-login-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+            </div>
+            <button type="submit" class="btn btn-primary" id="auth-login-submit">Login</button>
+          </form>
+          <form class="auth-form" id="auth-register-form" data-form="register">
+            <div class="field">
+              <label for="auth-register-username">Username</label>
+              <input type="text" id="auth-register-username" name="username" placeholder="admin" required />
+            </div>
+            <div class="field">
+              <label for="auth-register-email">Email</label>
+              <input type="email" id="auth-register-email" name="email" placeholder="admin@example.com" required />
+            </div>
+            <div class="field">
+              <label for="auth-register-password">Password</label>
+              <input type="password" id="auth-register-password" name="password" placeholder="Create a password" autocomplete="new-password" required />
+            </div>
+            <div class="auth-config-summary" id="auth-config-summary">
+              <div class="auth-config-item">
+                <span class="auth-config-label">GitHub Username</span>
+                <span class="auth-config-value" id="auth-config-username"></span>
+              </div>
+              <div class="auth-config-item">
+                <span class="auth-config-label">Repository</span>
+                <span class="auth-config-value" id="auth-config-repo"></span>
+              </div>
+              <div class="auth-config-item">
+                <span class="auth-config-label">Branch</span>
+                <span class="auth-config-value" id="auth-config-branch"></span>
+              </div>
+            </div>
+            <div class="auth-config-note">
+              Managed from the Config tab.
+              <button type="button" class="auth-config-edit" id="auth-config-edit">Open Config</button>
+            </div>
+            <button type="submit" class="btn btn-primary" id="auth-register-submit">Create Account</button>
+          </form>
+          <div class="auth-form-message" id="auth-form-message"></div>
         </div>
       `;
 
-      // Add event listener for sign in button
-      const signInBtn = document.getElementById("sign-in-btn");
-      if (signInBtn) {
-        signInBtn.addEventListener("click", () => this.openSignIn());
-      }
+      this.setupAuthForms(authSection);
+      this.showAuthFeedback();
     }
   }
 
@@ -716,25 +1048,41 @@ class PopupController {
       if (typeof extensionAuth !== "undefined") {
         await extensionAuth.signOut();
         // Update local auth status
-        this.authStatus = { isAuthenticated: false, user: null };
+        this.authStatus = { isAuthenticated: false, user: null, token: null };
         this.updateAuthSection();
         this.showMessage("Signed out successfully", "success");
+        this.showAuthFeedback("success", "Signed out successfully.");
       } else {
         // Fallback: clear local storage
-        await chrome.storage.local.remove(["firebase_user", "auth_timestamp"]);
-        this.authStatus = { isAuthenticated: false, user: null };
+        await chrome.storage.local.remove([
+          "auth_user",
+          "auth_token",
+          "auth_timestamp",
+          "firebase_user",
+        ]);
+        this.authStatus = { isAuthenticated: false, user: null, token: null };
         this.updateAuthSection();
         this.showMessage("Signed out locally", "success");
+        this.showAuthFeedback("success", "Signed out locally.");
       }
     } catch (error) {
       console.error("Error signing out:", error);
       // Even if sign out fails, clear local state
-      await chrome.storage.local.remove(["firebase_user", "auth_timestamp"]);
-      this.authStatus = { isAuthenticated: false, user: null };
+      await chrome.storage.local.remove([
+        "auth_user",
+        "auth_token",
+        "auth_timestamp",
+        "firebase_user",
+      ]);
+      this.authStatus = { isAuthenticated: false, user: null, token: null };
       this.updateAuthSection();
       this.showMessage(
         "Failed to sign out from website, but cleared local session.",
         "warning",
+      );
+      this.showAuthFeedback(
+        "warning",
+        "Failed to sign out remotely. Local session cleared.",
       );
     }
   }
