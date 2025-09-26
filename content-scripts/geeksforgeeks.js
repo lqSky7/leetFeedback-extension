@@ -77,46 +77,121 @@
     async loadPersistedState() {
       try {
         const currentUrl = this.getCurrentProblemUrl();
-        const result = await chrome.storage.local.get([`gfg_state_${currentUrl}`]);
-        const state = result[`gfg_state_${currentUrl}`];
+        const result = await chrome.storage.local.get([`problem_data_${currentUrl}`]);
+        const problemData = result[`problem_data_${currentUrl}`];
 
-        if (state) {
-          console.log(`📥 [GeeksforGeeks Run Counter] Loaded persisted state:`, state);
-          this.attempts = state.attempts || [];
-          this.runCounter = state.runCounter || 0;
-          this.incorrectRunCounter = state.incorrectRunCounter || 0;
-          this.hasAnalyzedMistakes = state.hasAnalyzedMistakes || false;
-          this.currentProblemUrl = state.currentProblemUrl || currentUrl;
-          this.topics = state.topics || [];
+        if (problemData) {
+          console.log(`📥 [GeeksforGeeks] Loaded problem data:`, problemData);
+          
+          // Extract tracking info from problem data if available
+          this.attempts = problemData.attempts || [];
+          this.runCounter = problemData.runCounter || 0;
+          this.incorrectRunCounter = problemData.incorrectRunCounter || 0;
+          this.hasAnalyzedMistakes = problemData.hasAnalyzedMistakes || false;
+          this.currentProblemUrl = problemData.currentProblemUrl || currentUrl;
+          this.topics = problemData.parent_topic || [];
 
-          console.log(`🔢 [GeeksforGeeks Run Counter] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}, Topics: ${this.topics.length}`);
+          console.log(`🔢 [GeeksforGeeks] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}, Topics: ${this.topics.length}`);
         } else {
-          console.log(`🆕 [GeeksforGeeks Run Counter] No persisted state found - starting fresh`);
+          console.log(`🆕 [GeeksforGeeks] No problem data found - starting fresh`);
           this.topics = [];
         }
       } catch (error) {
-        console.error('[GeeksforGeeks Run Counter] Error loading persisted state:', error);
+        console.error('[GeeksforGeeks] Error loading problem data:', error);
       }
     }
 
-    async savePersistedState() {
+    async savePersistedState(overrides = {}) {
       try {
         const currentUrl = this.getCurrentProblemUrl();
-        const state = {
-          attempts: this.attempts,
-          runCounter: this.runCounter,
-          incorrectRunCounter: this.incorrectRunCounter,
-          hasAnalyzedMistakes: this.hasAnalyzedMistakes,
-          currentProblemUrl: this.currentProblemUrl,
-          topics: this.topics,
+        
+        // Load existing problem data to merge with tracking state
+        const result = await chrome.storage.local.get([`problem_data_${currentUrl}`]);
+        let problemData = result[`problem_data_${currentUrl}`] || {};
+
+        // Merge tracking state into problem data
+        problemData = {
+          ...problemData,
+          ...overrides,
+          attempts: overrides.attempts ?? this.attempts,
+          runCounter: overrides.runCounter ?? this.runCounter,
+          incorrectRunCounter: overrides.incorrectRunCounter ?? this.incorrectRunCounter,
+          hasAnalyzedMistakes: overrides.hasAnalyzedMistakes ?? this.hasAnalyzedMistakes,
+          currentProblemUrl: overrides.currentProblemUrl ?? this.currentProblemUrl,
+          parent_topic: overrides.parent_topic ?? this.topics,
+          timestamp: overrides.timestamp ?? new Date().toISOString()
+        };
+
+        await chrome.storage.local.set({ [`problem_data_${currentUrl}`]: problemData });
+        console.log(`💾 [GeeksforGeeks] Saved problem data for: ${currentUrl}`);
+      } catch (error) {
+        console.error('[GeeksforGeeks] Error saving problem data:', error);
+      }
+    }
+
+    // Utility methods for new problem data format
+    async storeProblemData(problemInfo, solved = false, tries = 0) {
+      try {
+        const currentUrl = this.getCurrentProblemUrl();
+        const storageKey = `problem_data_${currentUrl}`;
+        const existingResult = await chrome.storage.local.get([storageKey]);
+        const existingData = existingResult[storageKey] || {};
+        const previousSolved = existingData.solved || { value: false, date: 0, tries: 0 };
+
+        const triesValue = typeof tries === 'number' ? tries : (previousSolved.tries ?? 0);
+
+        let solvedData;
+        if (previousSolved.value) {
+          solvedData = previousSolved;
+        } else if (solved) {
+          solvedData = {
+            value: true,
+            date: previousSolved.date && previousSolved.date > 0 ? previousSolved.date : Date.now(),
+            tries: triesValue
+          };
+        } else {
+          solvedData = {
+            value: false,
+            date: 0,
+            tries: triesValue
+          };
+        }
+
+        const problemData = {
+          ...existingData,
+          name: problemInfo.title || existingData.name || 'Unknown Problem',
+          platform: 'geeksforgeeks',
+          difficulty: this.normalizeDifficulty(problemInfo.difficulty),
+          solved: solvedData,
+          ignored: existingData.ignored ?? false,
+          parent_topic: problemInfo.topics || problemInfo.topicTags || existingData.parent_topic || [],
+          problem_link: problemInfo.url || existingData.problem_link || window.location.href.split('?')[0],
+          
+          // Include tracking state
+          attempts: this.attempts || [],
+          runCounter: this.runCounter || 0,
+          incorrectRunCounter: this.incorrectRunCounter || 0,
+          hasAnalyzedMistakes: this.hasAnalyzedMistakes || false,
+          currentProblemUrl: this.currentProblemUrl || currentUrl,
           timestamp: new Date().toISOString()
         };
 
-        await chrome.storage.local.set({ [`gfg_state_${currentUrl}`]: state });
-        console.log(`💾 [GeeksforGeeks Run Counter] Saved state for problem: ${currentUrl}`);
+        await chrome.storage.local.set({ [storageKey]: problemData });
+        console.log(`💾 [GeeksforGeeks] Stored problem data:`, problemData);
+        return problemData;
       } catch (error) {
-        console.error('[GeeksforGeeks Run Counter] Error saving persisted state:', error);
+        console.error('[GeeksforGeeks] Error storing problem data:', error);
       }
+    }
+
+    normalizeDifficulty(difficulty) {
+      if (!difficulty) return 1; // Default to Easy
+      const diff = difficulty.toLowerCase();
+      if (diff.includes('school')) return 0; // School
+      if (diff.includes('basic') || diff.includes('easy')) return 1; // Easy
+      if (diff.includes('medium')) return 2; // Medium
+      if (diff.includes('hard')) return 3; // Hard
+      return 1; // Default to Easy
     }
 
     getCurrentProblemUrl() {
@@ -131,11 +206,11 @@
       this.incorrectRunCounter = 0;
       this.hasAnalyzedMistakes = false;
       this.topics = [];
-      console.log(`🔄 [GeeksforGeeks Run Counter] Counters reset for new problem`);
+      console.log(`🔄 [GeeksforGeeks] Counters reset for new problem`);
 
-      // Clean up any stored state for this problem
+      // Clean up any stored problem data for this problem
       const currentUrl = this.getCurrentProblemUrl();
-      chrome.storage.local.remove([`gfg_state_${currentUrl}`]).catch(console.error);
+      chrome.storage.local.remove([`problem_data_${currentUrl}`]).catch(console.error);
     }
 
     setupEventListeners() {
@@ -558,6 +633,9 @@
         this.currentProblem = problemInfo;
         DSAUtils.logDebug(PLATFORM, 'Problem info extracted successfully', problemInfo);
 
+        // Store problem data as unsolved when first encountered
+        await this.storeProblemData(problemInfo, false, 0);
+
         return problemInfo;
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error extracting problem info', error);
@@ -867,7 +945,7 @@
             code: solution,
             language: this.currentProblem.language || 'Unknown',
             timestamp: new Date().toISOString(),
-            type: 'submission',
+            type: 'submit',
             successful: true
           };
           this.attempts.push(successfulAttempt);
@@ -875,12 +953,17 @@
         }
 
         // Add attempts for mistake analysis
-        const incorrectAttempts = this.attempts.filter(a => !a.successful);
-        DSAUtils.logDebug(PLATFORM, `Total attempts: ${this.attempts.length}, Incorrect attempts: ${incorrectAttempts.length}`);
+        const finalAttempts = [...this.attempts];
+        const incorrectAttempts = finalAttempts.filter(a => !a.successful);
+        DSAUtils.logDebug(PLATFORM, `Total attempts: ${finalAttempts.length}, Incorrect attempts: ${incorrectAttempts.length}`);
 
-        this.currentProblem.attempts = this.attempts;
-        if (this.attempts.length > 0) {
-          DSAUtils.logDebug(PLATFORM, 'Attempts being sent to GitHub:', this.attempts.map(a => ({
+        const totalRunCounter = this.runCounter;
+        const totalIncorrectRuns = this.incorrectRunCounter;
+        this.hasAnalyzedMistakes = false;
+
+        this.currentProblem.attempts = finalAttempts;
+        if (finalAttempts.length > 0) {
+          DSAUtils.logDebug(PLATFORM, 'Attempts being sent to GitHub:', finalAttempts.map(a => ({
             language: a.language,
             type: a.type,
             successful: a.successful,
@@ -905,14 +988,22 @@
           DSAUtils.logDebug(PLATFORM, 'Push successful!');
           console.log(`✅ [GeeksforGeeks Submission] Solution pushed to GitHub successfully!`);
 
+          // Store problem data as solved
+          const totalTries = totalRunCounter + 1; // +1 for the successful submission
+          await this.storeProblemData(this.currentProblem, true, totalTries);
+
           // Reset counters after successful submission
           this.runCounter = 0;
           this.incorrectRunCounter = 0;
           this.attempts = [];
-          this.hasAnalyzedMistakes = false;
 
-          // Save cleared state
-          await this.savePersistedState();
+          // Persist final attempts and counters for history
+          await this.savePersistedState({
+            attempts: finalAttempts,
+            runCounter: totalRunCounter,
+            incorrectRunCounter: totalIncorrectRuns,
+            hasAnalyzedMistakes: this.hasAnalyzedMistakes
+          });
         } else {
           DSAUtils.logError(PLATFORM, 'Push failed:', result.error);
           console.log(`❌ [GeeksforGeeks Submission] Failed to push solution:`, result.error);
