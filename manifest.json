@@ -16,6 +16,7 @@
         "https://*.takeuforward.org/*",
         "https://api.github.com/*",
         "https://generativelanguage.googleapis.com/*",
+        "https://leetfeedback-backend.onrender.com/*",
         "https://leet-feedback.vercel.app/*",
         "https://*.vercel.app/*",
         "https://*.netlify.app/*"
@@ -30,6 +31,7 @@
                 "utils/common.js",
                 "utils/github-api.js",
                 "utils/gemini-api.js",
+                "utils/backend-api.js",
                 "utils/time-tracker.js",
                 "content-scripts/leetcode.js"
             ],
@@ -44,6 +46,7 @@
                 "utils/common.js",
                 "utils/github-api.js",
                 "utils/gemini-api.js",
+                "utils/backend-api.js",
                 "utils/time-tracker.js",
                 "content-scripts/geeksforgeeks.js"
             ],
@@ -55,6 +58,7 @@
                 "utils/common.js",
                 "utils/github-api.js",
                 "utils/gemini-api.js",
+                "utils/backend-api.js",
                 "utils/time-tracker.js",
                 "content-scripts/takeuforward.js"
             ],

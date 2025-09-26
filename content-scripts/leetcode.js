@@ -5,6 +5,7 @@
 
   const PLATFORM = DSA_PLATFORMS.LEETCODE;
   let githubAPI = null;
+  let backendAPI = null;
   let isInitialized = false;
   let extractorInstance = null; // Global singleton instance
 
@@ -42,6 +43,10 @@
 
         githubAPI = new GitHubAPI();
         await githubAPI.initialize();
+        
+        backendAPI = new BackendAPI();
+        await backendAPI.initialize();
+        
         this.injectMonacoBridge();
         this.setupBridgeListener();
         this.setupEventListeners();
@@ -961,8 +966,8 @@
         // Add performance stats
         problemInfo.stats = stats;
 
-        // Case 1: Normal successful submission (push solution to GitHub)
-        console.log(`📤 [LeetCode Submission] Pushing successful solution to GitHub...`);
+        // Case 1: Normal successful submission (push to backend first, then GitHub)
+        console.log(`📤 [LeetCode Submission] UPDATED VERSION - Pushing successful solution to backend and GitHub...`);
 
         const attemptsToPersist = [...this.attempts];
         if (submissionAttempt) {
@@ -981,7 +986,36 @@
         problemInfo.attempts = [];
         problemInfo.mistakeAnalysisOnly = false;
 
-        // Push to GitHub (normal solution)
+        // Step 1: Push to Backend API first
+        console.log(`🔄 [LeetCode Submission] Step 1: Pushing to backend...`);
+        console.log(`🔍 [LeetCode Debug] BackendAPI available:`, typeof BackendAPI !== 'undefined');
+        console.log(`🔍 [LeetCode Debug] backendAPI instance:`, backendAPI);
+        try {
+          if (!backendAPI) {
+            console.log(`🔧 [LeetCode Submission] Initializing BackendAPI...`);
+            backendAPI = new BackendAPI();
+            await backendAPI.initialize();
+            console.log(`🔧 [LeetCode Submission] BackendAPI initialized:`, backendAPI);
+          }
+          
+          const currentUrl = this.getCurrentProblemUrl();
+          console.log(`📍 [LeetCode Submission] Current problem URL: ${currentUrl}`);
+          
+          const backendResult = await backendAPI.pushCurrentProblemData(currentUrl);
+          
+          if (backendResult.success) {
+            console.log(`✅ [LeetCode Submission] Backend push successful!`, backendResult.data);
+          } else {
+            console.log(`⚠️ [LeetCode Submission] Backend push failed: ${backendResult.error}`);
+            // Continue with GitHub push even if backend fails
+          }
+        } catch (error) {
+          console.error(`❌ [LeetCode Submission] Backend push error:`, error);
+          // Continue with GitHub push even if backend fails
+        }
+
+        // Step 2: Push to GitHub (normal solution)
+        console.log(`🔄 [LeetCode Submission] Step 2: Pushing to GitHub...`);
         const result = await githubAPI.pushSolution(problemInfo, PLATFORM);
 
         if (result.success) {
@@ -1052,7 +1086,9 @@
 
   async function initializeLeetCode() {
     // Wait for required utilities to be available
-    if (typeof DSAUtils === 'undefined' || typeof GitHubAPI === 'undefined') {
+    console.log(`🔍 [LeetCode Init] Checking dependencies - DSAUtils: ${typeof DSAUtils}, GitHubAPI: ${typeof GitHubAPI}, BackendAPI: ${typeof BackendAPI}`);
+    if (typeof DSAUtils === 'undefined' || typeof GitHubAPI === 'undefined' || typeof BackendAPI === 'undefined') {
+      console.log(`⏳ [LeetCode Init] Dependencies not ready, retrying in 500ms...`);
       setTimeout(initializeLeetCode, 500);
       return;
     }
