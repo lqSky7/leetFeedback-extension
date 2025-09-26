@@ -253,12 +253,12 @@
     }
 
     normalizeDifficulty(difficulty) {
-      if (!difficulty) return 1; // Default to Easy
+      if (!difficulty) return 0; // Default to Easy
       const diff = difficulty.toLowerCase();
-      if (diff.includes('easy')) return 1; // Easy
-      if (diff.includes('medium')) return 2; // Medium
-      if (diff.includes('hard')) return 3; // Hard
-      return 1; // Default to Easy
+      if (diff.includes('easy')) return 0; // Easy
+      if (diff.includes('medium')) return 1; // Medium
+      if (diff.includes('hard')) return 2; // Hard
+      return 0; // Default to Easy
     }
     getCurrentProblemUrl() {
       const url = window.location.href;

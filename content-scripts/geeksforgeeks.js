@@ -185,13 +185,13 @@
     }
 
     normalizeDifficulty(difficulty) {
-      if (!difficulty) return 1; // Default to Easy
+      if (!difficulty) return 0; // Default to Easy
       const diff = difficulty.toLowerCase();
       if (diff.includes('school')) return 0; // School
-      if (diff.includes('basic') || diff.includes('easy')) return 1; // Easy
-      if (diff.includes('medium')) return 2; // Medium
-      if (diff.includes('hard')) return 3; // Hard
-      return 1; // Default to Easy
+      if (diff.includes('basic') || diff.includes('easy')) return 0; // Easy
+      if (diff.includes('medium')) return 1; // Medium
+      if (diff.includes('hard')) return 2; // Hard
+      return 0; // Default to Easy
     }
 
     getCurrentProblemUrl() {
