@@ -91,14 +91,30 @@ class PopupController {
       clearBtn.addEventListener("click", () => this.clearScheduledTasks());
     }
 
-    const focusModeSelect = document.getElementById("focus-mode");
-    if (focusModeSelect) {
-      focusModeSelect.addEventListener("change", () => this.updateFocusModeDescription());
-    }
+    // Focus mode selector buttons
+    document.querySelectorAll(".focus-option").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        // Remove active from all
+        document.querySelectorAll(".focus-option").forEach((b) => b.classList.remove("active"));
+        // Add active to clicked
+        e.currentTarget.classList.add("active");
+        // Update hidden input
+        const focusInput = document.getElementById("focus-mode");
+        if (focusInput) {
+          focusInput.value = e.currentTarget.dataset.value;
+        }
+      });
+    });
 
     const grandparentFilter = document.getElementById("grandparent-filter");
     if (grandparentFilter) {
       grandparentFilter.addEventListener("change", () => this.updateParentTopicOptions());
+    }
+
+    // Refresh tasks button
+    const refreshBtn = document.getElementById("refresh-tasks");
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", () => this.loadTaskData());
     }
   }
 
@@ -844,7 +860,7 @@ class PopupController {
         : "";
       const avatarMarkup = user.photoURL
         ? `<img src="${user.photoURL}" alt="${displayName}" />`
-        : `<div class="default-avatar">👤</div>`;
+        : `<div class="default-avatar"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>`;
 
       const metaItems = [];
       const githubUsername = user.github_username || user.githubUsername;
@@ -902,7 +918,7 @@ class PopupController {
           <button class="btn btn-primary" id="website-btn">Website</button>
           <button class="btn sign-out" id="sign-out-btn">Sign Out</button>
         </div>
-        <div class="sync-status synced">✓ Connected to LeetFeedback backend</div>
+        <div class="sync-status synced">Connected to LeetFeedback backend</div>
       `;
 
       const websiteBtn = document.getElementById("website-btn");
@@ -1128,7 +1144,7 @@ class PopupController {
     const grandparents = [...new Set(this.tasks.map(task => task.grandparent))].sort();
     const parentTopics = [...new Set(this.tasks.map(task => task.parent_topic))].sort();
 
-    // Populate grandparent filter
+    // Populate grandparent filter (single select)
     grandparentSelect.innerHTML = '<option value="">All Categories</option>';
     grandparents.forEach(gp => {
       const option = document.createElement("option");
@@ -1152,15 +1168,13 @@ class PopupController {
     const parentSelect = document.getElementById("parent-filter");
     if (!grandparentSelect || !parentSelect) return;
 
-    const selectedGrandparents = Array.from(grandparentSelect.selectedOptions)
-      .map(option => option.value)
-      .filter(value => value !== "");
+    const selectedGrandparent = grandparentSelect.value;
 
     let availableParents;
-    if (selectedGrandparents.length > 0) {
+    if (selectedGrandparent) {
       availableParents = [...new Set(
         this.tasks
-          .filter(task => selectedGrandparents.includes(task.grandparent))
+          .filter(task => task.grandparent === selectedGrandparent)
           .map(task => task.parent_topic)
       )].sort();
     } else {
@@ -1184,31 +1198,16 @@ class PopupController {
 
     const stats = window.PredictionAlgorithm.getTaskStatistics(this.tasks);
     
-    document.getElementById("total-tasks").textContent = stats.total;
-    document.getElementById("active-tasks").textContent = stats.active;
-    document.getElementById("solved-tasks").textContent = stats.solved;
-    document.getElementById("unsolved-tasks").textContent = stats.unsolved;
-    document.getElementById("ignored-tasks").textContent = stats.ignored;
-
-    const statsSection = document.getElementById("prediction-stats");
-    if (statsSection) {
-      statsSection.style.display = "block";
-    }
-  }
-
-  updateFocusModeDescription() {
-    const focusMode = parseInt(document.getElementById("focus-mode").value) || 1;
-    const descElement = document.getElementById("focus-description");
-    if (!descElement) return;
-
-    const descriptions = {
-      0: "100% revision problems",
-      1: "70% revision problems, 30% new problems",
-      2: "30% revision problems, 70% new problems",
-      3: "100% new problems"
-    };
-
-    descElement.textContent = descriptions[focusMode] || descriptions[1];
+    // Update stats row values
+    const totalEl = document.getElementById("total-tasks");
+    const solvedEl = document.getElementById("solved-tasks");
+    const unsolvedEl = document.getElementById("unsolved-tasks");
+    const ignoredEl = document.getElementById("ignored-tasks");
+    
+    if (totalEl) totalEl.textContent = stats.total;
+    if (solvedEl) solvedEl.textContent = stats.solved;
+    if (unsolvedEl) unsolvedEl.textContent = stats.unsolved;
+    if (ignoredEl) ignoredEl.textContent = stats.ignored;
   }
 
   async generateSchedule() {
@@ -1235,13 +1234,11 @@ class PopupController {
       await new Promise(resolve => setTimeout(resolve, 300));
 
       // Generate schedule using the prediction algorithm
-      const grandparentSelect = document.getElementById("grandparent-filter");
-      const selectedGrandparents = Array.from(grandparentSelect.selectedOptions)
-        .map(option => option.value)
-        .filter(value => value !== "");
+      const grandparentFilter = document.getElementById("grandparent-filter");
+      const selectedGrandparent = grandparentFilter ? grandparentFilter.value : null;
 
       const filters = {
-        grandparent: selectedGrandparents.length > 0 ? selectedGrandparents : null,
+        grandparent: selectedGrandparent ? [selectedGrandparent] : null,
         parent_topic: document.getElementById("parent-filter").value || null,
       };
 
@@ -1269,56 +1266,27 @@ class PopupController {
   }
 
   async displayScheduledTasks() {
-    const taskList = document.getElementById("task-list");
-    const timestampElement = document.getElementById("schedule-timestamp");
-    if (!taskList) return;
+    const resultsContainer = document.getElementById("schedule-results");
+    const emptyState = document.getElementById("prediction-empty");
+    if (!resultsContainer) return;
 
-    taskList.innerHTML = "";
+    // Remove existing task cards only (keep header)
+    const existingCards = resultsContainer.querySelectorAll(".task-card");
+    existingCards.forEach(card => card.remove());
 
     if (this.scheduledTasks.length === 0) {
-      taskList.innerHTML = `
-        <div class="task-item">
-          <span class="task-name">No tasks to schedule with current settings.</span>
-        </div>
-      `;
-      if (timestampElement) timestampElement.textContent = "";
-      this.showPredictionResults(true);
+      if (emptyState) emptyState.style.display = "flex";
+      resultsContainer.style.display = "none";
       return;
     }
 
-    // Show timestamp if we have saved schedule data
-    if (timestampElement) {
-      try {
-        const data = await chrome.storage.local.get(["scheduledTasksData"]);
-        if (data.scheduledTasksData && data.scheduledTasksData.generatedAt) {
-          const generatedAt = new Date(data.scheduledTasksData.generatedAt);
-          const now = new Date();
-          const diffMs = now - generatedAt;
-          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-          const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-          let timeString = "";
-          if (diffHours > 0) {
-            timeString = `${diffHours}h ${diffMinutes}m ago`;
-          } else if (diffMinutes > 0) {
-            timeString = `${diffMinutes}m ago`;
-          } else {
-            timeString = "just now";
-          }
-
-          timestampElement.textContent = `(generated ${timeString})`;
-        } else {
-          timestampElement.textContent = "";
-        }
-      } catch (error) {
-        console.error("Error loading timestamp:", error);
-        timestampElement.textContent = "";
-      }
-    }
+    if (emptyState) emptyState.style.display = "none";
+    resultsContainer.style.display = "flex";
+    resultsContainer.style.flexDirection = "column";
 
     this.scheduledTasks.forEach((task, index) => {
       const taskItem = document.createElement("div");
-      taskItem.className = "task-item";
+      taskItem.className = "task-card";
 
       const originalIndex = this.tasks.findIndex(t => 
         t.name === task.name && 
@@ -1326,64 +1294,89 @@ class PopupController {
         t.parent_topic === task.parent_topic
       );
 
-      const difficultyBadge = task.difficulty === 0 ? "easy" : 
+      const difficultyClass = task.difficulty === 0 ? "easy" : 
                              task.difficulty === 1 ? "medium" : "hard";
-      const typeBadge = task.solved.value ? "revision" : "new";
+      const difficultyLabel = task.difficulty === 0 ? "Easy" : 
+                              task.difficulty === 1 ? "Medium" : "Hard";
+      const typeClass = task.solved.value ? "revision" : "new";
+      const typeLabel = task.solved.value ? "Revision" : "New";
 
       taskItem.innerHTML = `
-        <span class="task-name">${task.name}</span>
+        <div class="task-header">
+          <span class="task-name">${task.name}</span>
+          <div class="task-badges">
+            <span class="task-badge badge-${difficultyClass}">${difficultyLabel}</span>
+            <span class="task-badge badge-${typeClass}">${typeLabel}</span>
+          </div>
+        </div>
         <div class="task-meta">
-          <span class="task-badge badge-${difficultyBadge}">
-            ${task.difficulty === 0 ? "Easy" : task.difficulty === 1 ? "Medium" : "Hard"}
-          </span>
-          <span class="task-badge badge-${typeBadge}">
-            ${task.solved.value ? "Revision" : "New"}
-          </span>
-          ${task.problem_link ? 
-            `<button class="link-button" data-link="${task.problem_link}" title="Open problem link">🔗</button>` : ""
-          }
-          <button class="ignore-button" data-task-index="${originalIndex}" title="Ignore this task">−</button>
+          <span class="task-topic">${task.parent_topic}</span>
+          <div class="task-actions">
+            ${task.problem_link ? 
+              `<button class="icon-btn link-btn" data-link="${task.problem_link}" title="Open problem">
+                <img src="../icons/ui/link.svg" alt="Link" />
+              </button>` : ""
+            }
+            <button class="icon-btn ignore-btn" data-task-index="${originalIndex}" title="Ignore task">
+              <img src="../icons/ui/x.svg" alt="Ignore" />
+            </button>
+          </div>
         </div>
       `;
 
       // Add event listener for ignore button
-      const ignoreBtn = taskItem.querySelector(".ignore-button");
-      ignoreBtn.addEventListener("click", () => {
-        this.ignoreTask(originalIndex);
-      });
-
-      // Add event listener for link button
-      const linkBtn = taskItem.querySelector(".link-button");
-      if (linkBtn) {
-        linkBtn.addEventListener("click", () => {
-          window.open(task.problem_link, "_blank");
+      const ignoreBtn = taskItem.querySelector(".ignore-btn");
+      if (ignoreBtn) {
+        ignoreBtn.addEventListener("click", () => {
+          this.ignoreTask(originalIndex);
         });
       }
 
-      taskList.appendChild(taskItem);
-    });
+      // Add event listener for link button
+      const linkBtn = taskItem.querySelector(".link-btn");
+      if (linkBtn) {
+        linkBtn.addEventListener("click", () => {
+          chrome.tabs.create({ url: task.problem_link });
+        });
+      }
 
-    this.showPredictionResults(true);
+      resultsContainer.appendChild(taskItem);
+    });
   }
 
   updateScheduledCount() {
-    const scheduledCount = document.getElementById("scheduled-count");
-    if (scheduledCount) {
-      scheduledCount.textContent = this.scheduledTasks.length;
+    const countBadge = document.getElementById("scheduled-count");
+    if (countBadge) {
+      countBadge.textContent = this.scheduledTasks.length;
+      countBadge.style.display = this.scheduledTasks.length > 0 ? "inline-flex" : "none";
     }
   }
 
   showPredictionLoading(show) {
-    const loadingElement = document.getElementById("prediction-loading");
-    if (loadingElement) {
-      loadingElement.style.display = show ? "flex" : "none";
+    const generateBtn = document.getElementById("generate-schedule");
+    if (generateBtn) {
+      generateBtn.disabled = show;
+      if (show) {
+        generateBtn.innerHTML = '<span class="loading-spinner"></span> Generating...';
+      } else {
+        this.updateGenerateButtonText();
+      }
     }
   }
 
   showPredictionResults(show) {
-    const resultsElement = document.getElementById("prediction-results");
-    if (resultsElement) {
-      resultsElement.style.display = show ? "block" : "none";
+    const resultsContainer = document.getElementById("schedule-results");
+    const emptyState = document.getElementById("prediction-empty");
+    
+    if (show && this.scheduledTasks.length > 0) {
+      if (resultsContainer) {
+        resultsContainer.style.display = "flex";
+        resultsContainer.style.flexDirection = "column";
+      }
+      if (emptyState) emptyState.style.display = "none";
+    } else {
+      if (resultsContainer) resultsContainer.style.display = "none";
+      if (emptyState) emptyState.style.display = "flex";
     }
   }
 
@@ -1443,16 +1436,10 @@ class PopupController {
     const hasSavedTasks = this.scheduledTasks && this.scheduledTasks.length > 0;
 
     if (hasSavedTasks) {
-      button.innerHTML = `
-        <span class="btn-icon">🔄</span>
-        Update Schedule
-      `;
-      button.title = "Update your saved schedule with new settings";
+      button.innerHTML = `<img src="../icons/ui/refresh.svg" alt="" class="btn-icon" /> Regenerate`;
+      button.title = "Regenerate schedule with current settings";
     } else {
-      button.innerHTML = `
-        <span class="btn-icon">🔮</span>
-        Generate Schedule
-      `;
+      button.innerHTML = `<img src="../icons/ui/play.svg" alt="" class="btn-icon" /> Generate`;
       button.title = "Generate a new schedule";
     }
   }
@@ -1471,9 +1458,14 @@ class PopupController {
         }
 
         if (scheduleData.focusMode !== undefined) {
-          const focusSelect = document.getElementById("focus-mode");
-          if (focusSelect) focusSelect.value = scheduleData.focusMode;
-          this.updateFocusModeDescription();
+          // Update hidden input
+          const focusInput = document.getElementById("focus-mode");
+          if (focusInput) focusInput.value = scheduleData.focusMode;
+          
+          // Update button active state
+          document.querySelectorAll(".focus-option").forEach((btn) => {
+            btn.classList.toggle("active", parseInt(btn.dataset.value) === scheduleData.focusMode);
+          });
         }
 
         return true;
@@ -1490,10 +1482,8 @@ class PopupController {
       const targetCount = parseInt(document.getElementById("target-count").value) || 10;
       const focusMode = parseInt(document.getElementById("focus-mode").value) || 1;
 
-      const grandparentSelect = document.getElementById("grandparent-filter");
-      const selectedGrandparents = Array.from(grandparentSelect.selectedOptions)
-        .map(option => option.value)
-        .filter(value => value !== "");
+      const grandparentFilter = document.getElementById("grandparent-filter");
+      const selectedGrandparent = grandparentFilter ? grandparentFilter.value : null;
 
       const scheduleData = {
         scheduledTasks: this.scheduledTasks,
@@ -1501,7 +1491,7 @@ class PopupController {
         targetCount,
         focusMode,
         filters: {
-          grandparent: selectedGrandparents,
+          grandparent: selectedGrandparent ? [selectedGrandparent] : null,
           parent_topic: document.getElementById("parent-filter").value || null,
         }
       };
