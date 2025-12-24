@@ -35,6 +35,7 @@
       this.submitCounter = 0;
       this.currentSubmissionAttempt = null;
       this.aiAnalysis = null; // Store Gemini AI analysis
+      this.problemStartTime = null; // Track when user started on this problem
     }
 
     async initialize() {
@@ -159,10 +160,12 @@
           this.topics = problemData.parent_topic || [];
           this.submitCounter = problemData.submitCounter || 0;
           this.aiAnalysis = problemData.aiAnalysis || null;
+          this.problemStartTime = problemData.problemStartTime || Date.now();
 
           console.log(`🔢 [LeetCode] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}`);
         } else {
           console.log(`🆕 [LeetCode] No problem data found - starting fresh`);
+          this.problemStartTime = Date.now(); // Start tracking time for new problem
         }
       } catch (error) {
         console.error('[LeetCode] Error loading problem data:', error);
@@ -189,6 +192,7 @@
           parent_topic: overrides.parent_topic ?? this.topics,
           submitCounter: overrides.submitCounter ?? this.submitCounter,
           aiAnalysis: overrides.aiAnalysis ?? this.aiAnalysis,
+          problemStartTime: overrides.problemStartTime ?? this.problemStartTime,
           timestamp: overrides.timestamp ?? new Date().toISOString()
         };
 
@@ -245,6 +249,7 @@
           currentProblemUrl: this.currentProblemUrl || currentUrl,
           submitCounter: this.submitCounter || 0,
           aiAnalysis: this.aiAnalysis || null,
+          problemStartTime: this.problemStartTime || Date.now(),
           timestamp: new Date().toISOString()
         };
 
@@ -281,6 +286,7 @@
       this.submissionInProgress = false;
       this.currentSubmissionAttempt = null;
       this.aiAnalysis = null;
+      this.problemStartTime = Date.now(); // Reset start time for new problem
       console.log(`🔄 [LeetCode] Counters reset for new problem`);
 
       // Clean up any stored problem data for this problem
@@ -997,6 +1003,12 @@
         problemInfo.attempts = [];
         problemInfo.mistakeAnalysisOnly = false;
 
+        // Store problem as solved BEFORE pushing to backend
+        const submissionCount = attemptsToPersist.filter(a => a.type === 'submit').length;
+        const totalTries = (submissionCount > 0 ? submissionCount : this.runCounter + 1);
+        await this.storeProblemData(problemInfo, true, totalTries);
+        console.log(`💾 [LeetCode Submission] Stored problem as solved with ${totalTries} tries`);
+
         // Step 1: Push to Backend API first
         console.log(`🔄 [LeetCode Submission] Step 1: Pushing to backend...`);
         console.log(`🔍 [LeetCode Debug] BackendAPI available:`, typeof BackendAPI !== 'undefined');
@@ -1031,12 +1043,6 @@
 
         if (result.success) {
           console.log(`✅ [LeetCode Submission] Solution pushed to GitHub successfully!`);
-          
-          // Store problem data as solved
-          this.hasAnalyzedMistakes = false;
-          const submissionCount = attemptsToPersist.filter(a => a.type === 'submit').length;
-          const totalTries = (submissionCount > 0 ? submissionCount : this.runCounter + 1);
-          await this.storeProblemData(problemInfo, true, totalTries);
           
           // Reset counters after successful submission
           this.runCounter = 0;

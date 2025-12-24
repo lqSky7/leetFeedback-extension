@@ -136,7 +136,9 @@ class BackendAPI {
         attempts = [],
         runCounter = 0,
         aiAnalysis = null,
-        timestamp
+        problemStartTime = null,
+        timestamp,
+        language = null  // Add language from stored data (for TakeUforward/GFG)
       } = storedProblemData;
 
       // Convert difficulty: 0 -> easy, 1 -> medium, 2 -> hard
@@ -152,14 +154,15 @@ class BackendAPI {
         problemSlug = name.toLowerCase().replace(/\s+/g, '-');
       }
 
-      // Determine language from attempts if available
+      // Determine language from attempts if available, otherwise from stored data
       const lastAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null;
-      const language = lastAttempt?.language || 'python';
+      const languageValue = lastAttempt?.language || language || 'python';
 
-      // Calculate time taken (in seconds) - sum of all attempt times or default
-      const timeTaken = attempts.reduce((sum, attempt) => {
-        return sum + (attempt.timeTaken || 0);
-      }, 0) || 0;
+      // Calculate time taken (in seconds) from problem start to submission
+      let timeTaken = 0;
+      if (problemStartTime && solved.date) {
+        timeTaken = Math.floor((solved.date - problemStartTime) / 1000); // Convert ms to seconds
+      }
 
       // Generate idempotency key from problem slug and timestamp
       const idempotencyKey = `${problemSlug}-${solved.date || Date.now()}`;
@@ -169,8 +172,8 @@ class BackendAPI {
         platform: platform.toLowerCase(),
         problemTitle: name || 'Unknown Problem',
         difficulty: difficultyStr,
-        language: language,
-        outcome: solved.value ? 'accepted' : 'attempted',
+        language: languageValue,
+        outcome: solved.value ? 'accepted' : 'failed',
         idempotencyKey: idempotencyKey,
         happenedAt: solved.date ? new Date(solved.date).toISOString() : new Date().toISOString(),
         deviceId: 1, // Default device ID

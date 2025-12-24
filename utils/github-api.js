@@ -157,7 +157,7 @@ class GitHubAPI {
       const dirPath = DSAUtils.createDirectoryPath(platform, problemInfo);
       const filePath = `${dirPath}/solution.md`;
       
-      let content, commitMessage;
+      let content, commitMessage, analysisResult;
 
       if (contentType === 'solution') {
         // Successful solution - just the solution
