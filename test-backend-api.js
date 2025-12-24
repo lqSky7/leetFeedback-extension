@@ -32,7 +32,7 @@ async function testBackendAPI(authToken) {
     };
     
     try {
-      const response1 = await fetch('https://leetfeedback-backend.onrender.com/api/problems/push', {
+      const response1 = await fetch('https://traverse-backend-api.azurewebsites.net/api/problems/push', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -57,7 +57,7 @@ async function testBackendAPI(authToken) {
     console.log('🔄 [Test] Step 4: Testing with Cookie header...');
     
     try {
-      const response2 = await fetch('https://leetfeedback-backend.onrender.com/api/problems/push', {
+      const response2 = await fetch('https://traverse-backend-api.azurewebsites.net/api/problems/push', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +84,7 @@ async function testBackendAPI(authToken) {
     try {
       const xhrResponse = await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', 'https://leetfeedback-backend.onrender.com/api/problems/push');
+        xhr.open('POST', 'https://traverse-backend-api.azurewebsites.net/api/problems/push');
         xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.setRequestHeader('Cookie', `token=${authToken}`);
         
@@ -118,7 +118,7 @@ async function testBackendAPI(authToken) {
     // Try with 'Bearer ' prefix removed
     const cleanToken = authToken.replace('Bearer ', '');
     try {
-      const response3 = await fetch('https://leetfeedback-backend.onrender.com/api/problems/push', {
+      const response3 = await fetch('https://traverse-backend-api.azurewebsites.net/api/problems/push', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

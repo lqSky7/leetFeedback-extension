@@ -2,7 +2,7 @@
 
 class BackendAPI {
   constructor() {
-    this.baseURL = 'https://leetfeedback-backend.onrender.com';
+    this.baseURL = 'https://traverse-backend-api.azurewebsites.net';
     this.authToken = null;
     this.initialized = false;
     console.log(`🔧 [Backend API] BackendAPI constructor called`);

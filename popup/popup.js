@@ -200,11 +200,11 @@ class PopupController {
     const formData = new FormData(form);
 
     const payload = {
-      email: formData.get("email")?.toString().trim(),
+      username: formData.get("username")?.toString().trim(),
       password: formData.get("password"),
     };
 
-    if (!payload.email || !payload.password) {
+    if (!payload.username || !payload.password) {
       this.showAuthFeedback("error", "Please fill in all login fields.");
       return;
     }
@@ -939,8 +939,8 @@ class PopupController {
           </div>
           <form class="auth-form active" id="auth-login-form" data-form="login">
             <div class="field">
-              <label for="auth-login-email">Email</label>
-              <input type="email" id="auth-login-email" name="email" placeholder="admin@example.com" autocomplete="email" required />
+              <label for="auth-login-username">Username</label>
+              <input type="text" id="auth-login-username" name="username" placeholder="johndoe" autocomplete="username" required />
             </div>
             <div class="field">
               <label for="auth-login-password">Password</label>

@@ -7,7 +7,7 @@ async function testLoginAndPush() {
     // Step 1: Login to get the token
     console.log('🔐 [Test] Step 1: Logging in...');
     
-    const loginResponse = await fetch('https://leetfeedback-backend.onrender.com/api/auth/login', {
+    const loginResponse = await fetch('https://traverse-backend-api.azurewebsites.net/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -54,7 +54,7 @@ async function testLoginAndPush() {
       "problem_link": "/problems/test-problem"
     };
     
-    const pushResponse = await fetch('https://leetfeedback-backend.onrender.com/api/problems/push', {
+    const pushResponse = await fetch('https://traverse-backend-api.azurewebsites.net/api/problems/push', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -76,7 +76,7 @@ async function testLoginAndPush() {
       // Step 3: Try with Authorization Bearer header
       console.log('🔄 [Test] Step 3: Testing push with Authorization Bearer header...');
       
-      const pushResponse2 = await fetch('https://leetfeedback-backend.onrender.com/api/problems/push', {
+      const pushResponse2 = await fetch('https://traverse-backend-api.azurewebsites.net/api/problems/push', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -122,7 +122,7 @@ async function testPushWithToken(token) {
   };
   
   console.log('🔄 [Test] Testing Cookie method...');
-  const response1 = await fetch('https://leetfeedback-backend.onrender.com/api/problems/push', {
+  const response1 = await fetch('https://traverse-backend-api.azurewebsites.net/api/problems/push', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -134,7 +134,7 @@ async function testPushWithToken(token) {
   console.log('📊 [Test] Cookie response:', response1.status, await response1.text());
   
   console.log('🔄 [Test] Testing Bearer method...');
-  const response2 = await fetch('https://leetfeedback-backend.onrender.com/api/problems/push', {
+  const response2 = await fetch('https://traverse-backend-api.azurewebsites.net/api/problems/push', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

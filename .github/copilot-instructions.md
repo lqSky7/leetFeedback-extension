@@ -4,12 +4,12 @@ Chrome Extension (Manifest V3) tracking coding practice on LeetCode, GeeksforGee
 
 ## Backend API
 
-**Base URL:** `https://leetfeedback-backend.onrender.com`
+**Base URL:** `https://traverse-backend-api.azurewebsites.net`
 
 ### Auth
 
 ```
-POST /api/auth/login     { "email": "...", "password": "..." }
+POST /api/auth/login     { "username": "...", "password": "..." }
 POST /api/auth/register  { "username", "email", "password", "github_username", "github_repo", "github_branch" }
 GET  /api/auth/verify    Authorization: Bearer <token>
 ```

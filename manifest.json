@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "LeetFeedback",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Automatically push your DSA solutions from LeetCode, GeeksforGeeks, and TakeUforward to GitHub",
     "icons": {
         "16": "icons/16.png",
@@ -16,7 +16,7 @@
         "https://*.takeuforward.org/*",
         "https://api.github.com/*",
         "https://generativelanguage.googleapis.com/*",
-        "https://leetfeedback-backend.onrender.com/*",
+        "https://traverse-backend-api.azurewebsites.net/*",
         "https://leet-feedback.vercel.app/*",
         "https://*.vercel.app/*",
         "https://*.netlify.app/*"

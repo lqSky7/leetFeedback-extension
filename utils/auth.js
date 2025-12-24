@@ -13,7 +13,7 @@ class ExtensionAuth {
   }
 
   getApiBaseUrl() {
-    return 'https://leetfeedback-backend.onrender.com';
+    return 'https://traverse-backend-api.azurewebsites.net';
   }
 
   async init() {
@@ -165,12 +165,12 @@ class ExtensionAuth {
 
   async login(credentials = {}) {
     const payload = {
-      email: credentials.email?.trim(),
+      username: credentials.username?.trim(),
       password: credentials.password,
     };
 
-    if (!payload.email || !payload.password) {
-      throw new Error('Email and password are required.');
+    if (!payload.username || !payload.password) {
+      throw new Error('Username and password are required.');
     }
 
     const data = await this.request('/api/auth/login', {
@@ -181,9 +181,9 @@ class ExtensionAuth {
     const token = ExtensionAuth.pickToken(data);
     const user =
       ExtensionAuth.pickUser(data, {
-        email: payload.email,
+        username: payload.username,
       }) || {
-        email: payload.email,
+        username: payload.username,
       };
 
     if (!token) {
