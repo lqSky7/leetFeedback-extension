@@ -195,50 +195,6 @@ class ExtensionAuth {
     return { token: token || null, user, data };
   }
 
-  async register(payload = {}) {
-    const body = {
-      username: payload.username?.trim(),
-      email: payload.email?.trim(),
-      password: payload.password,
-      github_username: payload.github_username?.trim(),
-      github_repo: payload.github_repo?.trim(),
-      github_branch: (payload.github_branch || 'main').trim(),
-    };
-
-    if (!body.username || !body.email || !body.password) {
-      throw new Error('All required fields must be provided.');
-    }
-
-    const data = await this.request('/api/auth/register', {
-      method: 'POST',
-      body,
-    });
-
-    const token = ExtensionAuth.pickToken(data);
-    const user =
-      ExtensionAuth.pickUser(data, {
-        username: body.username,
-        email: body.email,
-        github_username: body.github_username,
-        github_repo: body.github_repo,
-        github_branch: body.github_branch,
-      }) || {
-        username: body.username,
-        email: body.email,
-        github_username: body.github_username,
-        github_repo: body.github_repo,
-        github_branch: body.github_branch,
-      };
-
-    if (token) {
-      await this.updateAuthStatus(true, user, token || null);
-    } else {
-      await this.updateAuthStatus(false, null, null);
-    }
-
-    return { token: token || null, user, data };
-  }
-
   async signOut() {
     await this.updateAuthStatus(false, null, null);
   }

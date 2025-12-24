@@ -139,6 +139,13 @@ class PopupController {
     toggleButtons.forEach((button) => {
       button.addEventListener("click", () => {
         if (button.classList.contains("active")) return;
+        
+        // Redirect to web app for registration
+        if (button.dataset.target === "register") {
+          chrome.tabs.create({ url: "https://leet-feedback.vercel.app/login" });
+          return;
+        }
+        
         setActiveForm(button.dataset.target);
         this.showAuthFeedback();
       });
@@ -150,26 +157,6 @@ class PopupController {
         this.handleLoginSubmit(event),
       );
     }
-
-    const registerForm = authSection.querySelector("#auth-register-form");
-    if (registerForm) {
-      registerForm.addEventListener("submit", (event) =>
-        this.handleRegisterSubmit(event),
-      );
-    }
-
-    const configEditBtn = authSection.querySelector("#auth-config-edit");
-    if (configEditBtn) {
-      configEditBtn.addEventListener("click", () => {
-        this.switchTab("config");
-        this.showAuthFeedback(
-          "info",
-          "Update your GitHub details in the Config tab.",
-        );
-      });
-    }
-
-    this.refreshAuthConfigSummary();
   }
 
   activateAuthForm(target) {
@@ -220,67 +207,6 @@ class PopupController {
       this.showAuthFeedback(
         "error",
         error?.message || "Login failed. Please try again.",
-      );
-    } finally {
-      this.toggleAuthLoading(submitBtn, false);
-    }
-  }
-
-  async handleRegisterSubmit(event) {
-    event.preventDefault();
-
-    const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const formData = new FormData(form);
-    const config = this.collectFormData();
-
-    const payload = {
-      username: formData.get("username")?.toString().trim(),
-      email: formData.get("email")?.toString().trim(),
-      password: formData.get("password"),
-      github_username: config.owner?.trim(),
-      github_repo: config.repo?.trim(),
-      github_branch: config.branch?.trim() || "main",
-    };
-
-    if (!payload.username || !payload.email || !payload.password) {
-      this.showAuthFeedback("error", "Please complete all required fields.");
-      return;
-    }
-
-    if (!payload.github_username || !payload.github_repo) {
-      this.showAuthFeedback(
-        "error",
-        "Set your GitHub username and repository in the Config tab before registering.",
-      );
-      this.refreshAuthConfigSummary();
-      return;
-    }
-
-    try {
-      this.toggleAuthLoading(submitBtn, true, "Creating account...");
-      const result = await extensionAuth.register(payload);
-
-      if (result?.token) {
-        const displayName =
-          result.user?.username || result.user?.email || "User";
-        this.showAuthFeedback(
-          "success",
-          `Account ready, ${displayName}! You're signed in.`,
-        );
-      } else {
-        this.showAuthFeedback(
-          "info",
-          "Account created. Please log in with your new credentials.",
-        );
-        this.activateAuthForm("login");
-      }
-
-      form.reset();
-    } catch (error) {
-      this.showAuthFeedback(
-        "error",
-        error?.message || "Registration failed. Please try again.",
       );
     } finally {
       this.toggleAuthLoading(submitBtn, false);
@@ -947,39 +873,6 @@ class PopupController {
               <input type="password" id="auth-login-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
             </div>
             <button type="submit" class="btn btn-primary" id="auth-login-submit">Login</button>
-          </form>
-          <form class="auth-form" id="auth-register-form" data-form="register">
-            <div class="field">
-              <label for="auth-register-username">Username</label>
-              <input type="text" id="auth-register-username" name="username" placeholder="admin" required />
-            </div>
-            <div class="field">
-              <label for="auth-register-email">Email</label>
-              <input type="email" id="auth-register-email" name="email" placeholder="admin@example.com" required />
-            </div>
-            <div class="field">
-              <label for="auth-register-password">Password</label>
-              <input type="password" id="auth-register-password" name="password" placeholder="Create a password" autocomplete="new-password" required />
-            </div>
-            <div class="auth-config-summary" id="auth-config-summary">
-              <div class="auth-config-item">
-                <span class="auth-config-label">GitHub Username</span>
-                <span class="auth-config-value" id="auth-config-username"></span>
-              </div>
-              <div class="auth-config-item">
-                <span class="auth-config-label">Repository</span>
-                <span class="auth-config-value" id="auth-config-repo"></span>
-              </div>
-              <div class="auth-config-item">
-                <span class="auth-config-label">Branch</span>
-                <span class="auth-config-value" id="auth-config-branch"></span>
-              </div>
-            </div>
-            <div class="auth-config-note">
-              Managed from the Config tab.
-              <button type="button" class="auth-config-edit" id="auth-config-edit">Open Config</button>
-            </div>
-            <button type="submit" class="btn btn-primary" id="auth-register-submit">Create Account</button>
           </form>
           <div class="auth-form-message" id="auth-form-message"></div>
         </div>
