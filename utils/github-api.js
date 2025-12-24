@@ -204,6 +204,8 @@ class GitHubAPI {
 
       if (result.success) {
         console.log(`✅ [GitHub API] Content pushed successfully: ${filePath}`);
+        // Return analysis with result so it can be stored for backend submission
+        return { ...result, analysis: analysisResult.analysis };
       }
 
       return result;

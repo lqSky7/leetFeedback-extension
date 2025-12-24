@@ -70,6 +70,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
     }
     
+    if (request.type === 'BACKEND_API_FETCH') {
+      handleBackendAPIFetch(request, sender, sendResponse);
+      return true;
+    }
+    
     // Unknown message type
     console.log("Unknown message type:", request.type);
     sendResponse({ success: false, error: 'Unknown message type' });
@@ -189,7 +194,28 @@ async function handleContentScriptReady(request, sender, sendResponse) {
     sendResponse({ success: false, error: error.message });
   }
 }
-
+// Handle backend API fetch (to bypass CORS from content scripts)
+async function handleBackendAPIFetch(request, sender, sendResponse) {
+  try {
+    const { url, options } = request;
+    console.log(`[Background] Making backend API request to: ${url}`);
+    
+    const response = await fetch(url, options);
+    const data = await response.json();
+    
+    sendResponse({ 
+      success: response.ok, 
+      status: response.status,
+      data: data 
+    });
+  } catch (error) {
+    console.error('[Background] Backend API fetch error:', error);
+    sendResponse({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+}
 // Helper function to get debug mode
 async function getDebugMode() {
   return new Promise((resolve) => {
@@ -371,6 +397,29 @@ async function handleInitializeConfig(request, sender, sendResponse) {
   } catch (error) {
     console.error('Error initializing config:', error);
     sendResponse({ success: false, error: error.message });
+  }
+}
+
+// Handle backend API fetch (to bypass CORS from content scripts)
+async function handleBackendAPIFetch(request, sender, sendResponse) {
+  try {
+    const { url, options } = request;
+    console.log(`[Background] Making backend API request to: ${url}`);
+    
+    const response = await fetch(url, options);
+    const data = await response.json();
+    
+    sendResponse({ 
+      success: response.ok, 
+      status: response.status,
+      data: data 
+    });
+  } catch (error) {
+    console.error('[Background] Backend API fetch error:', error);
+    sendResponse({ 
+      success: false, 
+      error: error.message 
+    });
   }
 }
 

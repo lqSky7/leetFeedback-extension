@@ -34,6 +34,7 @@
       this.submissionInProgress = false;
       this.submitCounter = 0;
       this.currentSubmissionAttempt = null;
+      this.aiAnalysis = null; // Store Gemini AI analysis
     }
 
     async initialize() {
@@ -157,6 +158,7 @@
           this.currentProblemUrl = problemData.currentProblemUrl || currentUrl;
           this.topics = problemData.parent_topic || [];
           this.submitCounter = problemData.submitCounter || 0;
+          this.aiAnalysis = problemData.aiAnalysis || null;
 
           console.log(`🔢 [LeetCode] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}`);
         } else {
@@ -186,6 +188,7 @@
           currentProblemUrl: overrides.currentProblemUrl ?? this.currentProblemUrl,
           parent_topic: overrides.parent_topic ?? this.topics,
           submitCounter: overrides.submitCounter ?? this.submitCounter,
+          aiAnalysis: overrides.aiAnalysis ?? this.aiAnalysis,
           timestamp: overrides.timestamp ?? new Date().toISOString()
         };
 
@@ -241,6 +244,7 @@
           hasAnalyzedMistakes: this.hasAnalyzedMistakes || false,
           currentProblemUrl: this.currentProblemUrl || currentUrl,
           submitCounter: this.submitCounter || 0,
+          aiAnalysis: this.aiAnalysis || null,
           timestamp: new Date().toISOString()
         };
 
@@ -276,6 +280,7 @@
       this.submitCounter = 0;
       this.submissionInProgress = false;
       this.currentSubmissionAttempt = null;
+      this.aiAnalysis = null;
       console.log(`🔄 [LeetCode] Counters reset for new problem`);
 
       // Clean up any stored problem data for this problem
@@ -708,6 +713,12 @@
 
         if (result.success) {
           console.log(`✅ [LeetCode Run Counter] Mistake analysis pushed to GitHub successfully!`);
+          
+          // Store the AI analysis result for backend submission
+          if (result.analysis) {
+            await this.savePersistedState({ aiAnalysis: result.analysis });
+            console.log(`💾 [LeetCode] Stored AI analysis for backend submission`);
+          }
         } else {
           console.log(`❌ [LeetCode Run Counter] Failed to push mistake analysis:`, result.error);
         }
@@ -1034,6 +1045,7 @@
           this.hasAnalyzedMistakes = false;
           this.submitCounter = 0;
           this.currentSubmissionAttempt = null;
+          this.aiAnalysis = null;
 
           await this.savePersistedState({
             attempts: attemptsToPersist,
