@@ -44,11 +44,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       handleTestGitHubConnection(request, sender, sendResponse);
       return true;
     }
-    
-    if (request.type === 'updateStats') {
-      handleUpdateStats(request, sender, sendResponse);
-      return true;
-    }
 
     if (request.type === 'initializeConfig') {
       handleInitializeConfig(request, sender, sendResponse);
@@ -350,54 +345,6 @@ async function handleTestGitHubConnection(request, sender, sendResponse) {
     const userData = await response.json();
     sendResponse({ success: true, user: userData });
   } catch (error) {
-    sendResponse({ success: false, error: error.message });
-  }
-}
-
-async function handleUpdateStats(request, sender, sendResponse) {
-  try {
-    const { platform, problemInfo } = request;
-    
-    // Get current stats
-    const result = await chrome.storage.sync.get(['dsa_stats']);
-    const stats = result.dsa_stats || {
-      total_problems: 0,
-      platforms: {
-        leetcode: { count: 0, problems: [] },
-        geeksforgeeks: { count: 0, problems: [] },
-        takeuforward: { count: 0, problems: [] }
-      },
-      last_updated: new Date().toISOString()
-    };
-
-    // Update stats
-    if (!stats.platforms[platform]) {
-      stats.platforms[platform] = { count: 0, problems: [] };
-    }
-
-    // Check if problem already exists
-    const existingProblem = stats.platforms[platform].problems.find(
-      p => p.title === problemInfo.title || p.url === problemInfo.url
-    );
-
-    if (!existingProblem) {
-      stats.platforms[platform].problems.push({
-        title: problemInfo.title,
-        url: problemInfo.url,
-        difficulty: problemInfo.difficulty,
-        solved_at: new Date().toISOString()
-      });
-      stats.platforms[platform].count++;
-      stats.total_problems++;
-    }
-
-    stats.last_updated = new Date().toISOString();
-
-    // Save updated stats
-    await chrome.storage.sync.set({ dsa_stats: stats });
-    sendResponse({ success: true, stats });
-  } catch (error) {
-    console.error('Error updating stats:', error);
     sendResponse({ success: false, error: error.message });
   }
 }

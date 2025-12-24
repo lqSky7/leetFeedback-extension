@@ -62,8 +62,6 @@
 
             <nav class="tabs">
                 <button class="tab active" data-tab="config">Config</button>
-                <button class="tab" data-tab="stats">Stats</button>
-                <button class="tab" data-tab="prediction">Prediction</button>
                 <button class="tab" data-tab="settings">Settings</button>
             </nav>
 
@@ -155,145 +153,6 @@
                     </form>
                 </section>
 
-                <section class="tab-panel" id="stats">
-                    <div class="stats-redirect">
-                        <div class="stats-redirect-content">
-                            <h3>User Statistics</h3>
-                            <p>View your detailed statistics and progress</p>
-                            <button class="stats-redirect-btn" id="stats-redirect-btn">
-                                View Statistics
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="tab-panel" id="prediction">
-                    <div class="prediction-container">
-                        <!-- Header with Beta Tag -->
-                        <div class="prediction-header">
-                            <h3 class="prediction-title">
-                                <img src="../icons/ui/calendar.svg" alt="" class="icon" />
-                                Schedule
-                            </h3>
-                            <span class="beta-tag">Beta</span>
-                        </div>
-
-                        <!-- Quick Actions Bar -->
-                        <div class="quick-actions">
-                            <div class="task-count-input">
-                                <label for="target-count">Problems</label>
-                                <input
-                                    type="number"
-                                    class="count-input"
-                                    id="target-count"
-                                    value="10"
-                                    min="1"
-                                    max="50"
-                                />
-                            </div>
-                            <button type="button" class="btn btn-primary generate-btn" id="generate-schedule">
-                                <img src="../icons/ui/play.svg" alt="" class="icon" />
-                                Generate
-                            </button>
-                        </div>
-
-                        <!-- Focus Mode Selector - Simplified -->
-                        <div class="focus-selector">
-                            <div class="focus-option" data-value="0">
-                                <span class="focus-label">Revise Only</span>
-                            </div>
-                            <div class="focus-option active" data-value="1">
-                                <span class="focus-label">Balanced</span>
-                            </div>
-                            <div class="focus-option" data-value="2">
-                                <span class="focus-label">New Focus</span>
-                            </div>
-                            <div class="focus-option" data-value="3">
-                                <span class="focus-label">New Only</span>
-                            </div>
-                            <input type="hidden" id="focus-mode" value="1" />
-                        </div>
-
-                        <!-- Collapsible Filters -->
-                        <details class="filters-panel">
-                            <summary class="filters-toggle">
-                                <img src="../icons/ui/filter.svg" alt="" class="icon" />
-                                <span>Filters</span>
-                                <img src="../icons/ui/chevron-down.svg" alt="" class="icon chevron" />
-                            </summary>
-                            <div class="filters-content">
-                                <div class="filter-group">
-                                    <label class="filter-label">Category</label>
-                                    <select class="filter-select" id="grandparent-filter">
-                                        <option value="">All Categories</option>
-                                    </select>
-                                </div>
-                                <div class="filter-group">
-                                    <label class="filter-label">Topic</label>
-                                    <select class="filter-select" id="parent-filter">
-                                        <option value="">All Topics</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </details>
-
-                        <!-- Stats Row - Compact -->
-                        <div class="stats-row" id="prediction-stats">
-                            <div class="mini-stat">
-                                <span class="mini-stat-value" id="total-tasks">-</span>
-                                <span class="mini-stat-label">Total</span>
-                            </div>
-                            <div class="mini-stat">
-                                <span class="mini-stat-value" id="solved-tasks">-</span>
-                                <span class="mini-stat-label">Solved</span>
-                            </div>
-                            <div class="mini-stat">
-                                <span class="mini-stat-value" id="unsolved-tasks">-</span>
-                                <span class="mini-stat-label">Unsolved</span>
-                            </div>
-                            <div class="mini-stat">
-                                <span class="mini-stat-value" id="ignored-tasks">-</span>
-                                <span class="mini-stat-label">Ignored</span>
-                            </div>
-                        </div>
-
-                        <!-- Results Section -->
-                        <div class="schedule-results" id="schedule-results" style="display: none">
-                            <div class="schedule-header">
-                                <span class="schedule-title">
-                                    <img src="../icons/ui/list.svg" alt="" class="icon" />
-                                    Today's Problems
-                                    <span class="result-count" id="scheduled-count" style="display: none">0</span>
-                                </span>
-                                <div class="schedule-actions-inline">
-                                    <button type="button" class="icon-btn" id="clear-schedule" title="Clear schedule">
-                                        <img src="../icons/ui/trash.svg" alt="" class="icon" />
-                                    </button>
-                                </div>
-                            </div>
-                            <!-- Task cards will be populated here dynamically -->
-                        </div>
-
-                        <!-- Empty State -->
-                        <div class="empty-state" id="prediction-empty">
-                            <img src="../icons/ui/calendar.svg" alt="" class="empty-icon" />
-                            <p class="empty-text">Generate a schedule to start practicing</p>
-                        </div>
-
-                        <!-- Loading State -->
-                        <div class="loading-state" id="prediction-loading" style="display: none">
-                            <div class="loading-spinner"></div>
-                            <span class="loading-text">Generating schedule...</span>
-                        </div>
-
-                        <!-- Error State -->
-                        <div class="error-message" id="prediction-error" style="display: none">
-                            <img src="../icons/ui/alert.svg" alt="" class="icon error-icon" />
-                            <span class="error-text"></span>
-                        </div>
-                    </div>
-                </section>
-
                 <section class="tab-panel" id="settings">
                     <div class="settings-section">
                         <h3>Account</h3>
@@ -331,7 +190,6 @@
         </div>
 
         <script src="../utils/auth.js"></script>
-        <script src="prediction.js"></script>
         <script src="popup.js"></script>
     </body>
 </html>
