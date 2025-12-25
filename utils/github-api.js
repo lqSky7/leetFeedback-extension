@@ -157,7 +157,7 @@ class GitHubAPI {
       const dirPath = DSAUtils.createDirectoryPath(platform, problemInfo);
       const filePath = `${dirPath}/solution.md`;
       
-      let content, commitMessage;
+      let content, commitMessage, analysisResult;
 
       if (contentType === 'solution') {
         // Successful solution - just the solution
@@ -204,6 +204,8 @@ class GitHubAPI {
 
       if (result.success) {
         console.log(`✅ [GitHub API] Content pushed successfully: ${filePath}`);
+        // Return analysis with result so it can be stored for backend submission
+        return { ...result, analysis: analysisResult.analysis };
       }
 
       return result;

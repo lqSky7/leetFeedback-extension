@@ -44,11 +44,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       handleTestGitHubConnection(request, sender, sendResponse);
       return true;
     }
-    
-    if (request.type === 'updateStats') {
-      handleUpdateStats(request, sender, sendResponse);
-      return true;
-    }
 
     if (request.type === 'initializeConfig') {
       handleInitializeConfig(request, sender, sendResponse);
@@ -72,6 +67,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     
     if (request.type === 'CONTENT_SCRIPT_READY') {
       handleContentScriptReady(request, sender, sendResponse);
+      return true;
+    }
+    
+    if (request.type === 'BACKEND_API_FETCH') {
+      handleBackendAPIFetch(request, sender, sendResponse);
       return true;
     }
     
@@ -194,7 +194,28 @@ async function handleContentScriptReady(request, sender, sendResponse) {
     sendResponse({ success: false, error: error.message });
   }
 }
-
+// Handle backend API fetch (to bypass CORS from content scripts)
+async function handleBackendAPIFetch(request, sender, sendResponse) {
+  try {
+    const { url, options } = request;
+    console.log(`[Background] Making backend API request to: ${url}`);
+    
+    const response = await fetch(url, options);
+    const data = await response.json();
+    
+    sendResponse({ 
+      success: response.ok, 
+      status: response.status,
+      data: data 
+    });
+  } catch (error) {
+    console.error('[Background] Backend API fetch error:', error);
+    sendResponse({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+}
 // Helper function to get debug mode
 async function getDebugMode() {
   return new Promise((resolve) => {
@@ -354,54 +375,6 @@ async function handleTestGitHubConnection(request, sender, sendResponse) {
   }
 }
 
-async function handleUpdateStats(request, sender, sendResponse) {
-  try {
-    const { platform, problemInfo } = request;
-    
-    // Get current stats
-    const result = await chrome.storage.sync.get(['dsa_stats']);
-    const stats = result.dsa_stats || {
-      total_problems: 0,
-      platforms: {
-        leetcode: { count: 0, problems: [] },
-        geeksforgeeks: { count: 0, problems: [] },
-        takeuforward: { count: 0, problems: [] }
-      },
-      last_updated: new Date().toISOString()
-    };
-
-    // Update stats
-    if (!stats.platforms[platform]) {
-      stats.platforms[platform] = { count: 0, problems: [] };
-    }
-
-    // Check if problem already exists
-    const existingProblem = stats.platforms[platform].problems.find(
-      p => p.title === problemInfo.title || p.url === problemInfo.url
-    );
-
-    if (!existingProblem) {
-      stats.platforms[platform].problems.push({
-        title: problemInfo.title,
-        url: problemInfo.url,
-        difficulty: problemInfo.difficulty,
-        solved_at: new Date().toISOString()
-      });
-      stats.platforms[platform].count++;
-      stats.total_problems++;
-    }
-
-    stats.last_updated = new Date().toISOString();
-
-    // Save updated stats
-    await chrome.storage.sync.set({ dsa_stats: stats });
-    sendResponse({ success: true, stats });
-  } catch (error) {
-    console.error('Error updating stats:', error);
-    sendResponse({ success: false, error: error.message });
-  }
-}
-
 async function handleInitializeConfig(request, sender, sendResponse) {
   try {
     const result = await chrome.storage.sync.get([
@@ -424,6 +397,29 @@ async function handleInitializeConfig(request, sender, sendResponse) {
   } catch (error) {
     console.error('Error initializing config:', error);
     sendResponse({ success: false, error: error.message });
+  }
+}
+
+// Handle backend API fetch (to bypass CORS from content scripts)
+async function handleBackendAPIFetch(request, sender, sendResponse) {
+  try {
+    const { url, options } = request;
+    console.log(`[Background] Making backend API request to: ${url}`);
+    
+    const response = await fetch(url, options);
+    const data = await response.json();
+    
+    sendResponse({ 
+      success: response.ok, 
+      status: response.status,
+      data: data 
+    });
+  } catch (error) {
+    console.error('[Background] Backend API fetch error:', error);
+    sendResponse({ 
+      success: false, 
+      error: error.message 
+    });
   }
 }
 

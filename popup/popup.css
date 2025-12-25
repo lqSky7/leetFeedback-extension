@@ -486,31 +486,6 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* Stat Cards for Prediction */
-.stat-card {
-  text-align: center;
-  padding: 14px 10px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--card-radius);
-  transition: all 0.3s ease;
-}
-
-.stat-card:hover {
-  border-color: var(--accent);
-  background: var(--bg-tertiary);
-  transform: translateY(-2px);
-}
-
-.stat-number {
-  display: block;
-  font-family: 'Kelvinch', serif;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 4px;
-}
-
 /* Platforms */
 .platforms {
   margin-bottom: 24px;
@@ -737,57 +712,6 @@ body {
   font-style: italic;
 }
 
-/* Stats Redirect */
-.stats-redirect {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  padding: 40px 20px;
-}
-
-.stats-redirect-content {
-  text-align: center;
-  max-width: 280px;
-}
-
-.stats-redirect-content h3 {
-  font-family: 'Kelvinch', serif;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 10px;
-}
-
-.stats-redirect-content p {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin-bottom: 28px;
-  line-height: 1.5;
-}
-
-.stats-redirect-btn {
-  padding: 14px 32px;
-  border: 1px solid var(--text);
-  border-radius: var(--btn-radius);
-  background: var(--text);
-  color: var(--bg);
-  font-family: 'Adobe Garamond Pro', serif;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  letter-spacing: 0.3px;
-}
-
-.stats-redirect-btn:hover {
-  background: transparent;
-  color: var(--text);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.15);
-}
-
-/* Prediction Tab - Redesigned UX */
 .prediction-container {
   display: flex;
   flex-direction: column;
@@ -1377,66 +1301,6 @@ body {
   opacity: 1 !important;
 }
 
-/* Time Chart */
-.time-chart {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--card-radius);
-  padding: 16px;
-  height: 110px;
-  position: relative;
-}
-
-.chart-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  height: calc(100% - 20px);
-}
-
-.chart-bar-container {
-  display: flex;
-  align-items: center;
-  height: 22px;
-}
-
-.chart-bar {
-  height: 10px;
-  border-radius: 5px;
-  min-width: 4px;
-  transition: width 0.3s ease;
-}
-
-.chart-bar.leetcode {
-  background: var(--accent);
-}
-
-.chart-bar.gfg {
-  background: var(--success);
-}
-
-.chart-bar.tuf {
-  background: var(--warning);
-}
-
-.chart-label {
-  font-size: 10px;
-  color: var(--text-muted);
-  margin-left: 10px;
-  width: 70px;
-}
-
-.time-chart-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-muted);
-  font-size: 13px;
-  text-align: center;
-  font-style: italic;
-}
-
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
@@ -1845,29 +1709,7 @@ body {
 }
 
 /* Task schedule scrollbar */
-.task-schedule::-webkit-scrollbar {
-  width: 4px;
-}
-
-.task-schedule::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.task-schedule::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 2px;
-}
-
-.task-schedule::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
-
 /* Config tab padding fix */
 #config {
   padding: 8px 4px;
-}
-
-/* Prediction tab padding */
-#prediction {
-  padding: 0;
 }

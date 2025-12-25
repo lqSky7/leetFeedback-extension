@@ -68,7 +68,7 @@ class BackendAPI {
     }
   }
 
-  async pushProblemData(problemData) {
+  async pushSubmissionData(problemData) {
     try {
       if (!this.initialized) {
         const initialized = await this.initialize();
@@ -81,36 +81,44 @@ class BackendAPI {
         throw new Error('No authentication token available');
       }
 
-      console.log('[Backend API] Pushing problem data:', problemData);
+      console.log('[Backend API] Pushing submission data:', problemData);
       console.log('[Backend API] Raw auth token:', this.authToken);
       console.log('[Backend API] Token length:', this.authToken ? this.authToken.length : 0);
       
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.authToken}`
-      };
-      console.log('[Backend API] Full Authorization header:', headers.Authorization);
-      console.log('[Backend API] Request headers:', headers);
-
-      const response = await fetch(`${this.baseURL}/api/problems/push`, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(problemData)
+      // Use background script to make the fetch call (bypasses CORS)
+      const response = await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({
+          type: 'BACKEND_API_FETCH',
+          url: `${this.baseURL}/api/submissions`,
+          options: {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Cookie': `auth_token=${this.authToken}`
+            },
+            credentials: 'include',
+            body: JSON.stringify(problemData)
+          }
+        }, (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve(response);
+          }
+        });
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Backend API] Push failed:', response.status, errorText);
-        throw new Error(`Backend API error: ${response.status} - ${errorText}`);
+      if (!response.success) {
+        console.error('[Backend API] Push failed:', response.status, response.data);
+        throw new Error(`Backend API error: ${response.status} - ${JSON.stringify(response.data)}`);
       }
 
-      const result = await response.json();
-      console.log('[Backend API] Problem data pushed successfully! Status:', response.status);
-      console.log('[Backend API] Backend response:', result);
-      return { success: true, data: result };
+      console.log('[Backend API] Submission data pushed successfully! Status:', response.status);
+      console.log('[Backend API] Backend response:', response.data);
+      return { success: true, data: response.data };
 
     } catch (error) {
-      console.error('[Backend API] Error pushing problem data:', error);
+      console.error('[Backend API] Error pushing submission data:', error);
       return { success: false, error: error.message };
     }
   }
@@ -123,45 +131,64 @@ class BackendAPI {
         platform = 'leetcode',
         difficulty = 1,
         solved = { value: false, date: 0, tries: 0 },
-        ignored = false,
         parent_topic = [],
-        problem_link
+        problem_link,
+        attempts = [],
+        runCounter = 0,
+        aiAnalysis = null,
+        problemStartTime = null,
+        timestamp,
+        language = null  // Add language from stored data (for TakeUforward/GFG)
       } = storedProblemData;
 
-      // Format parent_topic - take first topic as parent_topic, second as grandparent
-      const topics = Array.isArray(parent_topic) ? parent_topic : [];
-      const parentTopic = topics.length > 0 ? topics[0] : 'Unknown Topic';
-      const grandparent = topics.length > 1 ? topics[1] : 'General';
+      // Convert difficulty: 0 -> easy, 1 -> medium, 2 -> hard
+      const difficultyMap = { 0: 'easy', 1: 'medium', 2: 'hard' };
+      const difficultyStr = difficultyMap[Number(difficulty)] || 'medium';
+
+      // Generate problem slug from URL or name
+      let problemSlug = '';
+      if (problem_link) {
+        const match = problem_link.match(/problems\/([^\/\?]+)/);
+        problemSlug = match ? match[1] : name.toLowerCase().replace(/\s+/g, '-');
+      } else {
+        problemSlug = name.toLowerCase().replace(/\s+/g, '-');
+      }
+
+      // Determine language from attempts if available, otherwise from stored data
+      const lastAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null;
+      const languageValue = lastAttempt?.language || language || 'python';
+
+      // Calculate time taken (in seconds) from problem start to submission
+      let timeTaken = 0;
+      if (problemStartTime && solved.date) {
+        timeTaken = Math.floor((solved.date - problemStartTime) / 1000); // Convert ms to seconds
+      }
+
+      // Generate idempotency key from problem slug and timestamp
+      const idempotencyKey = `${problemSlug}-${solved.date || Date.now()}`;
 
       const formattedData = {
-        name: name || 'Unknown Problem',
+        problemSlug: problemSlug,
         platform: platform.toLowerCase(),
-        difficulty: Number(difficulty) || 1,
-        solved: {
-          value: Boolean(solved.value),
-          date: Number(solved.date) || 0,
-          tries: Number(solved.tries) || 0
-        },
-        ignored: Boolean(ignored),
-        parent_topic: parentTopic,
-        grandparent: grandparent,
-        problem_link: problem_link || ''
+        problemTitle: name || 'Unknown Problem',
+        difficulty: difficultyStr,
+        language: languageValue,
+        outcome: solved.value ? 'accepted' : 'failed',
+        idempotencyKey: idempotencyKey,
+        happenedAt: solved.date ? new Date(solved.date).toISOString() : new Date().toISOString(),
+        deviceId: 1, // Default device ID
+        aiAnalysis: aiAnalysis, // Gemini AI analysis if available
+        numberOfTries: Number(runCounter) || 1, // Use runCounter (run button presses)
+        timeTaken: timeTaken
       };
 
-      console.log('[Backend API] Formatted problem data:', formattedData);
-      
-      // Validate the formatted data matches expected structure
-      const expectedFields = ['name', 'platform', 'difficulty', 'solved', 'ignored', 'parent_topic', 'grandparent', 'problem_link'];
-      const missingFields = expectedFields.filter(field => !(field in formattedData));
-      if (missingFields.length > 0) {
-        console.warn('[Backend API] Missing expected fields:', missingFields);
-      }
+      console.log('[Backend API] Formatted submission data:', formattedData);
       
       return formattedData;
 
     } catch (error) {
-      console.error('[Backend API] Error formatting problem data:', error);
-      throw new Error('Failed to format problem data for backend');
+      console.error('[Backend API] Error formatting submission data:', error);
+      throw new Error('Failed to format submission data for backend');
     }
   }
 
@@ -187,10 +214,10 @@ class BackendAPI {
       const formattedData = this.formatProblemDataForBackend(storedData);
 
       // Push to backend
-      return await this.pushProblemData(formattedData);
+      return await this.pushSubmissionData(formattedData);
 
     } catch (error) {
-      console.error('[Backend API] Error pushing current problem data:', error);
+      console.error('[Backend API] Error pushing submission:', error);
       return { success: false, error: error.message };
     }
   }
