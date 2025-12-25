@@ -176,7 +176,6 @@ class BackendAPI {
         outcome: solved.value ? 'accepted' : 'failed',
         idempotencyKey: idempotencyKey,
         happenedAt: solved.date ? new Date(solved.date).toISOString() : new Date().toISOString(),
-        deviceId: 1, // Default device ID
         aiAnalysis: aiAnalysis, // Gemini AI analysis if available
         numberOfTries: Number(runCounter) || 1, // Use runCounter (run button presses)
         timeTaken: timeTaken
