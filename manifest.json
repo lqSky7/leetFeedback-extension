@@ -1,14 +1,19 @@
 {
     "manifest_version": 3,
     "name": "LeetFeedback",
-    "version": "1.1.4",
+    "version": "1.2.0",
     "description": "Automatically push your DSA solutions from LeetCode, GeeksforGeeks, and TakeUforward to GitHub",
     "icons": {
         "16": "icons/16.png",
         "48": "icons/48.png",
         "128": "icons/128.png"
     },
-    "permissions": ["storage", "scripting", "activeTab", "tabs"],
+    "permissions": [
+        "storage",
+        "scripting",
+        "activeTab",
+        "tabs"
+    ],
     "host_permissions": [
         "https://*.leetcode.com/*",
         "https://*.geeksforgeeks.org/*",
@@ -26,7 +31,9 @@
     },
     "content_scripts": [
         {
-            "matches": ["https://*.leetcode.com/*"],
+            "matches": [
+                "https://*.leetcode.com/*"
+            ],
             "js": [
                 "utils/common.js",
                 "utils/github-api.js",
@@ -53,7 +60,9 @@
             "run_at": "document_end"
         },
         {
-            "matches": ["https://*.takeuforward.org/*"],
+            "matches": [
+                "https://*.takeuforward.org/*"
+            ],
             "js": [
                 "utils/common.js",
                 "utils/github-api.js",
@@ -70,7 +79,9 @@
                 "https://*.vercel.app/*",
                 "https://*.netlify.app/*"
             ],
-            "js": ["content-scripts/website-auth.js"],
+            "js": [
+                "content-scripts/website-auth.js"
+            ],
             "run_at": "document_end"
         }
     ],
@@ -85,8 +96,13 @@
     },
     "web_accessible_resources": [
         {
-            "resources": ["utils/interceptor.js", "utils/monaco-bridge.js"],
-            "matches": ["<all_urls>"]
+            "resources": [
+                "utils/interceptor.js",
+                "utils/monaco-bridge.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
         }
     ]
 }

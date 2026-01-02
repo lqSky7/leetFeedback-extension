@@ -5,7 +5,7 @@ class BackendAPI {
     this.baseURL = 'https://traverse-backend-api.azurewebsites.net';
     this.authToken = null;
     this.initialized = false;
-    console.log(`🔧 [Backend API] BackendAPI constructor called`);
+    console.log(`[Backend API] BackendAPI constructor called`);
   }
 
   async initialize() {
@@ -14,11 +14,11 @@ class BackendAPI {
       const result = await chrome.storage.local.get(['auth_token']);
       this.authToken = result.auth_token;
       this.initialized = true;
-      
+
       console.log('[Backend API] Raw token from storage:', this.authToken);
       console.log('[Backend API] Token type:', typeof this.authToken);
       console.log('[Backend API] Token starts with Bearer?', this.authToken ? this.authToken.startsWith('Bearer ') : false);
-      
+
       if (!this.authToken) {
         console.warn('[Backend API] No authentication token found');
         // Let's also check all auth-related storage keys
@@ -30,7 +30,7 @@ class BackendAPI {
         });
         return false;
       }
-      
+
       console.log('[Backend API] Initialized successfully');
       return true;
     } catch (error) {
@@ -84,7 +84,7 @@ class BackendAPI {
       console.log('[Backend API] Pushing submission data:', problemData);
       console.log('[Backend API] Raw auth token:', this.authToken);
       console.log('[Backend API] Token length:', this.authToken ? this.authToken.length : 0);
-      
+
       // Use background script to make the fetch call (bypasses CORS)
       const response = await new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({
@@ -102,6 +102,8 @@ class BackendAPI {
         }, (response) => {
           if (chrome.runtime.lastError) {
             reject(new Error(chrome.runtime.lastError.message));
+          } else if (!response) {
+            reject(new Error('No response from background script'));
           } else {
             resolve(response);
           }
@@ -109,8 +111,11 @@ class BackendAPI {
       });
 
       if (!response.success) {
-        console.error('[Backend API] Push failed:', response.status, response.data);
-        throw new Error(`Backend API error: ${response.status} - ${JSON.stringify(response.data)}`);
+        // Handle both HTTP errors (with status/data) and fetch errors (with error property)
+        const errorStatus = response.status || 'unknown';
+        const errorDetails = response.error || response.data || 'No details available';
+        console.error('[Backend API] Push failed:', errorStatus, errorDetails);
+        throw new Error(`Backend API error: ${errorStatus} - ${typeof errorDetails === 'object' ? JSON.stringify(errorDetails) : errorDetails}`);
       }
 
       console.log('[Backend API] Submission data pushed successfully! Status:', response.status);
@@ -159,9 +164,27 @@ class BackendAPI {
       const languageValue = lastAttempt?.language || language || 'python';
 
       // Calculate time taken (in seconds) from problem start to submission
+      // Subtract pausedTime (time when tab was hidden) for accurate active time tracking
+      // Ensure timeTaken is valid: not negative, and capped at 24 hours (86400 seconds)
       let timeTaken = 0;
+      const pausedTime = storedProblemData.pausedTime || 0;
+
       if (problemStartTime && solved.date) {
-        timeTaken = Math.floor((solved.date - problemStartTime) / 1000); // Convert ms to seconds
+        const totalElapsed = solved.date - problemStartTime; // Total elapsed time in ms
+        const activeTime = totalElapsed - pausedTime; // Subtract time when tab was hidden
+        const rawTimeTaken = Math.floor(activeTime / 1000); // Convert ms to seconds
+
+        // Only use if positive and reasonable (within 24 hours)
+        if (rawTimeTaken > 0 && rawTimeTaken < 86400) {
+          timeTaken = rawTimeTaken;
+        } else if (rawTimeTaken <= 0) {
+          console.warn('[Backend API] Non-positive time detected, resetting to 0. Active time:', activeTime, 'ms');
+          timeTaken = 0;
+        } else {
+          // Time is unreasonably large (> 24 hours), cap it
+          console.warn('[Backend API] Time taken exceeds 24 hours, capping. Raw value:', rawTimeTaken);
+          timeTaken = 86400; // Cap at 24 hours
+        }
       }
 
       // Generate idempotency key from problem slug and timestamp
@@ -176,13 +199,14 @@ class BackendAPI {
         outcome: solved.value ? 'accepted' : 'failed',
         idempotencyKey: idempotencyKey,
         happenedAt: solved.date ? new Date(solved.date).toISOString() : new Date().toISOString(),
+        deviceId: 1, // Default device ID
         aiAnalysis: aiAnalysis, // Gemini AI analysis if available
         numberOfTries: Number(runCounter) || 1, // Use runCounter (run button presses)
         timeTaken: timeTaken
       };
 
       console.log('[Backend API] Formatted submission data:', formattedData);
-      
+
       return formattedData;
 
     } catch (error) {
@@ -224,4 +248,4 @@ class BackendAPI {
 
 // Make BackendAPI available globally
 window.BackendAPI = BackendAPI;
-console.log(`🔧 [Backend API] BackendAPI class loaded and made available globally`);
+console.log(`[Backend API] BackendAPI class loaded and made available globally`);

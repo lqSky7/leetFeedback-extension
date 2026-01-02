@@ -60,7 +60,7 @@
         // Detect if we've changed problems - reset counters if so
         const currentUrl = this.getCurrentProblemUrl();
         if (this.currentProblemUrl !== currentUrl) {
-          console.log(`🔄 [GeeksforGeeks Run Counter] Problem changed - resetting counters`);
+          console.log(`[GeeksforGeeks Run Counter] Problem changed - resetting counters`);
           this.resetCounters();
           this.currentProblemUrl = currentUrl;
           await this.savePersistedState();
@@ -81,7 +81,7 @@
         const problemData = result[`problem_data_${currentUrl}`];
 
         if (problemData) {
-          console.log(`📥 [GeeksforGeeks] Loaded problem data:`, problemData);
+          console.log(`[GeeksforGeeks] Loaded problem data:`, problemData);
           
           // Extract tracking info from problem data if available
           this.attempts = problemData.attempts || [];
@@ -91,9 +91,9 @@
           this.currentProblemUrl = problemData.currentProblemUrl || currentUrl;
           this.topics = problemData.parent_topic || [];
 
-          console.log(`🔢 [GeeksforGeeks] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}, Topics: ${this.topics.length}`);
+          console.log(`[GeeksforGeeks] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}, Topics: ${this.topics.length}`);
         } else {
-          console.log(`🆕 [GeeksforGeeks] No problem data found - starting fresh`);
+          console.log(`[GeeksforGeeks] No problem data found - starting fresh`);
           this.topics = [];
         }
       } catch (error) {
@@ -123,7 +123,7 @@
         };
 
         await chrome.storage.local.set({ [`problem_data_${currentUrl}`]: problemData });
-        console.log(`💾 [GeeksforGeeks] Saved problem data for: ${currentUrl}`);
+        console.log(`[GeeksforGeeks] Saved problem data for: ${currentUrl}`);
       } catch (error) {
         console.error('[GeeksforGeeks] Error saving problem data:', error);
       }
@@ -177,7 +177,7 @@
         };
 
         await chrome.storage.local.set({ [storageKey]: problemData });
-        console.log(`💾 [GeeksforGeeks] Stored problem data:`, problemData);
+        console.log(`[GeeksforGeeks] Stored problem data:`, problemData);
         return problemData;
       } catch (error) {
         console.error('[GeeksforGeeks] Error storing problem data:', error);
@@ -206,7 +206,7 @@
       this.incorrectRunCounter = 0;
       this.hasAnalyzedMistakes = false;
       this.topics = [];
-      console.log(`🔄 [GeeksforGeeks] Counters reset for new problem`);
+      console.log(`[GeeksforGeeks] Counters reset for new problem`);
 
       // Clean up any stored problem data for this problem
       const currentUrl = this.getCurrentProblemUrl();
@@ -304,7 +304,7 @@
     async handleRunAttempt() {
       try {
         this.runCounter++;
-        console.log(`🏃‍♂️ [GeeksforGeeks Run Counter] Run attempt #${this.runCounter}`);
+        console.log(`[GeeksforGeeks Run Counter] Run attempt #${this.runCounter}`);
 
         const code = this.getCurrentCode();
         const language = this.getCurrentLanguage();
@@ -322,7 +322,7 @@
           };
 
           this.attempts.push(attempt);
-          console.log(`📝 [GeeksforGeeks Run Counter] Stored run attempt #${this.runCounter}`);
+          console.log(`[GeeksforGeeks Run Counter] Stored run attempt #${this.runCounter}`);
 
           // Save state after adding attempt
           await this.savePersistedState();
@@ -331,7 +331,7 @@
           await this.observeRunResult(attempt);
 
         } else {
-          console.log(`❌ [GeeksforGeeks Run Counter] Run #${this.runCounter} - Code too short or empty`);
+          console.log(`[GeeksforGeeks Run Counter] Run #${this.runCounter} - Code too short or empty`);
         }
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error storing run attempt', error);
@@ -364,7 +364,7 @@
               // Guard against multiple increments for the same attempt
               if (attempt.successful !== true) {
                 attempt.successful = true;
-                console.log(`✅ [GeeksforGeeks Run Counter] Run #${attempt.runNumber} - SUCCESS (Expected output matched)`);
+                console.log(`[GeeksforGeeks Run Counter] Run #${attempt.runNumber} - SUCCESS (Expected output matched)`);
 
                 // Save state after successful attempt
                 await this.savePersistedState();
@@ -384,8 +384,8 @@
               if (attempt.successful !== false) {
                 attempt.successful = false;
                 this.incorrectRunCounter++;
-                console.log(`❌ [GeeksforGeeks Run Counter] Run #${attempt.runNumber} - FAILED (Incorrect output)`);
-                console.log(`🔢 [GeeksforGeeks Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
+                console.log(`[GeeksforGeeks Run Counter] Run #${attempt.runNumber} - FAILED (Incorrect output)`);
+                console.log(`[GeeksforGeeks Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
 
                 // Save state after failed attempt
                 await this.savePersistedState();
@@ -423,8 +423,8 @@
             // If we can't determine the result, assume it's a failed run for safety
             attempt.successful = false;
             this.incorrectRunCounter++;
-            console.log(`⏰ [GeeksforGeeks Run Counter] Run #${attempt.runNumber} - TIMEOUT → Counted as FAILED (safety measure)`);
-            console.log(`🔢 [GeeksforGeeks Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
+            console.log(`[GeeksforGeeks Run Counter] Run #${attempt.runNumber} - TIMEOUT → Counted as FAILED (safety measure)`);
+            console.log(`[GeeksforGeeks Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
 
             // Save state after failed attempt
             await this.savePersistedState();
@@ -440,7 +440,7 @@
 
     async handleThreeIncorrectRuns() {
       try {
-        console.log(`🚨 [GeeksforGeeks Run Counter] 3 INCORRECT RUNS DETECTED - Triggering Gemini mistake analysis`);
+        console.log(`[GeeksforGeeks Run Counter] 3 INCORRECT RUNS DETECTED - Triggering Gemini mistake analysis`);
         this.hasAnalyzedMistakes = true;
 
         // Save state immediately after setting analysis flag
@@ -448,18 +448,18 @@
 
         // Get the failed attempts (should be exactly 3 by now)
         const failedAttempts = this.attempts.filter(a => a.successful === false);
-        console.log(`🔍 [GeeksforGeeks Run Counter] Analyzing ${failedAttempts.length} failed attempts`);
+        console.log(`[GeeksforGeeks Run Counter] Analyzing ${failedAttempts.length} failed attempts`);
 
         // Ensure we have at least 3 failed attempts
         if (failedAttempts.length < 3) {
-          console.log(`⚠️ [GeeksforGeeks Run Counter] Expected 3 failed attempts, found ${failedAttempts.length}. Counter: ${this.incorrectRunCounter}`);
+          console.log(`[GeeksforGeeks Run Counter] Expected 3 failed attempts, found ${failedAttempts.length}. Counter: ${this.incorrectRunCounter}`);
           return;
         }
 
         // Get current problem info
         const problemInfo = await this.extractProblemInfo();
         if (!problemInfo) {
-          console.log(`❌ [GeeksforGeeks Run Counter] Could not extract problem info for mistake analysis`);
+          console.log(`[GeeksforGeeks Run Counter] Could not extract problem info for mistake analysis`);
           return;
         }
 
@@ -467,7 +467,7 @@
         problemInfo.attempts = failedAttempts;
         problemInfo.mistakeAnalysisOnly = true;
 
-        console.log(`📤 [GeeksforGeeks Run Counter] Pushing mistake analysis to GitHub...`);
+        console.log(`[GeeksforGeeks Run Counter] Pushing mistake analysis to GitHub...`);
 
         // Initialize GitHub API
         if (!githubAPI) {
@@ -479,9 +479,9 @@
         const result = await githubAPI.pushMistakeAnalysis(problemInfo, PLATFORM);
 
         if (result.success) {
-          console.log(`✅ [GeeksforGeeks Run Counter] Mistake analysis pushed to GitHub successfully!`);
+          console.log(`[GeeksforGeeks Run Counter] Mistake analysis pushed to GitHub successfully!`);
         } else {
-          console.log(`❌ [GeeksforGeeks Run Counter] Failed to push mistake analysis:`, result.error);
+          console.log(`[GeeksforGeeks Run Counter] Failed to push mistake analysis:`, result.error);
         }
 
       } catch (error) {
@@ -907,8 +907,8 @@
 
     async handleSuccessfulSubmission() {
       try {
-        console.log(`🎉 [GeeksforGeeks Submission] SUCCESSFUL SUBMISSION DETECTED`);
-        console.log(`📊 [GeeksforGeeks Stats] Total runs: ${this.runCounter}, Failed runs: ${this.incorrectRunCounter}`);
+        console.log(`[GeeksforGeeks Submission] SUCCESSFUL SUBMISSION DETECTED`);
+        console.log(`[GeeksforGeeks Stats] Total runs: ${this.runCounter}, Failed runs: ${this.incorrectRunCounter}`);
 
         DSAUtils.logDebug(PLATFORM, 'Handling successful submission');
 
@@ -973,7 +973,7 @@
           })));
 
           if (incorrectAttempts.length >= 3) {
-            DSAUtils.logDebug(PLATFORM, `🔍 Mistake analysis will be triggered (${incorrectAttempts.length} incorrect attempts >= 3 threshold)`);
+            DSAUtils.logDebug(PLATFORM, `Mistake analysis will be triggered (${incorrectAttempts.length} incorrect attempts >= 3 threshold)`);
           } else {
             DSAUtils.logDebug(PLATFORM, `ℹ️ No mistake analysis (${incorrectAttempts.length} incorrect attempts < 3 threshold)`);
           }
@@ -986,7 +986,7 @@
 
         if (result.success) {
           DSAUtils.logDebug(PLATFORM, 'Push successful!');
-          console.log(`✅ [GeeksforGeeks Submission] Solution pushed to GitHub successfully!`);
+          console.log(`[GeeksforGeeks Submission] Solution pushed to GitHub successfully!`);
 
           // Store problem data as solved
           const totalTries = totalRunCounter + 1; // +1 for the successful submission
@@ -1006,7 +1006,7 @@
           });
         } else {
           DSAUtils.logError(PLATFORM, 'Push failed:', result.error);
-          console.log(`❌ [GeeksforGeeks Submission] Failed to push solution:`, result.error);
+          console.log(`[GeeksforGeeks Submission] Failed to push solution:`, result.error);
         }
 
       } catch (error) {
@@ -1089,9 +1089,9 @@
     // Use singleton pattern to maintain state across page changes
     if (!extractorInstance) {
       extractorInstance = new GeeksforGeeksExtractor();
-      console.log(`🆕 [GeeksforGeeks Run Counter] Created new extractor instance`);
+      console.log(`[GeeksforGeeks Run Counter] Created new extractor instance`);
     } else {
-      console.log(`♻️ [GeeksforGeeks Run Counter] Reusing existing extractor instance`);
+      console.log(`[GeeksforGeeks Run Counter] Reusing existing extractor instance`);
     }
 
     await extractorInstance.initialize();

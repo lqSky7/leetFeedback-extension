@@ -151,7 +151,7 @@ class GitHubAPI {
       }
 
       const { title } = problemInfo;
-      console.log(`🔧 [GitHub API] Pushing content for: ${title}`);
+      console.log(`[GitHub API] Pushing content for: ${title}`);
 
       // Create directory path and always use solution.md
       const dirPath = DSAUtils.createDirectoryPath(platform, problemInfo);
@@ -163,7 +163,7 @@ class GitHubAPI {
         // Successful solution - just the solution
         content = this.generateSolutionContent(problemInfo, platform);
         commitMessage = `Add solution for ${title}`;
-        console.log(`✅ [GitHub API] Creating successful solution`);
+        console.log(`[GitHub API] Creating successful solution`);
         
       } else if (contentType === 'mistake-analysis') {
         // Failed attempts - solution + mistake analysis
@@ -191,7 +191,7 @@ class GitHubAPI {
         // Create combined content: final solution + mistake analysis
         content = this.generateSolutionWithMistakeAnalysis(problemInfo, platform, finalAttempt, analysisResult.analysis, failedAttempts);
         commitMessage = `Add solution with mistake analysis for ${title} (${failedAttempts.length} attempts analyzed)`;
-        console.log(`📝 [GitHub API] Creating solution with mistake analysis`);
+        console.log(`[GitHub API] Creating solution with mistake analysis`);
       }
 
       // Check if solution.md already exists for updates
@@ -203,7 +203,7 @@ class GitHubAPI {
       const result = await this.createOrUpdateFile(filePath, content, commitMessage, sha);
 
       if (result.success) {
-        console.log(`✅ [GitHub API] Content pushed successfully: ${filePath}`);
+        console.log(`[GitHub API] Content pushed successfully: ${filePath}`);
         // Return analysis with result so it can be stored for backend submission
         return { ...result, analysis: analysisResult.analysis };
       }
