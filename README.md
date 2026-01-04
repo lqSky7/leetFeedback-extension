@@ -3,7 +3,7 @@
 # LeetFeedback
 
 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin: 20px 0;">
-  <h3 style="margin: 0; font-weight: 300;">AI-Powered Coding Practice Intelligence</h3>
+  <h3 style="margin: 0; font-weight: 300;">The Complete Learning Ecosystem</h3>
 </div>
 
 <p>
@@ -19,7 +19,7 @@
 
 ## Overview
 
-LeetFeedback is an open-source browser extension that automatically tracks coding practice sessions, provides AI-powered analysis of problem-solving patterns, and generates intelligent insights to accelerate learning progress.
+LeetFeedback is an open-source browser extension that automatically tracks coding practice sessions, Basically Turns DSA into a habit with Streaks, Leaderboards, Friends and Achievements; right on your existing coding platforms.
 
 <table>
   <tr>
@@ -62,84 +62,9 @@ LeetFeedback is an open-source browser extension that automatically tracks codin
 
 ## Authentication Backend
 
-The popup now supports logging in and registering directly with the LeetFeedback backend. The extension targets the hosted API at `https://leet-feedback.vercel.app` and persists the returned session token locally.
+Just login from settings after creating an account in the website.
+If you want to push your solutions to GitHub you can setup the key there as well, We DO NOT collect this data! you can check the code.
 
-### Endpoints
-
-- `POST /api/auth/login`
-  ```json
-  {
-    "username": "admin",
-    "email": "admin@example.com",
-    "password": "admin"
-  }
-  ```
-- `POST /api/auth/register`
-  ```json
-  {
-    "username": "admin",
-    "email": "admin@example.com",
-    "password": "admin",
-    "github_username": "lqsky7",
-    "github_repo": "gfg",
-    "github_branch": "main"
-  }
-  ```
-
-The extension stores the returned `token` and user profile to keep the session active for 24 hours. You can re-run `node tests/auth.test.js` to execute the companion smoke tests that exercise these flows against mocked responses.
-
-GitHub metadata for registration (username, repository, branch) is sourced directly from the Config tab—set it once there and the backend auth flow will reuse it automatically.
-
-## Features
-
-<div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); padding: 20px; border-radius: 10px; margin: 20px 0;">
-
-### Current Release (Phase 1-2)
-
-**Core Functionality**
-- Multi-platform support (LeetCode, GeeksforGeeks)
-- Automatic submission detection and tracking
-- AI-powered mistake pattern analysis
-- GitHub repository integration
-- Performance trend monitoring
-
-</div>
-
-<div style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); padding: 20px; border-radius: 10px; margin: 20px 0;">
-
-### Development Pipeline (Phase 3-8)
-
-**Study Tools**
-- ANKI flashcard generation
-- Notion workspace integration
-- Custom study planning
-
-**Analytics Platform**
-- Advanced performance dashboard
-- Comparative analysis tools
-- Export capabilities (CSV/PDF)
-
-**Platform Expansion**
-- TUF+, CodeChef, HackerRank support
-- Mobile companion application
-- Cross-platform synchronization
-
-**Enterprise Features**
-- Team collaboration tools
-- Organizational dashboards
-- Advanced security compliance
-
-</div>
-
-## Platform Support
-
-| Platform | Status | Integration Level |
-|----------|---------|------------------|
-| <span style="color: #00C851;">**LeetCode**</span> | Production | Full tracking, AI analysis |
-| <span style="color: #00C851;">**GeeksforGeeks**</span> | Production | Problem tracking, insights |
-| <span style="color: #FF8800;">**TUF+**</span> | Development | Advanced analytics |
-| <span style="color: #FF8800;">**CodeChef**</span> | Planned | Contest analysis |
-| <span style="color: #FF8800;">**HackerRank**</span> | Planned | Skill assessment |
 
 ## Contributing
 
@@ -168,5 +93,5 @@ MIT License - Free to use, modify, and distribute.
 ---
 
 <div align="center" style="color: #718096; font-size: 14px;">
-  <strong>LeetFeedback</strong> - Intelligent coding practice analytics
+  <strong>LeetFeedback</strong> - The Complete Learning Ecosystem
 </div>
