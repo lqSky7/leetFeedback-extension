@@ -25,6 +25,15 @@
       this.lastActivityTime = Date.now();
       this.currentPathname = window.location.pathname;
       this.problemStartTime = null;
+
+      // Run tracking for Gemini analysis
+      this.attempts = [];
+      this.runCounter = 0;
+      this.incorrectRunCounter = 0;
+      this.hasAnalyzedMistakes = false;
+      this.shouldAnalyzeWithGemini = false;
+      this.aiAnalysis = null;
+      this.aiTags = [];
     }
 
     async initialize() {
@@ -69,8 +78,15 @@
           this.currentPathname = window.location.pathname;
           currentPathname = window.location.pathname;
 
-          // Reset tries on problem change
+          // Reset tries and run tracking on problem change
           TRIES = 0;
+          this.attempts = [];
+          this.runCounter = 0;
+          this.incorrectRunCounter = 0;
+          this.hasAnalyzedMistakes = false;
+          this.shouldAnalyzeWithGemini = false;
+          this.aiAnalysis = null;
+          this.aiTags = [];
           this.problemStartTime = Date.now();
 
           setTimeout(() => {
@@ -117,9 +133,53 @@
           console.log('[TakeUforward] Tries now:', TRIES);
         }
 
-        // CODE_RUN: Track run attempts
+        // CODE_RUN: Track run attempts and capture code
         else if (event.data.type === 'CODE_RUN') {
-          console.log('[TakeUforward] Run button clicked');
+          this.runCounter++;
+          console.log(`[TakeUforward] Run button clicked - attempt #${this.runCounter}`);
+
+          // Capture the code at this run attempt
+          const runData = event.data.payload || {};
+          const code = runData.usercode || PUBLIC_CODE;
+          const language = runData.language || SELECTED_LANGUAGE;
+
+          if (code && code.length > 10) {
+            const attempt = {
+              code,
+              language,
+              timestamp: new Date().toISOString(),
+              type: 'run',
+              runNumber: this.runCounter,
+              successful: null // Will be determined by RUN_RESPONSE
+            };
+            this.attempts.push(attempt);
+            console.log(`[TakeUforward] Stored run attempt #${this.runCounter}`);
+          }
+        }
+
+        // RUN_RESPONSE: Track run results (success/failure)
+        else if (event.data.type === 'RUN_RESPONSE') {
+          const runResult = event.data.payload;
+          console.log('[TakeUforward] Run response received:', runResult);
+
+          // Find the most recent run attempt and mark it
+          const lastAttempt = this.attempts.filter(a => a.type === 'run').pop();
+          if (lastAttempt && lastAttempt.successful === null) {
+            if (runResult.success === true || runResult.status === 'Accepted') {
+              lastAttempt.successful = true;
+              console.log(`[TakeUforward] Run #${lastAttempt.runNumber} - SUCCESS`);
+            } else {
+              lastAttempt.successful = false;
+              this.incorrectRunCounter++;
+              console.log(`[TakeUforward] Run #${lastAttempt.runNumber} - FAILED`);
+              console.log(`[TakeUforward] Total failed runs: ${this.incorrectRunCounter}/3`);
+
+              // Check if we've reached 3 failed runs
+              if (this.incorrectRunCounter >= 2 && !this.hasAnalyzedMistakes) {
+                this.handleThreeIncorrectRuns();
+              }
+            }
+          }
         }
 
         // SUBMISSION_RESPONSE: Handle submission results
@@ -132,6 +192,13 @@
             await this.handleSuccessfulSubmission(submissionData);
           } else {
             console.log('[TakeUforward] Submission was not successful. Status:', submissionData.status);
+            // Count failed submissions as failed runs too
+            this.incorrectRunCounter++;
+            console.log(`[TakeUforward] Total failed attempts: ${this.incorrectRunCounter}/3`);
+
+            if (this.incorrectRunCounter >= 3 && !this.hasAnalyzedMistakes) {
+              this.handleThreeIncorrectRuns();
+            }
           }
         }
       });
@@ -382,6 +449,13 @@
           problemStartTime: this.problemStartTime || Date.now(),
           // Track paused time (when tab was hidden) to subtract from total time
           pausedTime: this.pausedTime || 0,
+          // Gemini analysis data
+          aiAnalysis: this.aiAnalysis || null,
+          aiTags: this.aiTags || [],
+          shouldAnalyzeWithGemini: this.shouldAnalyzeWithGemini || false,
+          // Run tracking
+          runCounter: this.runCounter || 0,
+          incorrectRunCounter: this.incorrectRunCounter || 0,
           timestamp: new Date().toISOString()
         };
 
@@ -393,6 +467,13 @@
         console.error('[TakeUforward] Error saving problem data:', error);
         return null;
       }
+    }
+
+    async handleThreeIncorrectRuns() {
+      // Just set flag - Gemini analysis will run on successful submit before backend push
+      console.log(`[TakeUforward] 3 failed runs detected - flagging for Gemini analysis on submit`);
+      this.hasAnalyzedMistakes = true;
+      this.shouldAnalyzeWithGemini = true;
     }
 
     async handleSuccessfulSubmission(submissionData) {
@@ -438,6 +519,39 @@
         await this.storeProblemData(problemInfo, true);
         console.log('[TakeUforward] Stored problem as solved');
 
+        // Step 0: Run Gemini analysis if flagged (before backend push)
+        if (this.shouldAnalyzeWithGemini) {
+          console.log(`[TakeUforward] Step 0: Running Gemini analysis before backend push...`);
+          try {
+            const geminiAPI = new GeminiAPI();
+            const geminiConfigured = await geminiAPI.initialize();
+
+            if (geminiConfigured) {
+              // Send ALL attempts (not just failed) to Gemini for full context
+              const allAttempts = this.attempts.filter(a => a.code && a.code.length > 10);
+              console.log(`[TakeUforward] Sending ${allAttempts.length} code iterations to Gemini`);
+
+              const geminiResult = await geminiAPI.analyzeMistakes(allAttempts, problemInfo);
+
+              if (geminiResult.success) {
+                this.aiAnalysis = geminiResult.analysis;
+                this.aiTags = geminiResult.tags || [];
+                console.log(`[TakeUforward] Gemini analysis complete. Tags: ${this.aiTags.join(', ')}`);
+
+                // Update stored problem data with AI analysis
+                await this.storeProblemData(problemInfo, true);
+              } else {
+                console.log(`[TakeUforward] Gemini analysis failed: ${geminiResult.error}`);
+              }
+            } else {
+              console.log(`[TakeUforward] Gemini API key not configured - skipping analysis`);
+            }
+          } catch (error) {
+            console.error(`[TakeUforward] Gemini analysis error:`, error);
+            // Continue with submission even if Gemini fails
+          }
+        }
+
         // Step 1: Push to Backend API
         console.log('[TakeUforward] Step 1: Pushing to backend...');
         try {
@@ -473,6 +587,13 @@
           PUBLIC_CODE = '';
           SELECTED_LANGUAGE = '';
           PROBLEM_SLUG = '';
+          this.attempts = [];
+          this.runCounter = 0;
+          this.incorrectRunCounter = 0;
+          this.hasAnalyzedMistakes = false;
+          this.shouldAnalyzeWithGemini = false;
+          this.aiAnalysis = null;
+          this.aiTags = [];
         } else {
           console.error('[TakeUforward] GitHub push failed:', githubResult.error);
         }

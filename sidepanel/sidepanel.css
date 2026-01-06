@@ -94,17 +94,17 @@ body {
   line-height: 1.5;
   background: var(--bg);
   color: var(--text);
-  width: 400px;
-  height: 540px;
-  overflow: hidden;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .container {
-  height: 100%;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 12px;
+  padding: 20px;
+  gap: 16px;
 }
 
 .separator {
@@ -224,7 +224,15 @@ body {
 .content {
   flex: 1;
   overflow-y: auto;
-  padding-right: 4px;
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+}
+
+.content::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari, Opera */
 }
 
 .tab-panel {
@@ -583,23 +591,7 @@ body {
   font-size: 11px;
 }
 
-/* Scrollbar */
-.content::-webkit-scrollbar {
-  width: 6px;
-}
 
-.content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.content::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
-.content::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
 
 /* Checkbox */
 .checkbox-label {
@@ -644,12 +636,12 @@ body {
   transition: opacity 0.3s ease;
 }
 
-.checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
+.checkbox-label input[type="checkbox"]:checked+.checkbox-custom {
   background: var(--text);
   border-color: var(--text);
 }
 
-.checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
+.checkbox-label input[type="checkbox"]:checked+.checkbox-custom::after {
   opacity: 1;
 }
 
@@ -990,7 +982,6 @@ body {
   font-weight: 700;
   border-radius: 10px;
 }
-}
 
 .schedule-actions-inline {
   display: flex;
@@ -1272,8 +1263,13 @@ body {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {
@@ -1303,20 +1299,36 @@ body {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideIn {
-  from { transform: translateY(10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .chart-bar {
   animation: slideIn 0.5s ease-out;
 }
 
-.stat, .platform, .activity-item {
+.stat,
+.platform,
+.activity-item {
   animation: fadeIn 0.4s ease-in-out;
 }
 

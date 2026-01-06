@@ -35,6 +35,8 @@
       this.submitCounter = 0;
       this.currentSubmissionAttempt = null;
       this.aiAnalysis = null; // Store Gemini AI analysis
+      this.aiTags = []; // Store Gemini mistake tags
+      this.shouldAnalyzeWithGemini = false; // Flag to run Gemini on submit
       this.problemStartTime = null; // Track when user started on this problem
     }
 
@@ -45,10 +47,10 @@
 
         githubAPI = new GitHubAPI();
         await githubAPI.initialize();
-        
+
         backendAPI = new BackendAPI();
         await backendAPI.initialize();
-        
+
         this.injectMonacoBridge();
         this.setupBridgeListener();
         this.setupEventListeners();
@@ -150,7 +152,7 @@
 
         if (problemData) {
           console.log(`[LeetCode] Loaded problem data:`, problemData);
-          
+
           // Extract tracking info from problem data if available
           this.attempts = problemData.attempts || [];
           this.runCounter = problemData.runCounter || 0;
@@ -160,6 +162,8 @@
           this.topics = problemData.parent_topic || [];
           this.submitCounter = problemData.submitCounter || 0;
           this.aiAnalysis = problemData.aiAnalysis || null;
+          this.aiTags = problemData.aiTags || [];
+          this.shouldAnalyzeWithGemini = problemData.shouldAnalyzeWithGemini || false;
           this.problemStartTime = problemData.problemStartTime || Date.now();
 
           console.log(`[LeetCode] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}`);
@@ -175,7 +179,7 @@
     async savePersistedState(overrides = {}) {
       try {
         const currentUrl = this.getCurrentProblemUrl();
-        
+
         // Load existing problem data to merge with tracking state
         const result = await chrome.storage.local.get([`problem_data_${currentUrl}`]);
         let problemData = result[`problem_data_${currentUrl}`] || {};
@@ -192,6 +196,8 @@
           parent_topic: overrides.parent_topic ?? this.topics,
           submitCounter: overrides.submitCounter ?? this.submitCounter,
           aiAnalysis: overrides.aiAnalysis ?? this.aiAnalysis,
+          aiTags: overrides.aiTags ?? this.aiTags,
+          shouldAnalyzeWithGemini: overrides.shouldAnalyzeWithGemini ?? this.shouldAnalyzeWithGemini,
           problemStartTime: overrides.problemStartTime ?? this.problemStartTime,
           timestamp: overrides.timestamp ?? new Date().toISOString()
         };
@@ -240,15 +246,17 @@
           ignored: existingData.ignored ?? false,
           parent_topic: problemInfo.topics || existingData.parent_topic || [],
           problem_link: problemInfo.url || existingData.problem_link || window.location.href.split('?')[0],
-          
+
           // Include tracking state
           attempts: this.attempts || [],
           runCounter: this.runCounter || 0,
           incorrectRunCounter: this.incorrectRunCounter || 0,
           hasAnalyzedMistakes: this.hasAnalyzedMistakes || false,
+          shouldAnalyzeWithGemini: this.shouldAnalyzeWithGemini || false,
           currentProblemUrl: this.currentProblemUrl || currentUrl,
           submitCounter: this.submitCounter || 0,
           aiAnalysis: this.aiAnalysis || null,
+          aiTags: this.aiTags || [],
           problemStartTime: this.problemStartTime || Date.now(),
           timestamp: new Date().toISOString()
         };
@@ -286,6 +294,8 @@
       this.submissionInProgress = false;
       this.currentSubmissionAttempt = null;
       this.aiAnalysis = null;
+      this.aiTags = [];
+      this.shouldAnalyzeWithGemini = false;
       this.problemStartTime = Date.now(); // Reset start time for new problem
       console.log(`[LeetCode] Counters reset for new problem`);
 
@@ -597,7 +607,7 @@
                 await this.savePersistedState();
 
                 // Check if we've reached 3 failed runs
-                if (this.incorrectRunCounter >= 3 && !this.hasAnalyzedMistakes) {
+                if (this.incorrectRunCounter >= 2 && !this.hasAnalyzedMistakes) {
                   this.handleThreeIncorrectRuns();
                 }
               } else {
@@ -661,77 +671,14 @@
     }
 
     async handleThreeIncorrectRuns() {
-      try {
-        console.log(`[LeetCode Run Counter] 3 INCORRECT RUNS DETECTED - Triggering Gemini mistake analysis`);
-        this.hasAnalyzedMistakes = true;
-
-        // Save state immediately after setting analysis flag
-        await this.savePersistedState();
-
-        // Get the failed attempts (should be exactly 3 by now)
-        const failedAttempts = this.attempts.filter(a => a.successful === false);
-        console.log(`[LeetCode Run Counter] Analyzing ${failedAttempts.length} failed attempts`);
-
-        // Debug: Log attempt details for verification
-        console.log(`[LeetCode Debug] Failed attempts:`, failedAttempts.map(a => ({
-          runNumber: a.runNumber,
-          successful: a.successful,
-          timestamp: a.timestamp
-        })));
-
-        // Ensure we have at least 3 failed attempts
-        if (failedAttempts.length < 3) {
-          console.log(`[LeetCode Run Counter] Expected 3 failed attempts, found ${failedAttempts.length}. Counter: ${this.incorrectRunCounter}`);
-          return;
-        }
-
-        // Get current problem info
-        const problemInfo = await this.extractProblemInfo();
-        if (!problemInfo) {
-          console.log(`[LeetCode Run Counter] Could not extract problem info for mistake analysis`);
-          return;
-        }
-
-        // Add failed attempts to problem info
-        problemInfo.attempts = failedAttempts;
-        problemInfo.mistakeAnalysisOnly = true; // Flag to indicate this is just for mistake analysis
-
-        console.log(`[LeetCode Debug] Sending to GitHub:`, {
-          attempts: problemInfo.attempts.length,
-          mistakeAnalysisOnly: problemInfo.mistakeAnalysisOnly,
-          attemptDetails: problemInfo.attempts.map(a => ({
-            runNumber: a.runNumber,
-            successful: a.successful,
-            hasCode: !!a.code
-          }))
-        });
-
-        console.log(`�[LeetCode Run Counter] Pushing mistake analysis to GitHub...`);
-
-        // Initialize GitHub API
-        if (!githubAPI) {
-          githubAPI = new GitHubAPI();
-          await githubAPI.initialize();
-        }
-
-        // Push mistake analysis to GitHub
-        const result = await githubAPI.pushMistakeAnalysis(problemInfo, PLATFORM);
-
-        if (result.success) {
-          console.log(`[LeetCode Run Counter] Mistake analysis pushed to GitHub successfully!`);
-          
-          // Store the AI analysis result for backend submission
-          if (result.analysis) {
-            await this.savePersistedState({ aiAnalysis: result.analysis });
-            console.log(`[LeetCode] Stored AI analysis for backend submission`);
-          }
-        } else {
-          console.log(`[LeetCode Run Counter] Failed to push mistake analysis:`, result.error);
-        }
-
-      } catch (error) {
-        console.error('[LeetCode Run Counter] Error handling three incorrect runs:', error);
-      }
+      // Just set flag - Gemini analysis will run on successful submit before backend push
+      console.log(`[LeetCode] 3 failed runs detected - flagging for Gemini analysis on submit`);
+      this.hasAnalyzedMistakes = true;
+      this.shouldAnalyzeWithGemini = true;
+      await this.savePersistedState({
+        hasAnalyzedMistakes: true,
+        shouldAnalyzeWithGemini: true
+      });
     }
 
 
@@ -1006,10 +953,42 @@
         // Store problem as solved BEFORE pushing to backend
         const submissionCount = attemptsToPersist.filter(a => a.type === 'submit').length;
         const totalTries = (submissionCount > 0 ? submissionCount : this.runCounter + 1);
+
+        // Step 0: Run Gemini analysis if flagged (before backend push)
+        if (this.shouldAnalyzeWithGemini) {
+          console.log(`[LeetCode Submission] Step 0: Running Gemini analysis before backend push...`);
+          try {
+            const geminiAPI = new GeminiAPI();
+            const geminiConfigured = await geminiAPI.initialize();
+
+            if (geminiConfigured) {
+              // Send ALL attempts (not just failed) to Gemini for full context
+              const allAttempts = this.attempts.filter(a => a.code && a.code.length > 10);
+              console.log(`[LeetCode] Sending ${allAttempts.length} code iterations to Gemini`);
+
+              const geminiResult = await geminiAPI.analyzeMistakes(allAttempts, problemInfo);
+
+              if (geminiResult.success) {
+                this.aiAnalysis = geminiResult.analysis;
+                this.aiTags = geminiResult.tags || [];
+                console.log(`[LeetCode] Gemini analysis complete. Tags: ${this.aiTags.join(', ')}`);
+              } else {
+                console.log(`[LeetCode] Gemini analysis failed: ${geminiResult.error}`);
+              }
+            } else {
+              console.log(`[LeetCode] Gemini API key not configured - skipping analysis`);
+            }
+          } catch (error) {
+            console.error(`[LeetCode] Gemini analysis error:`, error);
+            // Continue with submission even if Gemini fails
+          }
+        }
+
+        // Store problem data with AI analysis (will be picked up by backend push)
         await this.storeProblemData(problemInfo, true, totalTries);
         console.log(`[LeetCode Submission] Stored problem as solved with ${totalTries} tries`);
 
-        // Step 1: Push to Backend API first
+        // Step 1: Push to Backend API
         console.log(`[LeetCode Submission] Step 1: Pushing to backend...`);
         console.log(`[LeetCode Debug] BackendAPI available:`, typeof BackendAPI !== 'undefined');
         console.log(`[LeetCode Debug] backendAPI instance:`, backendAPI);
@@ -1020,12 +999,12 @@
             await backendAPI.initialize();
             console.log(`[LeetCode Submission] BackendAPI initialized:`, backendAPI);
           }
-          
+
           const currentUrl = this.getCurrentProblemUrl();
           console.log(`[LeetCode Submission] Current problem URL: ${currentUrl}`);
-          
+
           const backendResult = await backendAPI.pushCurrentProblemData(currentUrl);
-          
+
           if (backendResult.success) {
             console.log(`[LeetCode Submission] Backend push successful!`, backendResult.data);
           } else {
@@ -1043,22 +1022,27 @@
 
         if (result.success) {
           console.log(`[LeetCode Submission] Solution pushed to GitHub successfully!`);
-          
+
           // Reset counters after successful submission
           this.runCounter = 0;
           this.incorrectRunCounter = 0;
           this.attempts = [];
           this.hasAnalyzedMistakes = false;
+          this.shouldAnalyzeWithGemini = false;
           this.submitCounter = 0;
           this.currentSubmissionAttempt = null;
           this.aiAnalysis = null;
+          this.aiTags = [];
 
           await this.savePersistedState({
             attempts: attemptsToPersist,
             runCounter: 0,
             incorrectRunCounter: 0,
             hasAnalyzedMistakes: false,
-            submitCounter: 0
+            shouldAnalyzeWithGemini: false,
+            submitCounter: 0,
+            aiAnalysis: null,
+            aiTags: []
           });
         } else {
           console.log(`[LeetCode Submission] Failed to push solution:`, result.error);

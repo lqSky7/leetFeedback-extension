@@ -1,6 +1,6 @@
 // Interceptor script for TakeUforward submission monitoring
 
-(function() {
+(function () {
   'use strict';
 
   const XHR = XMLHttpRequest.prototype;
@@ -15,7 +15,7 @@
 
   XHR.send = function (body) {
     console.log('[TUF Interceptor] XHR send called for URL:', this.url, 'Method:', this.method);
-    
+
     // Intercept submit request to capture code
     if (
       this.url.includes('backend-go.takeuforward.org/api/v1/plus/judge/submit') &&
@@ -26,7 +26,7 @@
       try {
         const payload = JSON.parse(body);
         console.log('[TUF Interceptor] Submit payload:', payload);
-        
+
         window.postMessage(
           {
             type: 'CODE_SUBMIT',
@@ -53,6 +53,8 @@
             type: 'CODE_RUN',
             payload: {
               problem_id: payload.problem_id,
+              language: payload.language,
+              usercode: payload.usercode,
             },
           },
           '*',
@@ -61,7 +63,7 @@
         console.error('[TUF Interceptor] Error parsing run payload:', error);
       }
     }
-    
+
     // Add load event listener to capture responses
     this.addEventListener('load', function () {
       console.log('[TUF Interceptor] XHR load for URL:', this.url);
@@ -73,7 +75,7 @@
           console.log('[TUF Interceptor] Intercepting submission check response...');
           const response = JSON.parse(this.responseText);
           console.log('[TUF Interceptor] Submission check response:', response);
-          
+
           if (response.success && response.data) {
             const data = response.data;
             const submissionData = {
@@ -98,11 +100,40 @@
             console.log('[TUF Interceptor] Submission check not successful or no data');
           }
         }
+
+        // Intercept run check response (check-run endpoint)
+        if (
+          this.url.includes('backend-go.takeuforward.org/api/v1/plus/judge/check-run') &&
+          this.method.toLowerCase() === 'get'
+        ) {
+          console.log('[TUF Interceptor] Intercepting run check response...');
+          const response = JSON.parse(this.responseText);
+          console.log('[TUF Interceptor] Run check response:', response);
+
+          if (response.success && response.data) {
+            const data = response.data;
+            const runData = {
+              success: data.status === 'Accepted',
+              status: data.status,
+              totalTestCases: data.total_test_cases,
+              passedTestCases: data.passed_test_cases,
+            };
+            console.log('[TUF Interceptor] Processed run data:', runData);
+
+            window.postMessage(
+              {
+                type: 'RUN_RESPONSE',
+                payload: runData,
+              },
+              '*',
+            );
+          }
+        }
       } catch (error) {
         console.error('[TUF Interceptor] Error in interceptor:', error);
       }
     });
-    
+
     return send.apply(this, arguments);
   };
 

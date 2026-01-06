@@ -1,17 +1,22 @@
 // Fixed background script
 console.log("Background script starting...");
 
+// Allow users to open the side panel by clicking on the action toolbar icon
+chrome.sidePanel
+  .setPanelBehavior({ openPanelOnActionClick: true })
+  .catch((error) => console.error(error));
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log("DSA to GitHub Extension installed.");
-  
+
   // Initialize default settings
   chrome.storage.sync.get(['github_branch', 'time_tracking'], (data) => {
     const updates = {};
-    
+
     if (!data.github_branch) {
       updates.github_branch = 'main';
     }
-    
+
     // Initialize time tracking data if it doesn't exist (with simplified structure)
     if (!data.time_tracking) {
       updates.time_tracking = {
@@ -23,23 +28,23 @@ chrome.runtime.onInstalled.addListener(() => {
         lastUpdated: new Date().toISOString()
       };
     }
-    
+
     if (Object.keys(updates).length > 0) {
       chrome.storage.sync.set(updates);
     }
   });
 });
 
-// Handle messages from content scripts and popup
+// Handle messages from content scripts and sidepanel
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("Message received:", request.type);
-  
+
   try {
     if (request.type === 'getUserSolution') {
       handleGetUserSolution(request, sender, sendResponse);
       return true; // Will respond asynchronously
     }
-    
+
     if (request.type === 'testGitHubConnection') {
       handleTestGitHubConnection(request, sender, sendResponse);
       return true;
@@ -49,32 +54,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       handleInitializeConfig(request, sender, sendResponse);
       return true;
     }
-    
+
     if (request.type === 'updateTimeTracking') {
       handleUpdateTimeTracking(request, sender, sendResponse);
       return true;
     }
-    
+
     if (request.type === 'getTimeTracking') {
       handleGetTimeTracking(request, sender, sendResponse);
       return true;
     }
-    
+
     if (request.type === 'AUTH_STATE_CHANGED') {
       handleAuthStateChanged(request, sender, sendResponse);
       return true;
     }
-    
+
     if (request.type === 'CONTENT_SCRIPT_READY') {
       handleContentScriptReady(request, sender, sendResponse);
       return true;
     }
-    
+
     if (request.type === 'BACKEND_API_FETCH') {
       handleBackendAPIFetch(request, sender, sendResponse);
       return true;
     }
-    
+
     // Unknown message type
     console.log("Unknown message type:", request.type);
     sendResponse({ success: false, error: 'Unknown message type' });
@@ -90,14 +95,14 @@ async function handleGetUserSolution(request, sender, sendResponse) {
     if (request.platform === 'geeksforgeeks') {
       // Get debug mode first
       const debugMode = await getDebugMode();
-      
+
       // Inject script to extract solution from GeeksforGeeks
       const results = await chrome.scripting.executeScript({
         target: { tabId: sender.tab.id },
         func: extractGfGSolution,
         args: [debugMode]
       });
-      
+
       const solution = results[0]?.result || '';
       sendResponse({ success: true, solution });
     } else {
@@ -113,9 +118,9 @@ async function handleGetUserSolution(request, sender, sendResponse) {
 async function handleAuthStateChanged(request, sender, sendResponse) {
   try {
     const { isAuthenticated, user } = request;
-    
+
     console.log('[Background] Auth state changed:', { isAuthenticated, user: user?.email });
-    
+
     // Store auth data in local storage for extension access
     if (isAuthenticated && user) {
       await chrome.storage.local.set({
@@ -123,7 +128,7 @@ async function handleAuthStateChanged(request, sender, sendResponse) {
         auth_timestamp: Date.now()
       });
       console.log('[Background] User authenticated and stored:', user.email);
-      
+
       // Notify all extension contexts about auth change
       try {
         chrome.runtime.sendMessage({
@@ -137,7 +142,7 @@ async function handleAuthStateChanged(request, sender, sendResponse) {
     } else {
       await chrome.storage.local.remove(['firebase_user', 'auth_timestamp']);
       console.log('[Background] User signed out, data cleared');
-      
+
       // Notify all extension contexts about auth change
       try {
         chrome.runtime.sendMessage({
@@ -149,7 +154,7 @@ async function handleAuthStateChanged(request, sender, sendResponse) {
         // Ignore if no listeners
       }
     }
-    
+
     sendResponse({ success: true });
   } catch (error) {
     console.error('Error handling auth state change:', error);
@@ -161,14 +166,14 @@ async function handleAuthStateChanged(request, sender, sendResponse) {
 async function handleContentScriptReady(request, sender, sendResponse) {
   try {
     console.log('[Background] Content script ready on:', request.url);
-    
+
     // Check if we have cached auth data and should sync it
     const result = await chrome.storage.local.get(['firebase_user', 'auth_timestamp']);
     if (result.firebase_user && result.auth_timestamp) {
       const now = Date.now();
       const cacheAge = now - result.auth_timestamp;
       const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-      
+
       if (cacheAge < maxAge) {
         console.log('[Background] Syncing cached auth data to content script');
         // Request fresh auth status from the website
@@ -187,7 +192,7 @@ async function handleContentScriptReady(request, sender, sendResponse) {
         }, 1000);
       }
     }
-    
+
     sendResponse({ success: true });
   } catch (error) {
     console.error('Error handling content script ready:', error);
@@ -199,20 +204,20 @@ async function handleBackendAPIFetch(request, sender, sendResponse) {
   try {
     const { url, options } = request;
     console.log(`[Background] Making backend API request to: ${url}`);
-    
+
     const response = await fetch(url, options);
     const data = await response.json();
-    
-    sendResponse({ 
-      success: response.ok, 
+
+    sendResponse({
+      success: response.ok,
       status: response.status,
-      data: data 
+      data: data
     });
   } catch (error) {
     console.error('[Background] Backend API fetch error:', error);
-    sendResponse({ 
-      success: false, 
-      error: error.message 
+    sendResponse({
+      success: false,
+      error: error.message
     });
   }
 }
@@ -230,7 +235,7 @@ function extractGfGSolution(debugMode = false) {
   try {
     if (debugMode) console.log('[GFG Debug] Starting solution extraction...');
     let code = '';
-    
+
     // Method 1: Try to get from ACE editor
     if (debugMode) console.log('[GFG Debug] Checking ACE editor...');
     if (window.ace && window.ace.edit) {
@@ -250,7 +255,7 @@ function extractGfGSolution(debugMode = false) {
         }
       }
     }
-    
+
     // Method 2: Try to get from CodeMirror
     if (!code && window.CodeMirror) {
       if (debugMode) console.log('[GFG Debug] Checking CodeMirror...');
@@ -268,7 +273,7 @@ function extractGfGSolution(debugMode = false) {
         }
       }
     }
-    
+
     // Method 3: Try to get from Monaco editor
     if (!code && window.monaco && window.monaco.editor) {
       if (debugMode) console.log('[GFG Debug] Checking Monaco editor...');
@@ -283,30 +288,30 @@ function extractGfGSolution(debugMode = false) {
         }
       }
     }
-    
+
     // Method 4: Try to get from specific textarea with the right content
     if (debugMode) console.log('[GFG Debug] Checking all textareas for code content...');
     const allTextareas = document.querySelectorAll('textarea');
     if (debugMode) console.log('[GFG Debug] Found', allTextareas.length, 'textareas');
-    
+
     for (let i = 0; i < allTextareas.length; i++) {
       const textarea = allTextareas[i];
       const value = textarea.value;
       if (debugMode) console.log('[GFG Debug] Textarea', i, 'value length:', value.length);
       if (debugMode) console.log('[GFG Debug] Textarea', i, 'preview:', value.substring(0, 50));
-      
+
       // Check if this textarea contains actual code (look for common programming patterns)
       if (value && value.trim().length > 10) {
-        const hasCodePatterns = value.includes('{') || 
-                               value.includes('}') || 
-                               value.includes('class') ||
-                               value.includes('function') ||
-                               value.includes('def') ||
-                               value.includes('int ') ||
-                               value.includes('#include') ||
-                               value.includes('public') ||
-                               value.includes('return');
-        
+        const hasCodePatterns = value.includes('{') ||
+          value.includes('}') ||
+          value.includes('class') ||
+          value.includes('function') ||
+          value.includes('def') ||
+          value.includes('int ') ||
+          value.includes('#include') ||
+          value.includes('public') ||
+          value.includes('return');
+
         if (hasCodePatterns) {
           code = value;
           if (debugMode) console.log('[GFG Debug] Using textarea', i, 'with code patterns detected');
@@ -315,7 +320,7 @@ function extractGfGSolution(debugMode = false) {
         }
       }
     }
-    
+
     // Method 5: Try to get from DOM elements with line extraction
     if (!code) {
       if (debugMode) console.log('[GFG Debug] Checking DOM elements for code lines...');
@@ -325,7 +330,7 @@ function extractGfGSolution(debugMode = false) {
         '.monaco-editor .view-lines',
         '.ace_text-layer'
       ];
-      
+
       for (const selector of codeElements) {
         const element = document.querySelector(selector);
         if (element) {
@@ -346,7 +351,7 @@ function extractGfGSolution(debugMode = false) {
         }
       }
     }
-    
+
     if (debugMode) console.log('[GFG Debug] No code found with any method');
     return code || '';
   } catch (error) {
@@ -405,20 +410,20 @@ async function handleBackendAPIFetch(request, sender, sendResponse) {
   try {
     const { url, options } = request;
     console.log(`[Background] Making backend API request to: ${url}`);
-    
+
     const response = await fetch(url, options);
     const data = await response.json();
-    
-    sendResponse({ 
-      success: response.ok, 
+
+    sendResponse({
+      success: response.ok,
       status: response.status,
-      data: data 
+      data: data
     });
   } catch (error) {
     console.error('[Background] Backend API fetch error:', error);
-    sendResponse({ 
-      success: false, 
-      error: error.message 
+    sendResponse({
+      success: false,
+      error: error.message
     });
   }
 }
@@ -426,7 +431,7 @@ async function handleBackendAPIFetch(request, sender, sendResponse) {
 async function handleUpdateTimeTracking(request, sender, sendResponse) {
   try {
     const { platform, timeSpent } = request;
-    
+
     const result = await chrome.storage.sync.get(['time_tracking']);
     const timeTracking = result.time_tracking || {
       platforms: {
