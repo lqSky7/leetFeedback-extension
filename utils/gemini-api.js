@@ -3,7 +3,7 @@
 class GeminiAPI {
     constructor() {
         this.baseURL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
         this.apiKey = null;
     }
 
@@ -70,14 +70,29 @@ class GeminiAPI {
                 data.candidates[0] &&
                 data.candidates[0].content
             ) {
-                const analysis = data.candidates[0].content.parts[0].text;
-                return { success: true, analysis };
+                const rawAnalysis = data.candidates[0].content.parts[0].text;
+                const parsed = this.parseAnalysisResponse(rawAnalysis);
+                return { success: true, analysis: parsed.summary, tags: parsed.tags };
             } else {
                 throw new Error("Invalid response format from Gemini API");
             }
         } catch (error) {
             return { success: false, error: error.message };
         }
+    }
+
+    // Parse the Gemini response to extract tags and summary
+    parseAnalysisResponse(rawAnalysis) {
+        // Extract "TAGS: tag1, tag2, tag3" line from response
+        const tagsMatch = rawAnalysis.match(/^TAGS:\s*(.+)$/m);
+        const tags = tagsMatch
+            ? tagsMatch[1].split(',').map(t => t.trim()).filter(t => t.length > 0)
+            : [];
+
+        // Remove the TAGS line from summary for cleaner storage
+        const summary = rawAnalysis.replace(/^TAGS:\s*.+$/m, '').trim();
+
+        return { tags, summary };
     }
 
     buildAnalysisPrompt(attempts, problemInfo) {

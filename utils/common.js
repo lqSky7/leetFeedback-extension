@@ -14,24 +14,13 @@ const LANGUAGE_EXTENSIONS = {
   'Python': '.py',
   'Python3': '.py',
   'python': '.py',
-  'JavaScript': '.js',
-  'Javascript': '.js',
-  'javascript': '.js',
-  'TypeScript': '.ts',
-  'C#': '.cs',
   'Go': '.go',
-  'Rust': '.rs',
-  'Kotlin': '.kt',
-  'Swift': '.swift',
-  'Ruby': '.rb',
-  'PHP': '.php',
-  'Scala': '.scala'
 };
 
 class DSAUtils {
   static getCurrentPlatform() {
     const hostname = window.location.hostname;
-    
+
     if (hostname.includes('leetcode.com')) {
       return DSA_PLATFORMS.LEETCODE;
     } else if (hostname.includes('geeksforgeeks.org')) {
@@ -39,7 +28,7 @@ class DSAUtils {
     } else if (hostname.includes('takeuforward.org')) {
       return DSA_PLATFORMS.TAKEUFORWARD;
     }
-    
+
     return null;
   }
 
@@ -93,61 +82,61 @@ class DSAUtils {
 
   static generateCommitMessage(platform, problemInfo) {
     const { title, number, difficulty, language, stats } = problemInfo;
-    
+
     // Format consistently: "problem name - platform [difficulty]"
-    
+
     // Clean up the title based on platform-specific patterns
     let cleanTitle = title;
-    
+
     // Remove problem number prefix (e.g., "1. Two Sum")
     cleanTitle = cleanTitle.replace(/^\d+\.\s*/, '');
-    
+
     // Remove platform prefixes (e.g., "[LEETCODE]", "[GEEKSFORGEEKS]")
     cleanTitle = cleanTitle.replace(/\[(LEETCODE|GEEKSFORGEEKS|GFG|TAKEUFORWARD)\]/i, '');
-    
+
     // Remove difficulty in parentheses (e.g., "(Medium)", "(Easy)")
     cleanTitle = cleanTitle.replace(/\s*\((Easy|Medium|Hard|School|Basic)\)\s*/i, '');
-    
+
     // Remove any remaining brackets and their contents
     cleanTitle = cleanTitle.replace(/\[.*?\]/g, '');
-    
+
     // Normalize whitespace and trim
     cleanTitle = cleanTitle.replace(/\s+/g, ' ').trim();
-    
+
     // Capitalize platform name properly
     const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
-    
+
     // Build the final message in the required format
     let message = `${cleanTitle} - ${platformName}`;
-    
+
     // Add difficulty in square brackets if available
     if (difficulty) {
       message += ` [${difficulty}]`;
     }
-    
+
     return message;
   }
 
   static createDirectoryPath(platform, problemInfo) {
     const { difficulty, category, number, title } = problemInfo;
-    
+
     let path = platform;
-    
+
     if (difficulty) {
       path += `/${difficulty.toLowerCase()}`;
     }
-    
+
     if (category) {
       path += `/${this.sanitizeFileName(category)}`;
     }
-    
+
     if (number && title) {
       const folderName = `${number}-${this.formatProblemName(title)}`;
       path += `/${folderName}`;
     } else if (title) {
       path += `/${this.formatProblemName(title)}`;
     }
-    
+
     return path;
   }
 
@@ -155,16 +144,16 @@ class DSAUtils {
     return new Promise((resolve) => {
       chrome.storage.sync.get(['dsa_stats'], (data) => {
         const stats = data.dsa_stats || {};
-        
+
         if (!stats[platform]) {
           stats[platform] = { solved: 0, lastSolved: null };
         }
-        
+
         if (operation === 'increment') {
           stats[platform].solved += 1;
           stats[platform].lastSolved = new Date().toISOString();
         }
-        
+
         chrome.storage.sync.set({ dsa_stats: stats }, () => {
           resolve(stats);
         });

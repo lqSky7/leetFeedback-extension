@@ -5,6 +5,7 @@
 
   const PLATFORM = DSA_PLATFORMS.GEEKSFORGEEKS;
   let githubAPI = null;
+  let backendAPI = null;
   let isInitialized = false;
   let submissionInProgress = false;
   let extractorInstance = null; // Global singleton instance
@@ -43,6 +44,9 @@
       this.runCounter = 0;
       this.incorrectRunCounter = 0;
       this.hasAnalyzedMistakes = false;
+      this.shouldAnalyzeWithGemini = false;
+      this.aiAnalysis = null;
+      this.aiTags = [];
       this.topics = [];
       this.currentProblemUrl = null;
     }
@@ -54,13 +58,17 @@
 
         githubAPI = new GitHubAPI();
         await githubAPI.initialize();
+
+        backendAPI = new BackendAPI();
+        await backendAPI.initialize();
+
         this.setupEventListeners();
         this.checkPageType();
 
         // Detect if we've changed problems - reset counters if so
         const currentUrl = this.getCurrentProblemUrl();
         if (this.currentProblemUrl !== currentUrl) {
-          console.log(`🔄 [GeeksforGeeks Run Counter] Problem changed - resetting counters`);
+          console.log(`[GeeksforGeeks Run Counter] Problem changed - resetting counters`);
           this.resetCounters();
           this.currentProblemUrl = currentUrl;
           await this.savePersistedState();
@@ -81,19 +89,22 @@
         const problemData = result[`problem_data_${currentUrl}`];
 
         if (problemData) {
-          console.log(`📥 [GeeksforGeeks] Loaded problem data:`, problemData);
-          
+          console.log(`[GeeksforGeeks] Loaded problem data:`, problemData);
+
           // Extract tracking info from problem data if available
           this.attempts = problemData.attempts || [];
           this.runCounter = problemData.runCounter || 0;
           this.incorrectRunCounter = problemData.incorrectRunCounter || 0;
           this.hasAnalyzedMistakes = problemData.hasAnalyzedMistakes || false;
+          this.shouldAnalyzeWithGemini = problemData.shouldAnalyzeWithGemini || false;
+          this.aiAnalysis = problemData.aiAnalysis || null;
+          this.aiTags = problemData.aiTags || [];
           this.currentProblemUrl = problemData.currentProblemUrl || currentUrl;
           this.topics = problemData.parent_topic || [];
 
-          console.log(`🔢 [GeeksforGeeks] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}, Topics: ${this.topics.length}`);
+          console.log(`[GeeksforGeeks] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}, ShouldAnalyze: ${this.shouldAnalyzeWithGemini}`);
         } else {
-          console.log(`🆕 [GeeksforGeeks] No problem data found - starting fresh`);
+          console.log(`[GeeksforGeeks] No problem data found - starting fresh`);
           this.topics = [];
         }
       } catch (error) {
@@ -104,7 +115,7 @@
     async savePersistedState(overrides = {}) {
       try {
         const currentUrl = this.getCurrentProblemUrl();
-        
+
         // Load existing problem data to merge with tracking state
         const result = await chrome.storage.local.get([`problem_data_${currentUrl}`]);
         let problemData = result[`problem_data_${currentUrl}`] || {};
@@ -117,13 +128,16 @@
           runCounter: overrides.runCounter ?? this.runCounter,
           incorrectRunCounter: overrides.incorrectRunCounter ?? this.incorrectRunCounter,
           hasAnalyzedMistakes: overrides.hasAnalyzedMistakes ?? this.hasAnalyzedMistakes,
+          shouldAnalyzeWithGemini: overrides.shouldAnalyzeWithGemini ?? this.shouldAnalyzeWithGemini,
+          aiAnalysis: overrides.aiAnalysis ?? this.aiAnalysis,
+          aiTags: overrides.aiTags ?? this.aiTags,
           currentProblemUrl: overrides.currentProblemUrl ?? this.currentProblemUrl,
           parent_topic: overrides.parent_topic ?? this.topics,
           timestamp: overrides.timestamp ?? new Date().toISOString()
         };
 
         await chrome.storage.local.set({ [`problem_data_${currentUrl}`]: problemData });
-        console.log(`💾 [GeeksforGeeks] Saved problem data for: ${currentUrl}`);
+        console.log(`[GeeksforGeeks] Saved problem data for: ${currentUrl}`);
       } catch (error) {
         console.error('[GeeksforGeeks] Error saving problem data:', error);
       }
@@ -166,18 +180,21 @@
           ignored: existingData.ignored ?? false,
           parent_topic: problemInfo.topics || problemInfo.topicTags || existingData.parent_topic || [],
           problem_link: problemInfo.url || existingData.problem_link || window.location.href.split('?')[0],
-          
+
           // Include tracking state
           attempts: this.attempts || [],
           runCounter: this.runCounter || 0,
           incorrectRunCounter: this.incorrectRunCounter || 0,
           hasAnalyzedMistakes: this.hasAnalyzedMistakes || false,
+          shouldAnalyzeWithGemini: this.shouldAnalyzeWithGemini || false,
+          aiAnalysis: this.aiAnalysis || null,
+          aiTags: this.aiTags || [],
           currentProblemUrl: this.currentProblemUrl || currentUrl,
           timestamp: new Date().toISOString()
         };
 
         await chrome.storage.local.set({ [storageKey]: problemData });
-        console.log(`💾 [GeeksforGeeks] Stored problem data:`, problemData);
+        console.log(`[GeeksforGeeks] Stored problem data:`, problemData);
         return problemData;
       } catch (error) {
         console.error('[GeeksforGeeks] Error storing problem data:', error);
@@ -205,8 +222,11 @@
       this.runCounter = 0;
       this.incorrectRunCounter = 0;
       this.hasAnalyzedMistakes = false;
+      this.shouldAnalyzeWithGemini = false;
+      this.aiAnalysis = null;
+      this.aiTags = [];
       this.topics = [];
-      console.log(`🔄 [GeeksforGeeks] Counters reset for new problem`);
+      console.log(`[GeeksforGeeks] Counters reset for new problem`);
 
       // Clean up any stored problem data for this problem
       const currentUrl = this.getCurrentProblemUrl();
@@ -304,7 +324,7 @@
     async handleRunAttempt() {
       try {
         this.runCounter++;
-        console.log(`🏃‍♂️ [GeeksforGeeks Run Counter] Run attempt #${this.runCounter}`);
+        console.log(`[GeeksforGeeks Run Counter] Run attempt #${this.runCounter}`);
 
         const code = this.getCurrentCode();
         const language = this.getCurrentLanguage();
@@ -322,7 +342,7 @@
           };
 
           this.attempts.push(attempt);
-          console.log(`📝 [GeeksforGeeks Run Counter] Stored run attempt #${this.runCounter}`);
+          console.log(`[GeeksforGeeks Run Counter] Stored run attempt #${this.runCounter}`);
 
           // Save state after adding attempt
           await this.savePersistedState();
@@ -331,7 +351,7 @@
           await this.observeRunResult(attempt);
 
         } else {
-          console.log(`❌ [GeeksforGeeks Run Counter] Run #${this.runCounter} - Code too short or empty`);
+          console.log(`[GeeksforGeeks Run Counter] Run #${this.runCounter} - Code too short or empty`);
         }
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error storing run attempt', error);
@@ -364,7 +384,7 @@
               // Guard against multiple increments for the same attempt
               if (attempt.successful !== true) {
                 attempt.successful = true;
-                console.log(`✅ [GeeksforGeeks Run Counter] Run #${attempt.runNumber} - SUCCESS (Expected output matched)`);
+                console.log(`[GeeksforGeeks Run Counter] Run #${attempt.runNumber} - SUCCESS (Expected output matched)`);
 
                 // Save state after successful attempt
                 await this.savePersistedState();
@@ -384,14 +404,14 @@
               if (attempt.successful !== false) {
                 attempt.successful = false;
                 this.incorrectRunCounter++;
-                console.log(`❌ [GeeksforGeeks Run Counter] Run #${attempt.runNumber} - FAILED (Incorrect output)`);
-                console.log(`🔢 [GeeksforGeeks Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
+                console.log(`[GeeksforGeeks Run Counter] Run #${attempt.runNumber} - FAILED (Incorrect output)`);
+                console.log(`[GeeksforGeeks Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
 
                 // Save state after failed attempt
                 await this.savePersistedState();
 
                 // Check if we've reached 3 failed runs
-                if (this.incorrectRunCounter >= 3 && !this.hasAnalyzedMistakes) {
+                if (this.incorrectRunCounter >= 2 && !this.hasAnalyzedMistakes) {
                   this.handleThreeIncorrectRuns();
                 }
               }
@@ -423,8 +443,8 @@
             // If we can't determine the result, assume it's a failed run for safety
             attempt.successful = false;
             this.incorrectRunCounter++;
-            console.log(`⏰ [GeeksforGeeks Run Counter] Run #${attempt.runNumber} - TIMEOUT → Counted as FAILED (safety measure)`);
-            console.log(`🔢 [GeeksforGeeks Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
+            console.log(`[GeeksforGeeks Run Counter] Run #${attempt.runNumber} - TIMEOUT → Counted as FAILED (safety measure)`);
+            console.log(`[GeeksforGeeks Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
 
             // Save state after failed attempt
             await this.savePersistedState();
@@ -439,54 +459,14 @@
     }
 
     async handleThreeIncorrectRuns() {
-      try {
-        console.log(`🚨 [GeeksforGeeks Run Counter] 3 INCORRECT RUNS DETECTED - Triggering Gemini mistake analysis`);
-        this.hasAnalyzedMistakes = true;
-
-        // Save state immediately after setting analysis flag
-        await this.savePersistedState();
-
-        // Get the failed attempts (should be exactly 3 by now)
-        const failedAttempts = this.attempts.filter(a => a.successful === false);
-        console.log(`🔍 [GeeksforGeeks Run Counter] Analyzing ${failedAttempts.length} failed attempts`);
-
-        // Ensure we have at least 3 failed attempts
-        if (failedAttempts.length < 3) {
-          console.log(`⚠️ [GeeksforGeeks Run Counter] Expected 3 failed attempts, found ${failedAttempts.length}. Counter: ${this.incorrectRunCounter}`);
-          return;
-        }
-
-        // Get current problem info
-        const problemInfo = await this.extractProblemInfo();
-        if (!problemInfo) {
-          console.log(`❌ [GeeksforGeeks Run Counter] Could not extract problem info for mistake analysis`);
-          return;
-        }
-
-        // Add failed attempts to problem info
-        problemInfo.attempts = failedAttempts;
-        problemInfo.mistakeAnalysisOnly = true;
-
-        console.log(`📤 [GeeksforGeeks Run Counter] Pushing mistake analysis to GitHub...`);
-
-        // Initialize GitHub API
-        if (!githubAPI) {
-          githubAPI = new GitHubAPI();
-          await githubAPI.initialize();
-        }
-
-        // Push mistake analysis to GitHub
-        const result = await githubAPI.pushMistakeAnalysis(problemInfo, PLATFORM);
-
-        if (result.success) {
-          console.log(`✅ [GeeksforGeeks Run Counter] Mistake analysis pushed to GitHub successfully!`);
-        } else {
-          console.log(`❌ [GeeksforGeeks Run Counter] Failed to push mistake analysis:`, result.error);
-        }
-
-      } catch (error) {
-        console.error('[GeeksforGeeks Run Counter] Error handling three incorrect runs:', error);
-      }
+      // Just set flag - Gemini analysis will run on successful submit before backend push
+      console.log(`[GeeksforGeeks] 3 failed runs detected - flagging for Gemini analysis on submit`);
+      this.hasAnalyzedMistakes = true;
+      this.shouldAnalyzeWithGemini = true;
+      await this.savePersistedState({
+        hasAnalyzedMistakes: true,
+        shouldAnalyzeWithGemini: true
+      });
     }
 
     attachSubmitButtonListener() {
@@ -907,8 +887,8 @@
 
     async handleSuccessfulSubmission() {
       try {
-        console.log(`🎉 [GeeksforGeeks Submission] SUCCESSFUL SUBMISSION DETECTED`);
-        console.log(`📊 [GeeksforGeeks Stats] Total runs: ${this.runCounter}, Failed runs: ${this.incorrectRunCounter}`);
+        console.log(`[GeeksforGeeks Submission] SUCCESSFUL SUBMISSION DETECTED`);
+        console.log(`[GeeksforGeeks Stats] Total runs: ${this.runCounter}, Failed runs: ${this.incorrectRunCounter}`);
 
         DSAUtils.logDebug(PLATFORM, 'Handling successful submission');
 
@@ -959,54 +939,102 @@
 
         const totalRunCounter = this.runCounter;
         const totalIncorrectRuns = this.incorrectRunCounter;
-        this.hasAnalyzedMistakes = false;
 
         this.currentProblem.attempts = finalAttempts;
-        if (finalAttempts.length > 0) {
-          DSAUtils.logDebug(PLATFORM, 'Attempts being sent to GitHub:', finalAttempts.map(a => ({
-            language: a.language,
-            type: a.type,
-            successful: a.successful,
-            codeLength: a.code?.length || 0,
-            timestamp: a.timestamp,
-            codePreview: a.code?.substring(0, 50) + '...'
-          })));
 
-          if (incorrectAttempts.length >= 3) {
-            DSAUtils.logDebug(PLATFORM, `🔍 Mistake analysis will be triggered (${incorrectAttempts.length} incorrect attempts >= 3 threshold)`);
-          } else {
-            DSAUtils.logDebug(PLATFORM, `ℹ️ No mistake analysis (${incorrectAttempts.length} incorrect attempts < 3 threshold)`);
+        // Calculate total tries
+        const totalTries = totalRunCounter + 1; // +1 for the successful submission
+
+        // Step 0: Run Gemini analysis if flagged (before backend push)
+        if (this.shouldAnalyzeWithGemini) {
+          console.log(`[GeeksforGeeks Submission] Step 0: Running Gemini analysis before backend push...`);
+          try {
+            const geminiAPI = new GeminiAPI();
+            const geminiConfigured = await geminiAPI.initialize();
+
+            if (geminiConfigured) {
+              // Send ALL attempts (not just failed) to Gemini for full context
+              const allAttempts = this.attempts.filter(a => a.code && a.code.length > 10);
+              console.log(`[GeeksforGeeks] Sending ${allAttempts.length} code iterations to Gemini`);
+
+              const geminiResult = await geminiAPI.analyzeMistakes(allAttempts, this.currentProblem);
+
+              if (geminiResult.success) {
+                this.aiAnalysis = geminiResult.analysis;
+                this.aiTags = geminiResult.tags || [];
+                console.log(`[GeeksforGeeks] Gemini analysis complete. Tags: ${this.aiTags.join(', ')}`);
+              } else {
+                console.log(`[GeeksforGeeks] Gemini analysis failed: ${geminiResult.error}`);
+              }
+            } else {
+              console.log(`[GeeksforGeeks] Gemini API key not configured - skipping analysis`);
+            }
+          } catch (error) {
+            console.error(`[GeeksforGeeks] Gemini analysis error:`, error);
+            // Continue with submission even if Gemini fails
           }
         }
 
-        // Push to GitHub using single solution.md file
-        DSAUtils.logDebug(PLATFORM, 'Pushing to GitHub...');
+        // Store problem data with AI analysis (will be picked up by backend push)
+        await this.storeProblemData(this.currentProblem, true, totalTries);
+        console.log(`[GeeksforGeeks Submission] Stored problem as solved with ${totalTries} tries`);
+
+        // Step 1: Push to Backend API
+        console.log(`[GeeksforGeeks Submission] Step 1: Pushing to backend...`);
+        try {
+          if (!backendAPI) {
+            console.log(`[GeeksforGeeks Submission] Initializing BackendAPI...`);
+            backendAPI = new BackendAPI();
+            await backendAPI.initialize();
+          }
+
+          const currentUrl = this.getCurrentProblemUrl();
+          console.log(`[GeeksforGeeks Submission] Current problem URL: ${currentUrl}`);
+
+          const backendResult = await backendAPI.pushCurrentProblemData(currentUrl);
+
+          if (backendResult.success) {
+            console.log(`[GeeksforGeeks Submission] Backend push successful!`, backendResult.data);
+          } else {
+            console.log(`[GeeksforGeeks Submission] Backend push failed: ${backendResult.error}`);
+            // Continue with GitHub push even if backend fails
+          }
+        } catch (error) {
+          console.error(`[GeeksforGeeks Submission] Backend push error:`, error);
+          // Continue with GitHub push even if backend fails
+        }
+
+        // Step 2: Push to GitHub
+        console.log(`[GeeksforGeeks Submission] Step 2: Pushing to GitHub...`);
         const result = await githubAPI.pushSolution(this.currentProblem, PLATFORM);
         DSAUtils.logDebug(PLATFORM, 'Push result:', result);
 
         if (result.success) {
           DSAUtils.logDebug(PLATFORM, 'Push successful!');
-          console.log(`✅ [GeeksforGeeks Submission] Solution pushed to GitHub successfully!`);
-
-          // Store problem data as solved
-          const totalTries = totalRunCounter + 1; // +1 for the successful submission
-          await this.storeProblemData(this.currentProblem, true, totalTries);
+          console.log(`[GeeksforGeeks Submission] Solution pushed to GitHub successfully!`);
 
           // Reset counters after successful submission
           this.runCounter = 0;
           this.incorrectRunCounter = 0;
           this.attempts = [];
+          this.hasAnalyzedMistakes = false;
+          this.shouldAnalyzeWithGemini = false;
+          this.aiAnalysis = null;
+          this.aiTags = [];
 
-          // Persist final attempts and counters for history
+          // Persist final state
           await this.savePersistedState({
             attempts: finalAttempts,
-            runCounter: totalRunCounter,
-            incorrectRunCounter: totalIncorrectRuns,
-            hasAnalyzedMistakes: this.hasAnalyzedMistakes
+            runCounter: 0,
+            incorrectRunCounter: 0,
+            hasAnalyzedMistakes: false,
+            shouldAnalyzeWithGemini: false,
+            aiAnalysis: null,
+            aiTags: []
           });
         } else {
           DSAUtils.logError(PLATFORM, 'Push failed:', result.error);
-          console.log(`❌ [GeeksforGeeks Submission] Failed to push solution:`, result.error);
+          console.log(`[GeeksforGeeks Submission] Failed to push solution:`, result.error);
         }
 
       } catch (error) {
@@ -1089,9 +1117,9 @@
     // Use singleton pattern to maintain state across page changes
     if (!extractorInstance) {
       extractorInstance = new GeeksforGeeksExtractor();
-      console.log(`🆕 [GeeksforGeeks Run Counter] Created new extractor instance`);
+      console.log(`[GeeksforGeeks Run Counter] Created new extractor instance`);
     } else {
-      console.log(`♻️ [GeeksforGeeks Run Counter] Reusing existing extractor instance`);
+      console.log(`[GeeksforGeeks Run Counter] Reusing existing extractor instance`);
     }
 
     await extractorInstance.initialize();

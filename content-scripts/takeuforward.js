@@ -1,6 +1,6 @@
 // TakeUforward content script for DSA to GitHub extension
 
-(function() {
+(function () {
   'use strict';
 
   const PLATFORM = DSA_PLATFORMS.TAKEUFORWARD;
@@ -25,6 +25,15 @@
       this.lastActivityTime = Date.now();
       this.currentPathname = window.location.pathname;
       this.problemStartTime = null;
+
+      // Run tracking for Gemini analysis
+      this.attempts = [];
+      this.runCounter = 0;
+      this.incorrectRunCounter = 0;
+      this.hasAnalyzedMistakes = false;
+      this.shouldAnalyzeWithGemini = false;
+      this.aiAnalysis = null;
+      this.aiTags = [];
     }
 
     async initialize() {
@@ -32,19 +41,19 @@
         // Initialize GitHub API
         githubAPI = new GitHubAPI();
         await githubAPI.initialize();
-        
+
         // Initialize Backend API
         backendAPI = new BackendAPI();
         await backendAPI.initialize();
-        
+
         this.setupEventListeners();
         this.injectInterceptor();
         this.checkPageType();
         this.startTimeTracking();
         this.pollForQuestionDetails();
-        
+
         DSAUtils.logDebug(PLATFORM, 'TakeUforward extractor initialized');
-        console.log('✅ [TakeUforward] Extension fully initialized');
+        console.log('[TakeUforward] Extension fully initialized');
         isInitialized = true;
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Failed to initialize', error);
@@ -54,10 +63,10 @@
     setupEventListeners() {
       // Listen for URL changes
       this.observeUrlChanges();
-      
+
       // Listen for intercepted events
       this.setupMessageListener();
-      
+
       // Track user activity
       this.setupActivityTracking();
     }
@@ -68,11 +77,18 @@
           DSAUtils.logDebug(PLATFORM, `Path changed from ${this.currentPathname} to ${window.location.pathname}`);
           this.currentPathname = window.location.pathname;
           currentPathname = window.location.pathname;
-          
-          // Reset tries on problem change
+
+          // Reset tries and run tracking on problem change
           TRIES = 0;
+          this.attempts = [];
+          this.runCounter = 0;
+          this.incorrectRunCounter = 0;
+          this.hasAnalyzedMistakes = false;
+          this.shouldAnalyzeWithGemini = false;
+          this.aiAnalysis = null;
+          this.aiTags = [];
           this.problemStartTime = Date.now();
-          
+
           setTimeout(() => {
             this.fetchQuestionDetails();
           }, 4000);
@@ -91,12 +107,12 @@
         // CODE_SUBMIT: Capture code when user submits
         if (event.data.type === 'CODE_SUBMIT') {
           const submitData = event.data.payload;
-          console.log('📝 [TakeUforward] Captured code submission:', submitData);
-          
+          console.log('[TakeUforward] Captured code submission:', submitData);
+
           SELECTED_LANGUAGE = submitData.language || '';
           PUBLIC_CODE = submitData.usercode || '';
           PROBLEM_SLUG = submitData.problem_id || '';
-          
+
           // Store code data in chrome storage for persistence
           await chrome.storage.local.set({
             tuf_code_data: {
@@ -106,32 +122,83 @@
               timestamp: Date.now()
             }
           });
-          
-          console.log('💾 [TakeUforward] Stored code data:', {
+
+          console.log('[TakeUforward] Stored code data:', {
             language: SELECTED_LANGUAGE,
             codeLength: PUBLIC_CODE.length,
             problemSlug: PROBLEM_SLUG
           });
-          
+
           TRIES++;
-          console.log('🔢 [TakeUforward] Tries now:', TRIES);
+          console.log('[TakeUforward] Tries now:', TRIES);
         }
-        
-        // CODE_RUN: Track run attempts
+
+        // CODE_RUN: Track run attempts and capture code
         else if (event.data.type === 'CODE_RUN') {
-          console.log('🏃 [TakeUforward] Run button clicked');
+          this.runCounter++;
+          console.log(`[TakeUforward] Run button clicked - attempt #${this.runCounter}`);
+
+          // Capture the code at this run attempt
+          const runData = event.data.payload || {};
+          const code = runData.usercode || PUBLIC_CODE;
+          const language = runData.language || SELECTED_LANGUAGE;
+
+          if (code && code.length > 10) {
+            const attempt = {
+              code,
+              language,
+              timestamp: new Date().toISOString(),
+              type: 'run',
+              runNumber: this.runCounter,
+              successful: null // Will be determined by RUN_RESPONSE
+            };
+            this.attempts.push(attempt);
+            console.log(`[TakeUforward] Stored run attempt #${this.runCounter}`);
+          }
         }
-        
+
+        // RUN_RESPONSE: Track run results (success/failure)
+        else if (event.data.type === 'RUN_RESPONSE') {
+          const runResult = event.data.payload;
+          console.log('[TakeUforward] Run response received:', runResult);
+
+          // Find the most recent run attempt and mark it
+          const lastAttempt = this.attempts.filter(a => a.type === 'run').pop();
+          if (lastAttempt && lastAttempt.successful === null) {
+            if (runResult.success === true || runResult.status === 'Accepted') {
+              lastAttempt.successful = true;
+              console.log(`[TakeUforward] Run #${lastAttempt.runNumber} - SUCCESS`);
+            } else {
+              lastAttempt.successful = false;
+              this.incorrectRunCounter++;
+              console.log(`[TakeUforward] Run #${lastAttempt.runNumber} - FAILED`);
+              console.log(`[TakeUforward] Total failed runs: ${this.incorrectRunCounter}/3`);
+
+              // Check if we've reached 3 failed runs
+              if (this.incorrectRunCounter >= 2 && !this.hasAnalyzedMistakes) {
+                this.handleThreeIncorrectRuns();
+              }
+            }
+          }
+        }
+
         // SUBMISSION_RESPONSE: Handle submission results
         else if (event.data.type === 'SUBMISSION_RESPONSE') {
           const submissionData = event.data.payload;
-          console.log('📊 [TakeUforward] Received submission response:', submissionData);
-          
+          console.log('[TakeUforward] Received submission response:', submissionData);
+
           if (submissionData.success === true) {
-            console.log('✅ [TakeUforward] Submission successful! Processing...');
+            console.log('[TakeUforward] Submission successful! Processing...');
             await this.handleSuccessfulSubmission(submissionData);
           } else {
-            console.log('❌ [TakeUforward] Submission was not successful. Status:', submissionData.status);
+            console.log('[TakeUforward] Submission was not successful. Status:', submissionData.status);
+            // Count failed submissions as failed runs too
+            this.incorrectRunCounter++;
+            console.log(`[TakeUforward] Total failed attempts: ${this.incorrectRunCounter}/3`);
+
+            if (this.incorrectRunCounter >= 3 && !this.hasAnalyzedMistakes) {
+              this.handleThreeIncorrectRuns();
+            }
           }
         }
       });
@@ -140,7 +207,7 @@
     setupActivityTracking() {
       const handleUserActivity = () => {
         this.lastActivityTime = Date.now();
-        if (!this.sessionStartTime) {
+        if (!this.sessionStartTime && !this.isTabHidden) {
           this.startTimeTracking();
         }
       };
@@ -149,6 +216,29 @@
       document.addEventListener('keypress', handleUserActivity);
       document.addEventListener('scroll', handleUserActivity);
       document.addEventListener('mousemove', handleUserActivity);
+
+      // Track tab visibility - pause timer when tab is not visible
+      this.isTabHidden = document.hidden;
+      this.pausedTime = 0; // Track time spent paused
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          // Tab is now hidden - pause the timer
+          this.isTabHidden = true;
+          this.tabHiddenAt = Date.now();
+          DSAUtils.logDebug(PLATFORM, 'Tab hidden, pausing timer');
+        } else {
+          // Tab is now visible - resume the timer
+          this.isTabHidden = false;
+          if (this.tabHiddenAt && this.problemStartTime) {
+            // Add the hidden duration to our paused time accumulator
+            const hiddenDuration = Date.now() - this.tabHiddenAt;
+            this.pausedTime += hiddenDuration;
+            DSAUtils.logDebug(PLATFORM, `Tab visible, was hidden for ${Math.floor(hiddenDuration / 1000)}s`);
+          }
+          this.tabHiddenAt = null;
+        }
+      });
 
       // Update time every 5 minutes if user is active
       setInterval(() => {
@@ -160,10 +250,13 @@
     }
 
     startTimeTracking() {
+      // Always start fresh - never load from storage
+      // This ensures page refresh resets the timer
       this.sessionStartTime = Date.now();
       this.problemStartTime = Date.now();
+      this.pausedTime = 0; // Reset paused time on fresh start
       chrome.storage.sync.set({ last_session_start: new Date().toISOString() });
-      DSAUtils.logDebug(PLATFORM, 'Started tracking time on TakeUforward');
+      DSAUtils.logDebug(PLATFORM, 'Started fresh time tracking on TakeUforward');
     }
 
     updateTimeTracking() {
@@ -172,7 +265,7 @@
         chrome.storage.sync.get(['takeuforward_time'], (data) => {
           const currentTime = data.takeuforward_time || 0;
           const newTotalTime = currentTime + sessionDuration;
-          chrome.storage.sync.set({ 
+          chrome.storage.sync.set({
             takeuforward_time: newTotalTime,
             last_activity: new Date().toISOString()
           });
@@ -183,15 +276,15 @@
 
     pollForQuestionDetails() {
       const pollInterval = setInterval(() => {
-        console.log('🔍 [TakeUforward] Polling for question details...');
+        console.log('[TakeUforward] Polling for question details...');
         this.fetchQuestionDetails();
-        
+
         if (QUES && DESCRIPTION) {
-          console.log('✅ [TakeUforward] Question details found, stopping poll');
+          console.log('[TakeUforward] Question details found, stopping poll');
           clearInterval(pollInterval);
         }
       }, 1000);
-      
+
       // Stop polling after 30 seconds
       setTimeout(() => clearInterval(pollInterval), 30000);
     }
@@ -207,48 +300,48 @@
 
     fetchQuestionDetails() {
       console.log('📖 [TakeUforward] Fetching question details...');
-      
+
       const headingElem = document.querySelector('h1.text-xl.font-bold');
       const paragraphElem = document.querySelector('.tuf-text-14');
 
       if (headingElem && paragraphElem) {
         QUES = headingElem.textContent?.trim() || "";
         DESCRIPTION = paragraphElem.textContent?.trim() || "";
-        console.log('✅ [TakeUforward] Question details fetched:', QUES);
+        console.log('[TakeUforward] Question details fetched:', QUES);
       } else {
-        console.log('⚠️ [TakeUforward] Question elements not found:', { 
-          hasHeading: !!headingElem, 
-          hasParagraph: !!paragraphElem 
+        console.log('[TakeUforward] Question elements not found:', {
+          hasHeading: !!headingElem,
+          hasParagraph: !!paragraphElem
         });
       }
 
       // Extract difficulty
       const difficultyElement = document.querySelector('[class*="difficulty"], [class*="Difficulty"]');
       DIFFICULTY = difficultyElement?.textContent?.trim() || "Medium";
-      console.log('📊 [TakeUforward] Extracted difficulty:', DIFFICULTY);
+      console.log('[TakeUforward] Extracted difficulty:', DIFFICULTY);
     }
 
     async extractProblemInfo() {
       try {
         // Make sure we have latest question details
         this.fetchQuestionDetails();
-        
+
         // Try to get stored code data if not in memory
         if (!PUBLIC_CODE || !SELECTED_LANGUAGE || !PROBLEM_SLUG) {
-          console.log('🔄 [TakeUforward] Code data missing in memory, checking storage...');
+          console.log('[TakeUforward] Code data missing in memory, checking storage...');
           const storedData = await chrome.storage.local.get(['tuf_code_data']);
-          
+
           if (storedData.tuf_code_data && storedData.tuf_code_data.timestamp) {
             const dataAge = Date.now() - storedData.tuf_code_data.timestamp;
             if (dataAge < 60000) { // Within 60 seconds
               SELECTED_LANGUAGE = storedData.tuf_code_data.SELECTED_LANGUAGE || SELECTED_LANGUAGE;
               PUBLIC_CODE = storedData.tuf_code_data.PUBLIC_CODE || PUBLIC_CODE;
               PROBLEM_SLUG = storedData.tuf_code_data.PROBLEM_SLUG || PROBLEM_SLUG;
-              console.log('✅ [TakeUforward] Retrieved code data from storage (age:', Math.round(dataAge/1000), 'seconds)');
+              console.log('[TakeUforward] Retrieved code data from storage (age:', Math.round(dataAge / 1000), 'seconds)');
             }
           }
         }
-        
+
         const problemInfo = {
           title: QUES,
           description: DESCRIPTION,
@@ -265,7 +358,7 @@
           DSAUtils.logDebug(PLATFORM, 'Could not extract problem title');
           return null;
         }
-        
+
         if (!problemInfo.code) {
           DSAUtils.logDebug(PLATFORM, 'Could not extract problem code');
           return null;
@@ -273,7 +366,7 @@
 
         this.currentProblem = problemInfo;
         DSAUtils.logDebug(PLATFORM, 'Problem info extracted', problemInfo);
-        
+
         return problemInfo;
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error extracting problem info', error);
@@ -296,18 +389,19 @@
     }
 
     extractTopicsFromUrl() {
-      // Extract topic from URL: /plus/dsa/topic-name/
-      const urlPath = window.location.pathname;
-      const match = urlPath.match(/\/plus\/dsa\/([^\/]+)/);
+      // Extract topic from URL query parameters
+      // URL format: /plus/dsa/problems/3-sum?category=arrays&subcategory=faqs-medium
+      const urlParams = new URLSearchParams(window.location.search);
+      const categoryParam = urlParams.get('category');
       
-      if (match && match[1]) {
-        const rawTopic = match[1];
-        const topic = rawTopic
+      if (categoryParam) {
+        // Clean up the category: "arrays" -> "Arrays"
+        const topic = categoryParam
           .replace(/-/g, ' ')
           .replace(/\b\w/g, (l) => l.toUpperCase());
         return [topic];
       }
-      
+
       return ['General'];
     }
 
@@ -315,12 +409,12 @@
       try {
         const currentUrl = problemInfo.url;
         const storageKey = `problem_data_${currentUrl}`;
-        
+
         const existingResult = await chrome.storage.local.get([storageKey]);
         const existingData = existingResult[storageKey] || {};
-        
+
         const previousSolved = existingData.solved || { value: false, date: 0, tries: 0 };
-        
+
         let solvedData;
         if (previousSolved.value) {
           // Already solved, keep previous data
@@ -351,13 +445,24 @@
           parent_topic: problemInfo.topics || existingData.parent_topic || ['General'],
           problem_link: problemInfo.url,
           language: problemInfo.language || existingData.language || 'python',  // Store language
-          problemStartTime: this.problemStartTime || existingData.problemStartTime || Date.now(),
+          // Always use current instance's problemStartTime (fresh on page refresh)
+          // Don't load from storage - timer resets on page refresh
+          problemStartTime: this.problemStartTime || Date.now(),
+          // Track paused time (when tab was hidden) to subtract from total time
+          pausedTime: this.pausedTime || 0,
+          // Gemini analysis data
+          aiAnalysis: this.aiAnalysis || null,
+          aiTags: this.aiTags || [],
+          shouldAnalyzeWithGemini: this.shouldAnalyzeWithGemini || false,
+          // Run tracking
+          runCounter: this.runCounter || 0,
+          incorrectRunCounter: this.incorrectRunCounter || 0,
           timestamp: new Date().toISOString()
         };
 
         await chrome.storage.local.set({ [storageKey]: problemData });
-        console.log('💾 [TakeUforward] Saved problem data for:', currentUrl);
-        
+        console.log('[TakeUforward] Saved problem data for:', currentUrl);
+
         return problemData;
       } catch (error) {
         console.error('[TakeUforward] Error saving problem data:', error);
@@ -365,24 +470,31 @@
       }
     }
 
+    async handleThreeIncorrectRuns() {
+      // Just set flag - Gemini analysis will run on successful submit before backend push
+      console.log(`[TakeUforward] 3 failed runs detected - flagging for Gemini analysis on submit`);
+      this.hasAnalyzedMistakes = true;
+      this.shouldAnalyzeWithGemini = true;
+    }
+
     async handleSuccessfulSubmission(submissionData) {
       try {
-        console.log('🎉 [TakeUforward] SUCCESSFUL SUBMISSION DETECTED');
-        
+        console.log('[TakeUforward] SUCCESSFUL SUBMISSION DETECTED');
+
         // Wait a bit for UI to update
         await DSAUtils.sleep(2000);
-        
+
         // Extract latest problem info
         const problemInfo = await this.extractProblemInfo();
-        
+
         if (!problemInfo) {
-          console.error('❌ [TakeUforward] Could not extract problem information');
+          console.error('[TakeUforward] Could not extract problem information');
           return;
         }
-        
+
         // Validate we have code
         if (!problemInfo.code || problemInfo.code.length < 10) {
-          console.error('❌ [TakeUforward] Missing or invalid code. Code length:', problemInfo.code?.length);
+          console.error('[TakeUforward] Missing or invalid code. Code length:', problemInfo.code?.length);
           return;
         }
 
@@ -396,7 +508,7 @@
           memory: submissionData.averageMemory
         };
 
-        console.log('📊 [TakeUforward] Problem info ready for push:', {
+        console.log('[TakeUforward] Problem info ready for push:', {
           title: problemInfo.title,
           difficulty: problemInfo.difficulty,
           codeLength: problemInfo.code.length,
@@ -406,45 +518,85 @@
 
         // Store problem as solved BEFORE pushing to backend
         await this.storeProblemData(problemInfo, true);
-        console.log('💾 [TakeUforward] Stored problem as solved');
+        console.log('[TakeUforward] Stored problem as solved');
+
+        // Step 0: Run Gemini analysis if flagged (before backend push)
+        if (this.shouldAnalyzeWithGemini) {
+          console.log(`[TakeUforward] Step 0: Running Gemini analysis before backend push...`);
+          try {
+            const geminiAPI = new GeminiAPI();
+            const geminiConfigured = await geminiAPI.initialize();
+
+            if (geminiConfigured) {
+              // Send ALL attempts (not just failed) to Gemini for full context
+              const allAttempts = this.attempts.filter(a => a.code && a.code.length > 10);
+              console.log(`[TakeUforward] Sending ${allAttempts.length} code iterations to Gemini`);
+
+              const geminiResult = await geminiAPI.analyzeMistakes(allAttempts, problemInfo);
+
+              if (geminiResult.success) {
+                this.aiAnalysis = geminiResult.analysis;
+                this.aiTags = geminiResult.tags || [];
+                console.log(`[TakeUforward] Gemini analysis complete. Tags: ${this.aiTags.join(', ')}`);
+
+                // Update stored problem data with AI analysis
+                await this.storeProblemData(problemInfo, true);
+              } else {
+                console.log(`[TakeUforward] Gemini analysis failed: ${geminiResult.error}`);
+              }
+            } else {
+              console.log(`[TakeUforward] Gemini API key not configured - skipping analysis`);
+            }
+          } catch (error) {
+            console.error(`[TakeUforward] Gemini analysis error:`, error);
+            // Continue with submission even if Gemini fails
+          }
+        }
 
         // Step 1: Push to Backend API
-        console.log('🔄 [TakeUforward] Step 1: Pushing to backend...');
+        console.log('[TakeUforward] Step 1: Pushing to backend...');
         try {
           if (!backendAPI) {
-            console.log('🔧 [TakeUforward] Initializing BackendAPI...');
+            console.log('[TakeUforward] Initializing BackendAPI...');
             backendAPI = new BackendAPI();
             await backendAPI.initialize();
           }
-          
+
           const backendResult = await backendAPI.pushCurrentProblemData(problemInfo.url);
-          
+
           if (backendResult.success) {
-            console.log('✅ [TakeUforward] Backend push successful!', backendResult.data);
+            console.log('[TakeUforward] Backend push successful!', backendResult.data);
           } else {
-            console.log('⚠️ [TakeUforward] Backend push failed:', backendResult.error);
+            console.log('[TakeUforward] Backend push failed:', backendResult.error);
           }
         } catch (error) {
-          console.error('❌ [TakeUforward] Backend push error:', error);
+          console.error('[TakeUforward] Backend push error:', error);
         }
 
         // Step 2: Push to GitHub
-        console.log('🔄 [TakeUforward] Step 2: Pushing to GitHub...');
+        console.log('[TakeUforward] Step 2: Pushing to GitHub...');
         const githubResult = await githubAPI.pushSolution(problemInfo, PLATFORM);
-        
+
         if (githubResult.success) {
-          console.log('✅ [TakeUforward] GitHub push successful!');
-          
+          console.log('[TakeUforward] GitHub push successful!');
+
           // Clear stored code data after successful push
           await chrome.storage.local.remove(['tuf_code_data']);
-          
+
           // Reset state
           TRIES = 0;
           PUBLIC_CODE = '';
           SELECTED_LANGUAGE = '';
           PROBLEM_SLUG = '';
+          this.attempts = [];
+          this.runCounter = 0;
+          this.incorrectRunCounter = 0;
+          this.hasAnalyzedMistakes = false;
+          this.shouldAnalyzeWithGemini = false;
+          this.aiAnalysis = null;
+          this.aiTags = [];
         } else {
-          console.error('❌ [TakeUforward] GitHub push failed:', githubResult.error);
+          console.error('[TakeUforward] GitHub push failed:', githubResult.error);
         }
 
       } catch (error) {
@@ -457,7 +609,7 @@
       script.src = chrome.runtime.getURL('utils/interceptor.js');
       (document.head || document.documentElement).appendChild(script);
       script.onload = () => {
-        console.log('✅ [TakeUforward] Interceptor script injected');
+        console.log('[TakeUforward] Interceptor script injected');
         script.remove();
       };
     }
@@ -473,12 +625,12 @@
   async function initializeTakeUforward() {
     // Wait for required utilities to be available
     if (typeof DSAUtils === 'undefined' || typeof GitHubAPI === 'undefined' || typeof BackendAPI === 'undefined') {
-      console.log('⏳ [TakeUforward] Waiting for utilities...');
+      console.log('[TakeUforward] Waiting for utilities...');
       setTimeout(initializeTakeUforward, 500);
       return;
     }
 
-    console.log('🚀 [TakeUforward] Starting initialization...');
+    console.log('[TakeUforward] Starting initialization...');
     const extractor = new TakeUforwardExtractor();
     await extractor.initialize();
   }
