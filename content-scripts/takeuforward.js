@@ -389,13 +389,14 @@
     }
 
     extractTopicsFromUrl() {
-      // Extract topic from URL: /plus/dsa/topic-name/
-      const urlPath = window.location.pathname;
-      const match = urlPath.match(/\/plus\/dsa\/([^\/]+)/);
-
-      if (match && match[1]) {
-        const rawTopic = match[1];
-        const topic = rawTopic
+      // Extract topic from URL query parameters
+      // URL format: /plus/dsa/problems/3-sum?category=arrays&subcategory=faqs-medium
+      const urlParams = new URLSearchParams(window.location.search);
+      const categoryParam = urlParams.get('category');
+      
+      if (categoryParam) {
+        // Clean up the category: "arrays" -> "Arrays"
+        const topic = categoryParam
           .replace(/-/g, ' ')
           .replace(/\b\w/g, (l) => l.toUpperCase());
         return [topic];

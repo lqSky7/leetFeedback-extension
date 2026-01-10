@@ -1,5 +1,60 @@
 // Backend API utility for DSA to GitHub extension
 
+// Category mapping for ML model (0-14)
+const CATEGORY_MAP = {
+  // Arrays
+  'array': 0, 'arrays': 0,
+  // Strings
+  'string': 1, 'strings': 1,
+  // Linked List
+  'linked list': 2, 'linkedlist': 2, 'linked-list': 2,
+  // Trees
+  'tree': 3, 'trees': 3, 'binary tree': 3, 'binary search tree': 3, 'bst': 3,
+  // Graphs
+  'graph': 4, 'graphs': 4,
+  // Dynamic Programming
+  'dp': 5, 'dynamic programming': 5,
+  // Greedy
+  'greedy': 6,
+  // Backtracking
+  'backtracking': 7, 'recursion': 7,
+  // Sorting
+  'sorting': 8, 'sort': 8, 'sorting and searching': 8,
+  // Searching
+  'searching': 9, 'search': 9, 'binary search': 9,
+  // Stack
+  'stack': 10, 'monotonic stack': 10,
+  // Queue
+  'queue': 11,
+  // Heap
+  'heap': 12, 'priority queue': 12,
+  // HashMap
+  'hash map': 13, 'hashmap': 13, 'hash table': 13, 'hashtable': 13, 'hashing': 13,
+  // Math
+  'math': 14, 'bit manipulation': 14, 'number theory': 14
+};
+
+/**
+ * Map topic strings to category ID for ML model
+ * @param {string[]} topics - Array of topic strings from problem
+ * @returns {number|null} - Category ID (0-14) or null if unknown
+ */
+function mapTopicToCategory(topics) {
+  if (!topics || !Array.isArray(topics) || topics.length === 0) {
+    return null;
+  }
+  
+  for (const topic of topics) {
+    const normalized = topic.toLowerCase().trim();
+    if (CATEGORY_MAP[normalized] !== undefined) {
+      return CATEGORY_MAP[normalized];
+    }
+  }
+  
+  // No exact match found
+  return null;
+}
+
 class BackendAPI {
   constructor() {
     this.baseURL = 'https://traverse-backend-api.azurewebsites.net';
@@ -141,6 +196,7 @@ class BackendAPI {
         attempts = [],
         runCounter = 0,
         aiAnalysis = null,
+        aiTags = [],  // Gemini-generated mistake tags
         problemStartTime = null,
         timestamp,
         language = null  // Add language from stored data (for TakeUforward/GFG)
@@ -201,11 +257,14 @@ class BackendAPI {
         happenedAt: solved.date ? new Date(solved.date).toISOString() : new Date().toISOString(),
         deviceId: 1, // Default device ID
         aiAnalysis: aiAnalysis, // Gemini AI analysis if available
+        mistakeTags: aiTags || [], // Gemini-generated mistake tags
         numberOfTries: Number(runCounter) || 1, // Use runCounter (run button presses)
-        timeTaken: timeTaken
+        timeTaken: timeTaken,
+        category: mapTopicToCategory(parent_topic) // Map topic to category ID for ML model
       };
 
       console.log('[Backend API] Formatted submission data:', formattedData);
+      console.log('[Backend API] Topics:', parent_topic, '-> Category:', formattedData.category);
 
       return formattedData;
 
