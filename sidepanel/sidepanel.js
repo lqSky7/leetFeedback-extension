@@ -14,6 +14,8 @@ class PopupController {
     this.updateUI();
     this.updateConnectionStatus();
     this.initializePlatformIcons();
+    this.checkForUpdates();
+    this.updateSessionStatus();
   }
 
   initializePlatformIcons() {
@@ -69,6 +71,26 @@ class PopupController {
       chrome.tabs.create({ url: e.target.href });
     });
 
+    // GitHub push enabled checkbox
+    const githubPushCheckbox = document.getElementById("github-push-enabled");
+    if (githubPushCheckbox) {
+      githubPushCheckbox.addEventListener("change", (e) => {
+        this.config.githubPushEnabled = e.target.checked;
+        chrome.storage.sync.set({ github_push_enabled: e.target.checked });
+        console.log("GitHub push enabled:", e.target.checked);
+      });
+    }
+
+    // Timer overlay enabled checkbox
+    const timerOverlayCheckbox = document.getElementById("timer-overlay-enabled");
+    if (timerOverlayCheckbox) {
+      timerOverlayCheckbox.addEventListener("change", (e) => {
+        this.config.timerOverlayEnabled = e.target.checked;
+        chrome.storage.sync.set({ timer_overlay_enabled: e.target.checked });
+        console.log("Timer overlay enabled:", e.target.checked);
+      });
+    }
+
     // All event listeners set up
   }
 
@@ -93,13 +115,13 @@ class PopupController {
     toggleButtons.forEach((button) => {
       button.addEventListener("click", () => {
         if (button.classList.contains("active")) return;
-        
+
         // Redirect to web app for registration
         if (button.dataset.target === "register") {
           chrome.tabs.create({ url: "https://leet-feedback.vercel.app/login" });
           return;
         }
-        
+
         setActiveForm(button.dataset.target);
         this.showAuthFeedback();
       });
@@ -239,6 +261,8 @@ class PopupController {
           "debug_mode",
           "time_tracking",
           "mistake_tags",
+          "github_push_enabled",
+          "timer_overlay_enabled",
         ],
         (data) => {
           this.config = {
@@ -248,6 +272,8 @@ class PopupController {
             branch: data.github_branch || "main",
             geminiKey: data.gemini_api_key || "",
             debugMode: data.debug_mode || false,
+            githubPushEnabled: data.github_push_enabled !== false, // Default true
+            timerOverlayEnabled: data.timer_overlay_enabled !== false, // Default true
           };
           this.timeTracking = data.time_tracking || {
             platforms: {
@@ -275,6 +301,17 @@ class PopupController {
     document.getElementById("branch").value = this.config.branch;
     document.getElementById("gemini-key").value = this.config.geminiKey;
     document.getElementById("debug-mode").checked = this.config.debugMode;
+
+    // New settings
+    const githubPushCheckbox = document.getElementById("github-push-enabled");
+    const timerOverlayCheckbox = document.getElementById("timer-overlay-enabled");
+
+    if (githubPushCheckbox) {
+      githubPushCheckbox.checked = this.config.githubPushEnabled;
+    }
+    if (timerOverlayCheckbox) {
+      timerOverlayCheckbox.checked = this.config.timerOverlayEnabled;
+    }
 
     this.refreshAuthConfigSummary();
   }
@@ -314,7 +351,7 @@ class PopupController {
           gemini_api_key: formData.geminiKey,
           debug_mode: formData.debugMode,
         },
-        () => {},
+        () => { },
       );
 
       this.config = formData;
@@ -792,6 +829,196 @@ class PopupController {
         "warning",
         "Failed to sign out remotely. Local session cleared.",
       );
+    }
+  }
+
+  // Check for extension updates from GitHub releases
+  async checkForUpdates() {
+    const updateNotification = document.getElementById("update-notification");
+    if (!updateNotification) return;
+
+    try {
+      // Check if we should throttle (only check once per day)
+      const cacheResult = await chrome.storage.local.get(["update_check_cache"]);
+      const cache = cacheResult.update_check_cache;
+      const now = Date.now();
+      const oneDay = 24 * 60 * 60 * 1000;
+
+      if (cache && cache.timestamp && (now - cache.timestamp) < oneDay) {
+        // Use cached result
+        this.renderUpdateNotification(cache.hasUpdate, cache.latestVersion, cache.currentVersion);
+        return;
+      }
+
+      // Fetch latest release from GitHub
+      const response = await fetch(
+        "https://api.github.com/repos/lqSky7/leetFeedback-extension/releases/latest",
+        { headers: { Accept: "application/vnd.github.v3+json" } }
+      );
+
+      if (!response.ok) {
+        throw new Error(`GitHub API returned ${response.status}`);
+      }
+
+      const release = await response.json();
+      const latestVersion = release.tag_name.replace(/^v/, "");
+      const currentVersion = chrome.runtime.getManifest().version;
+
+      // Compare versions
+      const hasUpdate = this.compareVersions(latestVersion, currentVersion) > 0;
+
+      // Cache the result
+      await chrome.storage.local.set({
+        update_check_cache: {
+          hasUpdate,
+          latestVersion,
+          currentVersion,
+          releaseUrl: release.html_url,
+          timestamp: now
+        }
+      });
+
+      this.renderUpdateNotification(hasUpdate, latestVersion, currentVersion, release.html_url);
+
+    } catch (error) {
+      console.error("[Update Check] Error:", error);
+      updateNotification.innerHTML = `
+        <div class="update-uptodate">
+          <span class="update-uptodate-icon">✓</span>
+          <span>v${chrome.runtime.getManifest().version}</span>
+        </div>
+      `;
+    }
+  }
+
+  renderUpdateNotification(hasUpdate, latestVersion, currentVersion, releaseUrl = "https://github.com/lqSky7/leetFeedback-extension/releases") {
+    const updateNotification = document.getElementById("update-notification");
+    if (!updateNotification) return;
+
+    if (hasUpdate) {
+      updateNotification.classList.add("has-update");
+      updateNotification.innerHTML = `
+        <div class="update-available">
+          <div class="update-version-info">
+            <span class="update-current">Current: v${currentVersion}</span>
+            <span class="update-latest">v${latestVersion} available</span>
+          </div>
+          <a href="${releaseUrl}" target="_blank" class="update-link">
+            Download Update
+          </a>
+        </div>
+      `;
+    } else {
+      updateNotification.classList.remove("has-update");
+      updateNotification.innerHTML = `
+        <div class="update-uptodate">
+          <span class="update-uptodate-icon">✓</span>
+          <span>Up to date (v${currentVersion})</span>
+        </div>
+      `;
+    }
+  }
+
+  compareVersions(a, b) {
+    const partsA = a.split(".").map(Number);
+    const partsB = b.split(".").map(Number);
+
+    for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+      const numA = partsA[i] || 0;
+      const numB = partsB[i] || 0;
+      if (numA > numB) return 1;
+      if (numA < numB) return -1;
+    }
+    return 0;
+  }
+
+  // Check session/cookie expiration status
+  async updateSessionStatus() {
+    const sessionStatus = document.getElementById("session-status");
+    if (!sessionStatus) return;
+
+    try {
+      const result = await chrome.storage.local.get(["auth_token", "auth_timestamp", "auth_user"]);
+
+      if (!result.auth_token || !result.auth_user) {
+        // Not logged in - hide session status
+        sessionStatus.style.display = "none";
+        return;
+      }
+
+      sessionStatus.style.display = "block";
+
+      // Try to decode JWT to get expiration
+      let expiresAt = null;
+      try {
+        const token = result.auth_token;
+        if (token && token.includes(".")) {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          if (payload.exp) {
+            expiresAt = payload.exp * 1000; // Convert to ms
+          }
+        }
+      } catch (e) {
+        // Token might not be JWT or is malformed
+        console.log("[Session] Could not decode token:", e);
+      }
+
+      // Fallback: estimate expiration from auth_timestamp (assume 7 days)
+      if (!expiresAt && result.auth_timestamp) {
+        expiresAt = result.auth_timestamp + (7 * 24 * 60 * 60 * 1000);
+      }
+
+      if (expiresAt) {
+        const now = Date.now();
+        const timeLeft = expiresAt - now;
+        const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
+        const daysLeft = Math.floor(hoursLeft / 24);
+
+        if (timeLeft < 0) {
+          // Expired
+          sessionStatus.className = "session-status error";
+          sessionStatus.innerHTML = `
+            <div class="session-status-label">Session Status</div>
+            <div class="session-status-value">Session expired</div>
+            <div class="session-status-action">
+              <button class="btn btn-primary" id="relogin-btn">Login Again</button>
+            </div>
+          `;
+          document.getElementById("relogin-btn")?.addEventListener("click", () => {
+            chrome.tabs.create({ url: "https://leet-feedback.vercel.app/login" });
+          });
+        } else if (hoursLeft < 24) {
+          // Expiring soon (less than 24 hours)
+          sessionStatus.className = "session-status warning";
+          sessionStatus.innerHTML = `
+            <div class="session-status-label">Session Status</div>
+            <div class="session-status-value">Expires in ${hoursLeft} hour${hoursLeft !== 1 ? "s" : ""}</div>
+            <div class="session-status-action">
+              <button class="btn btn-primary" id="refresh-session-btn">Refresh Session</button>
+            </div>
+          `;
+          document.getElementById("refresh-session-btn")?.addEventListener("click", () => {
+            chrome.tabs.create({ url: "https://leet-feedback.vercel.app/login" });
+          });
+        } else {
+          // Session is healthy
+          sessionStatus.className = "session-status";
+          sessionStatus.innerHTML = `
+            <div class="session-status-label">Session Status</div>
+            <div class="session-status-value">Active (${daysLeft} day${daysLeft !== 1 ? "s" : ""} remaining)</div>
+          `;
+        }
+      } else {
+        // Can't determine expiration
+        sessionStatus.className = "session-status";
+        sessionStatus.innerHTML = `
+          <div class="session-status-label">Session Status</div>
+          <div class="session-status-value">Active</div>
+        `;
+      }
+    } catch (error) {
+      console.error("[Session Status] Error:", error);
+      sessionStatus.style.display = "none";
     }
   }
 }

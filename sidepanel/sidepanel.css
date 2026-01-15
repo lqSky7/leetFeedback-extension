@@ -1725,3 +1725,151 @@ body {
 #config {
   padding: 8px 4px;
 }
+
+/* Session Status */
+.session-status {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--input-radius);
+  font-size: 12px;
+}
+
+.session-status.warning {
+  border-color: var(--warning);
+  background: var(--warning-dim);
+}
+
+.session-status.error {
+  border-color: var(--error);
+  background: var(--error-dim);
+}
+
+.session-status-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.session-status-value {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.session-status-action {
+  margin-top: 8px;
+}
+
+.session-status-action .btn {
+  padding: 8px 16px;
+  font-size: 12px;
+}
+
+/* Update Notification */
+.update-notification {
+  padding: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  font-size: 13px;
+}
+
+.update-notification.has-update {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.update-check-message {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+.update-available {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.update-version-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.update-current {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.update-latest {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.update-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--text);
+  color: var(--bg);
+  text-decoration: none;
+  border-radius: var(--btn-radius);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+}
+
+.update-link:hover {
+  background: var(--text-secondary);
+  transform: translateY(-1px);
+}
+
+.update-uptodate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--success);
+  font-size: 13px;
+}
+
+.update-uptodate-icon {
+  font-size: 16px;
+}
+
+/* Settings Option */
+.settings-option {
+  margin-bottom: 14px;
+}
+
+.settings-option:last-child {
+  margin-bottom: 0;
+}
+
+.settings-option-title {
+  margin-bottom: 4px;
+}
+
+.settings-option-description {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 34px;
+  font-style: italic;
+}
+
+/* Settings Section */
+.settings-section {
+  margin-bottom: 4px;
+}
+
+.settings-section h3 {
+  font-family: 'Kelvinch', serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
