@@ -36,14 +36,9 @@ class PopupController {
   }
 
   setupEventListeners() {
-    // Tab navigation with animation
+    // Tab navigation
     document.querySelectorAll(".tab").forEach((tab) => {
       tab.addEventListener("click", (e) => {
-        const ripple = document.createElement("span");
-        ripple.classList.add("tab-ripple");
-        e.target.appendChild(ripple);
-        setTimeout(() => ripple.remove(), 600);
-
         this.switchTab(e.target.dataset.tab);
       });
     });
@@ -61,27 +56,36 @@ class PopupController {
     });
 
     // Toggle password visibility
-    document.getElementById("toggle-token").addEventListener("click", () => {
-      this.togglePasswordVisibility("token", "toggle-token");
-    });
+    const toggleTokenBtn = document.getElementById("toggle-token");
+    if (toggleTokenBtn) {
+      toggleTokenBtn.addEventListener("click", () => {
+        this.togglePasswordVisibility("token", "toggle-token");
+      });
+    }
 
     // Toggle Gemini key visibility
-    document.getElementById("toggle-gemini").addEventListener("click", () => {
-      this.togglePasswordVisibility("gemini-key", "toggle-gemini");
+    const toggleGeminiBtn = document.getElementById("toggle-gemini");
+    if (toggleGeminiBtn) {
+      toggleGeminiBtn.addEventListener("click", () => {
+        this.togglePasswordVisibility("gemini-key", "toggle-gemini");
+      });
+    }
+
+    // Token links - open in new tab
+    document.querySelectorAll(".token-link").forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        chrome.tabs.create({ url: e.target.href });
+      });
     });
 
-    // GitHub token link
-    document.querySelector(".token-link").addEventListener("click", (e) => {
-      e.preventDefault();
-      chrome.tabs.create({ url: e.target.href });
-    });
-
-    // GitHub push enabled checkbox
+    // GitHub push enabled checkbox - with accordion toggle
     const githubPushCheckbox = document.getElementById("github-push-enabled");
     if (githubPushCheckbox) {
       githubPushCheckbox.addEventListener("change", (e) => {
         this.config.githubPushEnabled = e.target.checked;
         chrome.storage.sync.set({ github_push_enabled: e.target.checked });
+        this.toggleGitHubConfig(e.target.checked);
         console.log("GitHub push enabled:", e.target.checked);
       });
     }
@@ -96,7 +100,29 @@ class PopupController {
       });
     }
 
+    // Debug mode checkbox
+    const debugModeCheckbox = document.getElementById("debug-mode");
+    if (debugModeCheckbox) {
+      debugModeCheckbox.addEventListener("change", (e) => {
+        this.config.debugMode = e.target.checked;
+        chrome.storage.sync.set({ debug_mode: e.target.checked });
+        console.log("Debug mode enabled:", e.target.checked);
+      });
+    }
+
     // All event listeners set up
+  }
+
+  // Toggle GitHub config accordion visibility
+  toggleGitHubConfig(isEnabled) {
+    const configFields = document.getElementById("github-config-fields");
+    if (configFields) {
+      if (isEnabled) {
+        configFields.classList.remove("collapsed");
+      } else {
+        configFields.classList.add("collapsed");
+      }
+    }
   }
 
   setupAuthForms(authSection) {
@@ -305,7 +331,11 @@ class PopupController {
       timerOverlayCheckbox.checked = this.config.timerOverlayEnabled;
     }
 
-    this.refreshAuthConfigSummary();
+    // Set initial GitHub accordion state
+    this.toggleGitHubConfig(this.config.githubPushEnabled);
+
+    // Update auth section
+    this.updateAuthSection();
   }
 
   switchTab(tabName) {
@@ -320,14 +350,6 @@ class PopupController {
       panel.classList.remove("active");
     });
     document.getElementById(tabName).classList.add("active");
-
-    if (tabName === "settings") {
-      // Ensure debug checkbox is properly loaded with current value
-      document.getElementById("debug-mode").checked =
-        this.config.debugMode || false;
-      this.updateAuthSection();
-      console.log("Settings tab loaded. Debug mode:", this.config.debugMode);
-    }
   }
 
   async saveConfiguration() {
@@ -499,84 +521,39 @@ class PopupController {
         user.name ||
         user.email ||
         "User";
-      const emailRow = user.email
-        ? `<div class="auth-user-email">${user.email}</div>`
-        : "";
+      const email = user.email || "";
       const avatarMarkup = user.photoURL
         ? `<img src="${user.photoURL}" alt="${displayName}" />`
-        : `<div class="default-avatar"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>`;
+        : `<div class="default-avatar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>`;
 
-      const metaItems = [];
-      const githubUsername = user.github_username || user.githubUsername;
-      const githubRepo = user.github_repo || user.githubRepo;
-      const githubBranch = user.github_branch || user.githubBranch;
-
-      if (githubUsername || githubRepo) {
-        metaItems.push(`
-          <div class="auth-meta-item">
-            <span class="auth-meta-label">GitHub</span>
-            <span class="auth-meta-value">${githubUsername || "N/A"}${githubRepo ? `/${githubRepo}` : ""}</span>
-          </div>
-        `);
-      }
-
-      if (githubBranch) {
-        metaItems.push(`
-          <div class="auth-meta-item">
-            <span class="auth-meta-label">Branch</span>
-            <span class="auth-meta-value">${githubBranch}</span>
-          </div>
-        `);
-      }
-
-      const tokenPreview =
-        this.authStatus.token && this.authStatus.token.length > 12
-          ? `${this.authStatus.token.slice(0, 6)}…${this.authStatus.token.slice(-4)}`
-          : this.authStatus.token || "Active";
-
-      metaItems.push(`
-        <div class="auth-meta-item">
-          <span class="auth-meta-label">Session</span>
-          <span class="auth-meta-value">${tokenPreview}</span>
-        </div>
-      `);
-
-      const metaHtml =
-        metaItems.length > 0
-          ? `<div class="auth-meta">${metaItems.join("")}</div>`
-          : "";
+      // Get session status for badge
+      const sessionBadge = this.getSessionStatusBadge();
 
       authSection.innerHTML = `
-        <div class="auth-user">
-          <div class="auth-avatar">
-            ${avatarMarkup}
+        <div class="profile-card">
+          <div class="profile-left">
+            <div class="profile-avatar">
+              ${avatarMarkup}
+            </div>
+            <div class="profile-info">
+              <div class="profile-name">${displayName}</div>
+              ${email ? `<div class="profile-email">${email}</div>` : ""}
+              ${sessionBadge}
+            </div>
           </div>
-          <div class="auth-user-info">
-            <div class="auth-user-name">${displayName}</div>
-            ${emailRow}
-            <div class="auth-provider">Backend session active</div>
+          <div class="profile-right">
+            <button class="btn" id="sign-out-btn">Sign Out</button>
           </div>
         </div>
-        ${metaHtml}
-        <div class="auth-actions">
-          <button class="btn btn-primary" id="website-btn">Website</button>
-          <button class="btn sign-out" id="sign-out-btn">Sign Out</button>
-        </div>
-        <div class="sync-status synced">Connected to LeetFeedback backend</div>
       `;
 
-      const websiteBtn = document.getElementById("website-btn");
       const signOutBtn = document.getElementById("sign-out-btn");
-
-      if (websiteBtn) {
-        websiteBtn.addEventListener("click", () => this.openWebsite());
-      }
       if (signOutBtn) {
         signOutBtn.addEventListener("click", () => this.signOut());
       }
     } else {
       authSection.innerHTML = `
-        <div class="auth-card">
+        <div class="auth-login-compact">
           <div class="auth-toggle">
             <button class="auth-toggle-btn active" data-target="login">Login</button>
             <button class="auth-toggle-btn" data-target="register">Register</button>
@@ -598,6 +575,49 @@ class PopupController {
 
       this.setupAuthForms(authSection);
       this.showAuthFeedback();
+    }
+  }
+
+  // Get session status as a badge element
+  getSessionStatusBadge() {
+    try {
+      // Try to determine session status from stored data
+      const token = this.authStatus?.token;
+      if (!token) {
+        return `<div class="profile-status-badge">Active</div>`;
+      }
+
+      // Try to decode JWT for expiration
+      let expiresAt = null;
+      if (token.includes(".")) {
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          if (payload.exp) {
+            expiresAt = payload.exp * 1000;
+          }
+        } catch (e) {
+          // Token might not be JWT
+        }
+      }
+
+      if (expiresAt) {
+        const now = Date.now();
+        const timeLeft = expiresAt - now;
+        const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
+        const daysLeft = Math.floor(hoursLeft / 24);
+
+        if (timeLeft < 0) {
+          return `<div class="profile-status-badge error">Session expired</div>`;
+        } else if (hoursLeft < 24) {
+          return `<div class="profile-status-badge warning">Expires in ${hoursLeft}h</div>`;
+        } else {
+          return `<div class="profile-status-badge">Active (${daysLeft} day${daysLeft !== 1 ? "s" : ""} remaining)</div>`;
+        }
+      }
+
+      return `<div class="profile-status-badge">Active</div>`;
+    } catch (e) {
+      return `<div class="profile-status-badge">Active</div>`;
     }
   }
 

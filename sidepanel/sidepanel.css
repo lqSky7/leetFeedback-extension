@@ -1684,13 +1684,7 @@ body {
   font-weight: 500;
 }
 
-.auth-section {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--card-radius);
-  padding: 20px;
-  margin-bottom: 16px;
-}
+/* Auth section is now a simple container - profile-card has its own styling */
 
 .auth-user {
   display: flex;
@@ -1992,4 +1986,151 @@ body {
   font-weight: 600;
   color: var(--text);
   margin-bottom: 12px;
+}
+
+/* GitHub Config Accordion */
+.github-config-fields {
+  max-height: 500px;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s ease-out;
+  opacity: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 12px;
+}
+
+.github-config-fields.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+}
+
+/* Compact Profile Card */
+.profile-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+}
+
+.profile-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar .default-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.profile-avatar .default-avatar svg {
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
+}
+
+.profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-name {
+  font-family: 'HarmonyOS Sans', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-email {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--success);
+  background: var(--success-dim);
+  padding: 3px 8px;
+  border-radius: 10px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.profile-status-badge.warning {
+  color: var(--warning);
+  background: var(--warning-dim);
+}
+
+.profile-status-badge.error {
+  color: var(--error);
+  background: var(--error-dim);
+}
+
+.profile-right {
+  flex-shrink: 0;
+}
+
+.profile-right .btn {
+  padding: 8px 14px;
+  font-size: 12px;
+}
+
+/* Compact auth login form */
+.auth-login-compact {
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+}
+
+.auth-login-compact .auth-toggle {
+  margin-bottom: 14px;
+}
+
+.auth-login-compact .field {
+  margin-bottom: 12px;
+}
+
+.auth-login-compact .btn {
+  width: 100%;
+  margin-top: 4px;
 }

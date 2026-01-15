@@ -49,76 +49,21 @@
         </nav>
 
         <main class="content">
+            <!-- Config Tab -->
             <section class="tab-panel active" id="config">
-                <form id="config-form" class="form">
-                    <div class="field">
-                        <label for="token">GitHub Token (Optional & Stored Locally)</label>
-                        <div class="input-group">
-                            <input type="password" id="token" placeholder="ghp_..." required />
-                            <button type="button" class="toggle-btn" id="toggle-token">
-                                Show
-                            </button>
-                        </div>
-                        <a href="https://github.com/settings/tokens/new?scopes=repo&description=DSA%20to%20GitHub%20Extension"
-                            target="_blank" class="token-link">Generate Token</a>
-                    </div>
-
-                    <div class="field">
-                        <label for="gemini-key">Gemini API Key (Required for Mistake Tags & Revision Cards, Stored
-                            Locally!)</label>
-                        <div class="input-group">
-                            <input type="password" id="gemini-key" placeholder="AI..." />
-                            <button type="button" class="toggle-btn" id="toggle-gemini">
-                                Show
-                            </button>
-                        </div>
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="token-link">Get Gemini
-                            API Key</a>
-                    </div>
-
-                    <div class="field-group">
-                        <div class="field">
-                            <label for="owner">Owner</label>
-                            <input type="text" id="owner" placeholder="username" required />
-                        </div>
-                        <div class="field">
-                            <label for="repo">Repository</label>
-                            <input type="text" id="repo" placeholder="repo-name" required />
-                        </div>
-                    </div>
-
-                    <div class="field">
-                        <label for="branch">Branch</label>
-                        <input type="text" id="branch" placeholder="main" required />
-                    </div>
-                    <div class="actions"></div>
-                </form>
-            </section>
-
-            <section class="tab-panel" id="settings">
-                <div class="settings-section">
+                <!-- Account Section -->
+                <div class="settings-section" id="account-section">
                     <h3>Account</h3>
                     <div class="auth-section" id="auth-section">
                         <!-- Will be populated by JavaScript -->
                     </div>
-                    <div class="session-status" id="session-status">
-                        <!-- Will be populated by JavaScript -->
-                    </div>
                 </div>
 
                 <div class="separator"></div>
 
-                <div class="settings-section">
-                    <h3>Update Available</h3>
-                    <div class="update-notification" id="update-notification">
-                        <div class="update-check-message">Checking for updates...</div>
-                    </div>
-                </div>
-
-                <div class="separator"></div>
-
-                <div class="settings-section">
-                    <h3>Options</h3>
+                <!-- GitHub Section with Progressive Disclosure -->
+                <div class="settings-section" id="github-section">
+                    <h3>GitHub</h3>
                     <div class="settings-option">
                         <div class="settings-option-title">
                             <label class="checkbox-label">
@@ -131,6 +76,63 @@
                             Automatically push solutions to your GitHub repository
                         </div>
                     </div>
+
+                    <!-- GitHub Config Fields (collapsible) -->
+                    <div class="github-config-fields" id="github-config-fields">
+                        <div class="field">
+                            <label for="token">GitHub Token (Optional & Stored Locally)</label>
+                            <div class="input-group">
+                                <input type="password" id="token" placeholder="ghp_..." required />
+                                <button type="button" class="toggle-btn" id="toggle-token">
+                                    Show
+                                </button>
+                            </div>
+                            <a href="https://github.com/settings/tokens/new?scopes=repo&description=DSA%20to%20GitHub%20Extension"
+                                target="_blank" class="token-link">Generate Token</a>
+                        </div>
+
+                        <div class="field-group">
+                            <div class="field">
+                                <label for="owner">Owner</label>
+                                <input type="text" id="owner" placeholder="username" required />
+                            </div>
+                            <div class="field">
+                                <label for="repo">Repository</label>
+                                <input type="text" id="repo" placeholder="repo-name" required />
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="branch">Branch</label>
+                            <input type="text" id="branch" placeholder="main" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="separator"></div>
+
+                <!-- Gemini API Section -->
+                <div class="settings-section" id="gemini-section">
+                    <h3>Gemini API</h3>
+                    <div class="field">
+                        <label for="gemini-key">API Key (Required for Mistake Tags & Revision Cards, Stored
+                            Locally!)</label>
+                        <div class="input-group">
+                            <input type="password" id="gemini-key" placeholder="AI..." />
+                            <button type="button" class="toggle-btn" id="toggle-gemini">
+                                Show
+                            </button>
+                        </div>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="token-link">Get Gemini
+                            API Key</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Tab -->
+            <section class="tab-panel" id="settings">
+                <div class="settings-section">
+                    <h3>Options</h3>
                     <div class="settings-option">
                         <div class="settings-option-title">
                             <label class="checkbox-label">
@@ -143,12 +145,6 @@
                             Display a floating timer on DSA problem pages
                         </div>
                     </div>
-                </div>
-
-                <div class="separator"></div>
-
-                <div class="settings-section">
-                    <h3>Debugging Options</h3>
                     <div class="settings-option">
                         <div class="settings-option-title">
                             <label class="checkbox-label">
@@ -162,6 +158,15 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="separator"></div>
+
+                <div class="settings-section">
+                    <h3>Updates</h3>
+                    <div class="update-notification" id="update-notification">
+                        <div class="update-check-message">Checking for updates...</div>
+                    </div>
+                </div>
             </section>
         </main>
 
@@ -171,10 +176,22 @@
                 <div class="footer-logo-section">
                     <span class="footer-tr">TR</span>
                     <div class="footer-checkerboard">
-                        <div class="cb-cell filled"></div><div class="cb-cell"></div><div class="cb-cell filled"></div><div class="cb-cell"></div>
-                        <div class="cb-cell"></div><div class="cb-cell filled"></div><div class="cb-cell"></div><div class="cb-cell filled"></div>
-                        <div class="cb-cell filled"></div><div class="cb-cell"></div><div class="cb-cell filled"></div><div class="cb-cell"></div>
-                        <div class="cb-cell"></div><div class="cb-cell filled"></div><div class="cb-cell"></div><div class="cb-cell filled"></div>
+                        <div class="cb-cell filled"></div>
+                        <div class="cb-cell"></div>
+                        <div class="cb-cell filled"></div>
+                        <div class="cb-cell"></div>
+                        <div class="cb-cell"></div>
+                        <div class="cb-cell filled"></div>
+                        <div class="cb-cell"></div>
+                        <div class="cb-cell filled"></div>
+                        <div class="cb-cell filled"></div>
+                        <div class="cb-cell"></div>
+                        <div class="cb-cell filled"></div>
+                        <div class="cb-cell"></div>
+                        <div class="cb-cell"></div>
+                        <div class="cb-cell filled"></div>
+                        <div class="cb-cell"></div>
+                        <div class="cb-cell filled"></div>
                     </div>
                     <div class="footer-tagline">
                         <span class="muted">BUILT TO</span>
