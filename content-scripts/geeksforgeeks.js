@@ -995,25 +995,68 @@
 
           if (backendResult.success) {
             console.log(`[GeeksforGeeks Submission] Backend push successful!`, backendResult.data);
+            // Show success toast
+            if (window.LeetFeedbackToast) {
+              const message = backendResult.data?.message || 'Solution synced to Traverse!';
+              window.LeetFeedbackToast.success(message);
+            }
           } else {
             console.log(`[GeeksforGeeks Submission] Backend push failed: ${backendResult.error}`);
+            // Show error toast
+            if (window.LeetFeedbackToast) {
+              window.LeetFeedbackToast.error(`Sync failed: ${backendResult.error}`);
+            }
             // Continue with GitHub push even if backend fails
           }
         } catch (error) {
           console.error(`[GeeksforGeeks Submission] Backend push error:`, error);
+          // Show error toast
+          if (window.LeetFeedbackToast) {
+            window.LeetFeedbackToast.error(`Sync error: ${error.message}`);
+          }
           // Continue with GitHub push even if backend fails
         }
 
-        // Step 2: Push to GitHub
-        console.log(`[GeeksforGeeks Submission] Step 2: Pushing to GitHub...`);
-        const result = await githubAPI.pushSolution(this.currentProblem, PLATFORM);
-        DSAUtils.logDebug(PLATFORM, 'Push result:', result);
+        // Step 2: Check if GitHub push is enabled
+        const githubSettings = await chrome.storage.sync.get(['github_push_enabled']);
+        const githubPushEnabled = githubSettings.github_push_enabled !== false; // Default to true
 
-        if (result.success) {
-          DSAUtils.logDebug(PLATFORM, 'Push successful!');
-          console.log(`[GeeksforGeeks Submission] Solution pushed to GitHub successfully!`);
+        if (githubPushEnabled) {
+          // Step 2: Push to GitHub
+          console.log(`[GeeksforGeeks Submission] Step 2: Pushing to GitHub...`);
+          const result = await githubAPI.pushSolution(this.currentProblem, PLATFORM);
+          DSAUtils.logDebug(PLATFORM, 'Push result:', result);
 
-          // Reset counters after successful submission
+          if (result.success) {
+            DSAUtils.logDebug(PLATFORM, 'Push successful!');
+            console.log(`[GeeksforGeeks Submission] Solution pushed to GitHub successfully!`);
+
+            // Reset counters after successful submission
+            this.runCounter = 0;
+            this.incorrectRunCounter = 0;
+            this.attempts = [];
+            this.hasAnalyzedMistakes = false;
+            this.shouldAnalyzeWithGemini = false;
+            this.aiAnalysis = null;
+            this.aiTags = [];
+
+            // Persist final state
+            await this.savePersistedState({
+              attempts: finalAttempts,
+              runCounter: 0,
+              incorrectRunCounter: 0,
+              hasAnalyzedMistakes: false,
+              shouldAnalyzeWithGemini: false,
+              aiAnalysis: null,
+              aiTags: []
+            });
+          } else {
+            DSAUtils.logError(PLATFORM, 'Push failed:', result.error);
+            console.log(`[GeeksforGeeks Submission] Failed to push solution:`, result.error);
+          }
+        } else {
+          console.log(`[GeeksforGeeks Submission] GitHub push disabled by user - skipping`);
+          // Still reset counters
           this.runCounter = 0;
           this.incorrectRunCounter = 0;
           this.attempts = [];
@@ -1022,7 +1065,6 @@
           this.aiAnalysis = null;
           this.aiTags = [];
 
-          // Persist final state
           await this.savePersistedState({
             attempts: finalAttempts,
             runCounter: 0,
@@ -1032,9 +1074,6 @@
             aiAnalysis: null,
             aiTags: []
           });
-        } else {
-          DSAUtils.logError(PLATFORM, 'Push failed:', result.error);
-          console.log(`[GeeksforGeeks Submission] Failed to push solution:`, result.error);
         }
 
       } catch (error) {

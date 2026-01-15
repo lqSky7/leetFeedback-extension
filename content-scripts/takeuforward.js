@@ -393,7 +393,7 @@
       // URL format: /plus/dsa/problems/3-sum?category=arrays&subcategory=faqs-medium
       const urlParams = new URLSearchParams(window.location.search);
       const categoryParam = urlParams.get('category');
-      
+
       if (categoryParam) {
         // Clean up the category: "arrays" -> "Arrays"
         const topic = categoryParam
@@ -566,24 +566,59 @@
 
           if (backendResult.success) {
             console.log('[TakeUforward] Backend push successful!', backendResult.data);
+            // Show success toast
+            if (window.LeetFeedbackToast) {
+              const message = backendResult.data?.message || 'Solution synced to Traverse!';
+              window.LeetFeedbackToast.success(message);
+            }
           } else {
             console.log('[TakeUforward] Backend push failed:', backendResult.error);
+            // Show error toast
+            if (window.LeetFeedbackToast) {
+              window.LeetFeedbackToast.error(`Sync failed: ${backendResult.error}`);
+            }
           }
         } catch (error) {
           console.error('[TakeUforward] Backend push error:', error);
+          // Show error toast
+          if (window.LeetFeedbackToast) {
+            window.LeetFeedbackToast.error(`Sync error: ${error.message}`);
+          }
         }
 
-        // Step 2: Push to GitHub
-        console.log('[TakeUforward] Step 2: Pushing to GitHub...');
-        const githubResult = await githubAPI.pushSolution(problemInfo, PLATFORM);
+        // Step 2: Check if GitHub push is enabled
+        const githubSettings = await chrome.storage.sync.get(['github_push_enabled']);
+        const githubPushEnabled = githubSettings.github_push_enabled !== false; // Default to true
 
-        if (githubResult.success) {
-          console.log('[TakeUforward] GitHub push successful!');
+        if (githubPushEnabled) {
+          // Step 2: Push to GitHub
+          console.log('[TakeUforward] Step 2: Pushing to GitHub...');
+          const githubResult = await githubAPI.pushSolution(problemInfo, PLATFORM);
 
-          // Clear stored code data after successful push
-          await chrome.storage.local.remove(['tuf_code_data']);
+          if (githubResult.success) {
+            console.log('[TakeUforward] GitHub push successful!');
 
-          // Reset state
+            // Clear stored code data after successful push
+            await chrome.storage.local.remove(['tuf_code_data']);
+
+            // Reset state
+            TRIES = 0;
+            PUBLIC_CODE = '';
+            SELECTED_LANGUAGE = '';
+            PROBLEM_SLUG = '';
+            this.attempts = [];
+            this.runCounter = 0;
+            this.incorrectRunCounter = 0;
+            this.hasAnalyzedMistakes = false;
+            this.shouldAnalyzeWithGemini = false;
+            this.aiAnalysis = null;
+            this.aiTags = [];
+          } else {
+            console.error('[TakeUforward] GitHub push failed:', githubResult.error);
+          }
+        } else {
+          console.log('[TakeUforward] GitHub push disabled by user - skipping');
+          // Still reset state
           TRIES = 0;
           PUBLIC_CODE = '';
           SELECTED_LANGUAGE = '';
@@ -595,8 +630,6 @@
           this.shouldAnalyzeWithGemini = false;
           this.aiAnalysis = null;
           this.aiTags = [];
-        } else {
-          console.error('[TakeUforward] GitHub push failed:', githubResult.error);
         }
 
       } catch (error) {

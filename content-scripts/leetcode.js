@@ -1007,23 +1007,67 @@
 
           if (backendResult.success) {
             console.log(`[LeetCode Submission] Backend push successful!`, backendResult.data);
+            // Show success toast
+            if (window.LeetFeedbackToast) {
+              const message = backendResult.data?.message || 'Solution synced to Traverse!';
+              window.LeetFeedbackToast.success(message);
+            }
           } else {
             console.log(`[LeetCode Submission] Backend push failed: ${backendResult.error}`);
+            // Show error toast
+            if (window.LeetFeedbackToast) {
+              window.LeetFeedbackToast.error(`Sync failed: ${backendResult.error}`);
+            }
             // Continue with GitHub push even if backend fails
           }
         } catch (error) {
           console.error(`[LeetCode Submission] Backend push error:`, error);
+          // Show error toast
+          if (window.LeetFeedbackToast) {
+            window.LeetFeedbackToast.error(`Sync error: ${error.message}`);
+          }
           // Continue with GitHub push even if backend fails
         }
 
-        // Step 2: Push to GitHub (normal solution)
-        console.log(`[LeetCode Submission] Step 2: Pushing to GitHub...`);
-        const result = await githubAPI.pushSolution(problemInfo, PLATFORM);
+        // Step 2: Check if GitHub push is enabled
+        const githubSettings = await chrome.storage.sync.get(['github_push_enabled']);
+        const githubPushEnabled = githubSettings.github_push_enabled !== false; // Default to true
 
-        if (result.success) {
-          console.log(`[LeetCode Submission] Solution pushed to GitHub successfully!`);
+        if (githubPushEnabled) {
+          // Step 2: Push to GitHub (normal solution)
+          console.log(`[LeetCode Submission] Step 2: Pushing to GitHub...`);
+          const result = await githubAPI.pushSolution(problemInfo, PLATFORM);
 
-          // Reset counters after successful submission
+          if (result.success) {
+            console.log(`[LeetCode Submission] Solution pushed to GitHub successfully!`);
+
+            // Reset counters after successful submission
+            this.runCounter = 0;
+            this.incorrectRunCounter = 0;
+            this.attempts = [];
+            this.hasAnalyzedMistakes = false;
+            this.shouldAnalyzeWithGemini = false;
+            this.submitCounter = 0;
+            this.currentSubmissionAttempt = null;
+            this.aiAnalysis = null;
+            this.aiTags = [];
+
+            await this.savePersistedState({
+              attempts: attemptsToPersist,
+              runCounter: 0,
+              incorrectRunCounter: 0,
+              hasAnalyzedMistakes: false,
+              shouldAnalyzeWithGemini: false,
+              submitCounter: 0,
+              aiAnalysis: null,
+              aiTags: []
+            });
+          } else {
+            console.log(`[LeetCode Submission] Failed to push solution:`, result.error);
+          }
+        } else {
+          console.log(`[LeetCode Submission] GitHub push disabled by user - skipping`);
+          // Still reset counters
           this.runCounter = 0;
           this.incorrectRunCounter = 0;
           this.attempts = [];
@@ -1044,8 +1088,6 @@
             aiAnalysis: null,
             aiTags: []
           });
-        } else {
-          console.log(`[LeetCode Submission] Failed to push solution:`, result.error);
         }
 
       } catch (error) {
