@@ -1,6 +1,6 @@
 <div align="center">
 
-# LeetFeedback
+# Traverse
 
 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin: 20px 0;">
   <h3 style="margin: 0; font-weight: 300;">The Complete Learning Ecosystem</h3>
@@ -19,7 +19,7 @@
 
 ## Overview
 
-LeetFeedback is an open-source browser extension that automatically tracks coding practice sessions, Basically Turns DSA into a habit with Streaks, Leaderboards, Friends and Achievements; right on your existing coding platforms.
+Traverse is an open-source browser extension that automatically tracks coding practice sessions, Basically Turns DSA into a habit with Streaks, Leaderboards, Friends and Achievements; right on your existing coding platforms.
 
 <table>
   <tr>
@@ -50,7 +50,7 @@ LeetFeedback is an open-source browser extension that automatically tracks codin
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/QuickHasaCat/leetFeedback.git
+   git clone https://github.com/QuickHasaCat/Traverse.git
    ```
 
 2. Load extension in Chrome
@@ -76,11 +76,11 @@ see CONTRIBUTING.md
 
 ### Open Source Community
 
-LeetFeedback is developed by the community, for the community. All features remain free forever.
+Traverse is developed by the community, for the community. All features remain free forever.
 
 <p style="margin: 20px 0;">
-  <strong>Contribute:</strong> <a href="https://github.com/QuickHasaCat/leetFeedback" style="color: #a8edea;">GitHub Repository</a><br>
-  <strong>Issues:</strong> <a href="https://github.com/QuickHasaCat/leetFeedback/issues" style="color: #a8edea;">Bug Reports & Feature Requests</a><br>
+  <strong>Contribute:</strong> <a href="https://github.com/QuickHasaCat/Traverse" style="color: #a8edea;">GitHub Repository</a><br>
+  <strong>Issues:</strong> <a href="https://github.com/QuickHasaCat/Traverse/issues" style="color: #a8edea;">Bug Reports & Feature Requests</a><br>
   <strong>Contact:</strong> <a href="mailto:catince@outlook.com" style="color: #a8edea;">Development Team</a>
 </p>
 
@@ -93,5 +93,5 @@ MIT License - Free to use, modify, and distribute.
 ---
 
 <div align="center" style="color: #718096; font-size: 14px;">
-  <strong>LeetFeedback</strong> - The Complete Learning Ecosystem
+  <strong>Traverse</strong> - The Complete Learning Ecosystem
 </div>
