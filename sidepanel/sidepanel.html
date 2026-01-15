@@ -1,235 +1,178 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>LeetFeedback</title>
-        <link rel="stylesheet" href="sidepanel.css" />
-    </head>
-    <body>
-        <div class="container">
-            <header class="header">
-                <h1>Traverse</h1>
-                <div class="status" id="status">
-                    <span class="status-dot" id="status-dot"></span>
-                    <span class="status-text" id="status-text"
-                        >Disconnected</span
-                    >
-                </div>
-            </header>
 
-            <div class="platform-icons">
-                <a href="https://leetcode.com" target="_blank">
-                    <img
-                        src="../icons/leetcode-svgrepo-com.svg"
-                        alt="LeetCode"
-                        class="platform-icon"
-                    />
-                </a>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LeetFeedback</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+</head>
 
-                <a href="https://geeksforgeeks.org" target="_blank">
-                <img
-                    src="../icons/geeksforgeeks.svg"
-                    alt="GeeksForGeeks"
-                    class="platform-icon"
-                />
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-logo">
+                <img src="../icons/48.png" alt="Traverse" class="header-icon" />
+                <h1 class="chroma-text chroma-text-animate" data-chroma-id="traverse-logo">Traverse</h1>
+            </div>
+            <div class="status" id="status">
+                <span class="status-dot" id="status-dot"></span>
+                <span class="status-text" id="status-text">Disconnected</span>
+            </div>
+        </header>
+
+        <div class="platform-icons">
+            <a href="https://leetcode.com" target="_blank">
+                <img src="../icons/leetcode-svgrepo-com.svg" alt="LeetCode" class="platform-icon" />
+            </a>
+
+            <a href="https://geeksforgeeks.org" target="_blank">
+                <img src="../icons/geeksforgeeks.svg" alt="GeeksForGeeks" class="platform-icon" />
             </a>
 
             <a href="https://takeuforward.org" target="_blank">
-                <img
-                    src="../icons/TufPlusDark.2f9770f2ccd35b40c4c5.svg"
-                    alt="TakeuForward"
-                    class="platform-icon"
-                />
-                </a>
-                <a href="https://hackerrank.com" target="_blank">
-                <img
-                    src="../icons/hackerrank-svgrepo-com.svg"
-                    alt="HackerRank"
-                    class="platform-icon"
-                />
-                </a>
-                <a href="https://codechef.com" target="_blank">
-                <img
-                    src="../icons/codechef-svgrepo-com.svg"
-                    alt="CodeChef"
-                    class="platform-icon"
-                />
-                </a>
-            </div>
-
-            <div class="separator"></div>
-
-            <nav class="tabs">
-                <button class="tab active" data-tab="config">Config</button>
-                <button class="tab" data-tab="settings">Settings</button>
-            </nav>
-
-            <main class="content">
-                <section class="tab-panel active" id="config">
-                    <form id="config-form" class="form">
-                        <div class="field">
-                            <label for="token">GitHub Token</label>
-                            <div class="input-group">
-                                <input
-                                    type="password"
-                                    id="token"
-                                    placeholder="ghp_..."
-                                    required
-                                />
-                                <button
-                                    type="button"
-                                    class="toggle-btn"
-                                    id="toggle-token"
-                                >
-                                    Show
-                                </button>
-                            </div>
-                            <a
-                                href="https://github.com/settings/tokens/new?scopes=repo&description=DSA%20to%20GitHub%20Extension"
-                                target="_blank"
-                                class="token-link"
-                                >Generate Token</a
-                            >
-                        </div>
-
-                        <div class="field">
-                            <label for="gemini-key"
-                                >Gemini API Key (Optional)</label
-                            >
-                            <div class="input-group">
-                                <input
-                                    type="password"
-                                    id="gemini-key"
-                                    placeholder="AI..."
-                                />
-                                <button
-                                    type="button"
-                                    class="toggle-btn"
-                                    id="toggle-gemini"
-                                >
-                                    Show
-                                </button>
-                            </div>
-                            <a
-                                href="https://aistudio.google.com/app/apikey"
-                                target="_blank"
-                                class="token-link"
-                                >Get Gemini API Key</a
-                            >
-                        </div>
-
-                        <div class="field-group">
-                            <div class="field">
-                                <label for="owner">Owner</label>
-                                <input
-                                    type="text"
-                                    id="owner"
-                                    placeholder="username"
-                                    required
-                                />
-                            </div>
-                            <div class="field">
-                                <label for="repo">Repository</label>
-                                <input
-                                    type="text"
-                                    id="repo"
-                                    placeholder="repo-name"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div class="field">
-                            <label for="branch">Branch</label>
-                            <input
-                                type="text"
-                                id="branch"
-                                placeholder="main"
-                                required
-                            />
-                        </div>
-                        <div class="actions"></div>
-                    </form>
-                </section>
-
-                <section class="tab-panel" id="settings">
-                    <div class="settings-section">
-                        <h3>Account</h3>
-                        <div class="auth-section" id="auth-section">
-                            <!-- Will be populated by JavaScript -->
-                        </div>
-                        <div class="session-status" id="session-status">
-                            <!-- Will be populated by JavaScript -->
-                        </div>
-                    </div>
-
-                    <div class="separator"></div>
-
-                    <div class="settings-section">
-                        <h3>Update Available</h3>
-                        <div class="update-notification" id="update-notification">
-                            <div class="update-check-message">Checking for updates...</div>
-                        </div>
-                    </div>
-
-                    <div class="separator"></div>
-
-                    <div class="settings-section">
-                        <h3>Options</h3>
-                        <div class="settings-option">
-                            <div class="settings-option-title">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="github-push-enabled" checked />
-                                    <span class="checkbox-custom"></span>
-                                    Push to GitHub
-                                </label>
-                            </div>
-                            <div class="settings-option-description">
-                                Automatically push solutions to your GitHub repository
-                            </div>
-                        </div>
-                        <div class="settings-option">
-                            <div class="settings-option-title">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="timer-overlay-enabled" checked />
-                                    <span class="checkbox-custom"></span>
-                                    Show Timer Overlay
-                                </label>
-                            </div>
-                            <div class="settings-option-description">
-                                Display a floating timer on DSA problem pages
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="separator"></div>
-
-                    <div class="settings-section">
-                        <h3>Debugging Options</h3>
-                        <div class="settings-option">
-                            <div class="settings-option-title">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="debug-mode" />
-                                    <span class="checkbox-custom"></span>
-                                    Enable Debug Logs
-                                </label>
-                            </div>
-                            <div class="settings-option-description">
-                                Shows detailed console logs for debugging
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </main>
-
-            <footer class="footer">
-                <div class="separator"></div>
-                <p class="privacy-note">Privacy: Local storage only.</p>
-            </footer>
+                <img src="../icons/TufPlusDark.2f9770f2ccd35b40c4c5.svg" alt="TakeuForward" class="platform-icon" />
+            </a>
+            <a href="https://hackerrank.com" target="_blank">
+                <img src="../icons/hackerrank-svgrepo-com.svg" alt="HackerRank" class="platform-icon" />
+            </a>
+            <a href="https://codechef.com" target="_blank">
+                <img src="../icons/codechef-svgrepo-com.svg" alt="CodeChef" class="platform-icon" />
+            </a>
         </div>
 
-        <script src="../utils/auth.js"></script>
-        <script src="sidepanel.js"></script>
-    </body>
+        <div class="separator"></div>
+
+        <nav class="tabs">
+            <button class="tab active" data-tab="config">Config</button>
+            <button class="tab" data-tab="settings">Settings</button>
+        </nav>
+
+        <main class="content">
+            <section class="tab-panel active" id="config">
+                <form id="config-form" class="form">
+                    <div class="field">
+                        <label for="token">GitHub Token (Optional & Stored Locally)</label>
+                        <div class="input-group">
+                            <input type="password" id="token" placeholder="ghp_..." required />
+                            <button type="button" class="toggle-btn" id="toggle-token">
+                                Show
+                            </button>
+                        </div>
+                        <a href="https://github.com/settings/tokens/new?scopes=repo&description=DSA%20to%20GitHub%20Extension"
+                            target="_blank" class="token-link">Generate Token</a>
+                    </div>
+
+                    <div class="field">
+                        <label for="gemini-key">Gemini API Key (Required for Mistake Tags & Revision Cards, Stored
+                            Locally!)</label>
+                        <div class="input-group">
+                            <input type="password" id="gemini-key" placeholder="AI..." />
+                            <button type="button" class="toggle-btn" id="toggle-gemini">
+                                Show
+                            </button>
+                        </div>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="token-link">Get Gemini
+                            API Key</a>
+                    </div>
+
+                    <div class="field-group">
+                        <div class="field">
+                            <label for="owner">Owner</label>
+                            <input type="text" id="owner" placeholder="username" required />
+                        </div>
+                        <div class="field">
+                            <label for="repo">Repository</label>
+                            <input type="text" id="repo" placeholder="repo-name" required />
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="branch">Branch</label>
+                        <input type="text" id="branch" placeholder="main" required />
+                    </div>
+                    <div class="actions"></div>
+                </form>
+            </section>
+
+            <section class="tab-panel" id="settings">
+                <div class="settings-section">
+                    <h3>Account</h3>
+                    <div class="auth-section" id="auth-section">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    <div class="session-status" id="session-status">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="separator"></div>
+
+                <div class="settings-section">
+                    <h3>Update Available</h3>
+                    <div class="update-notification" id="update-notification">
+                        <div class="update-check-message">Checking for updates...</div>
+                    </div>
+                </div>
+
+                <div class="separator"></div>
+
+                <div class="settings-section">
+                    <h3>Options</h3>
+                    <div class="settings-option">
+                        <div class="settings-option-title">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="github-push-enabled" checked />
+                                <span class="checkbox-custom"></span>
+                                Push to GitHub
+                            </label>
+                        </div>
+                        <div class="settings-option-description">
+                            Automatically push solutions to your GitHub repository
+                        </div>
+                    </div>
+                    <div class="settings-option">
+                        <div class="settings-option-title">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="timer-overlay-enabled" checked />
+                                <span class="checkbox-custom"></span>
+                                Show Timer Overlay
+                            </label>
+                        </div>
+                        <div class="settings-option-description">
+                            Display a floating timer on DSA problem pages
+                        </div>
+                    </div>
+                </div>
+
+                <div class="separator"></div>
+
+                <div class="settings-section">
+                    <h3>Debugging Options</h3>
+                    <div class="settings-option">
+                        <div class="settings-option-title">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="debug-mode" />
+                                <span class="checkbox-custom"></span>
+                                Enable Debug Logs
+                            </label>
+                        </div>
+                        <div class="settings-option-description">
+                            Shows detailed console logs for debugging
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="separator"></div>
+            <p class="privacy-note">Privacy: Local storage only.</p>
+        </footer>
+    </div>
+
+    <script src="../utils/auth.js"></script>
+    <script src="sidepanel.js"></script>
+</body>
+
 </html>

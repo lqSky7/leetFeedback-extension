@@ -14,8 +14,39 @@ class PopupController {
     this.updateUI();
     this.updateConnectionStatus();
     this.initializePlatformIcons();
+    this.initializeChromaText();
     this.checkForUpdates();
     this.updateSessionStatus();
+  }
+
+  initializeChromaText() {
+    // Generate random vibrant colors for ChromaText effect
+    const logo = document.querySelector('[data-chroma-id="traverse-logo"]');
+    if (!logo) return;
+
+    // Generate 3 random vibrant colors using HSL for better color harmony
+    const generateVibrantColor = () => {
+      const hue = Math.floor(Math.random() * 360);
+      const saturation = 70 + Math.floor(Math.random() * 30); // 70-100%
+      const lightness = 50 + Math.floor(Math.random() * 20); // 50-70%
+      return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    };
+
+    const color1 = generateVibrantColor();
+    const color2 = generateVibrantColor();
+    const color3 = generateVibrantColor();
+
+    // Apply gradient with white base text and colorful sweep
+    const gradient = `linear-gradient(90deg,
+      rgb(255, 255, 255) 0px,
+      rgb(255, 255, 255) 33.33%,
+      ${color1} 42%,
+      ${color2} 50%,
+      ${color3} 58%,
+      transparent 66.67%,
+      transparent)`;
+
+    logo.style.backgroundImage = gradient;
   }
 
   initializePlatformIcons() {
@@ -381,18 +412,15 @@ class PopupController {
     const statusDot = document.getElementById("status-dot");
     const statusText = document.getElementById("status-text");
 
-    const isConfigured =
-      this.config.token && this.config.owner && this.config.repo;
+    // Check backend authentication status instead of GitHub config
+    const isConnected = this.authStatus?.isAuthenticated;
 
-    if (isConfigured && this.connectionStatus) {
+    if (isConnected) {
       statusDot.classList.add("connected");
       statusText.textContent = "Connected";
-    } else if (isConfigured) {
-      statusDot.classList.remove("connected");
-      statusText.textContent = "Configured";
     } else {
       statusDot.classList.remove("connected");
-      statusText.textContent = "Disconnected";
+      statusText.textContent = "Not Connected";
     }
   }
 
@@ -574,6 +602,7 @@ class PopupController {
             token: authStatus.token || null,
           };
           this.updateAuthSection();
+          this.updateConnectionStatus();
         });
 
         // Request fresh auth status
