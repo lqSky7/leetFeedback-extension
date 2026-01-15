@@ -1,63 +1,30 @@
-/* Font Faces */
+/* Font Faces - Matching website design system */
+/* HarmonyOS Sans - Primary body font */
 @font-face {
-  font-family: 'Adobe Garamond Pro';
-  src: url('../adobe-garamond-pro-2/AGaramondPro-Regular.otf') format('opentype');
+  font-family: 'HarmonyOS Sans';
+  src: url('../fonts/HarmonyOS_Sans_Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
-  font-family: 'Adobe Garamond Pro';
-  src: url('../adobe-garamond-pro-2/AGaramondPro-Bold.otf') format('opentype');
-  font-weight: 700;
+  font-family: 'HarmonyOS Sans';
+  src: url('../fonts/HarmonyOS_Sans_Medium.woff2') format('woff2');
+  font-weight: 500;
   font-style: normal;
 }
 
 @font-face {
-  font-family: 'Adobe Garamond Pro';
-  src: url('../adobe-garamond-pro-2/AGaramondPro-Italic.otf') format('opentype');
-  font-weight: 400;
-  font-style: italic;
-}
-
-@font-face {
-  font-family: 'Adobe Garamond Pro';
-  src: url('../adobe-garamond-pro-2/AGaramondPro-BoldItalic.otf') format('opentype');
-  font-weight: 700;
-  font-style: italic;
-}
-
-@font-face {
-  font-family: 'Kelvinch';
-  src: url('../kelvinch/Kelvinch-Roman.otf') format('opentype');
-  font-weight: 400;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Kelvinch';
-  src: url('../kelvinch/Kelvinch-Bold.otf') format('opentype');
+  font-family: 'HarmonyOS Sans';
+  src: url('../fonts/HarmonyOS_Sans_Bold.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
 }
 
-@font-face {
-  font-family: 'Kelvinch';
-  src: url('../kelvinch/Kelvinch-Italic.otf') format('opentype');
-  font-weight: 400;
-  font-style: italic;
-}
-
-@font-face {
-  font-family: 'Kelvinch';
-  src: url('../kelvinch/Kelvinch-BoldItalic.otf') format('opentype');
-  font-weight: 700;
-  font-style: italic;
-}
-
+/* Fascinate - Logo/branding font */
 @font-face {
   font-family: 'Fascinate';
-  src: url('../kelvinch/Fascinate-Regular.otf') format('opentype');
+  src: url('../fonts/Fascinate-Regular.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
 }
@@ -92,18 +59,20 @@
   }
 }
 
-/* Traverse logo ChromaText gradient (dark theme) */
+/* Traverse logo ChromaText gradient - matching website colors */
 [data-chroma-id="traverse-logo"] {
   background-image: linear-gradient(90deg,
       rgb(255, 255, 255) 0px,
       rgb(255, 255, 255) 33.33%,
-      rgb(0, 212, 255) 42%,
-      rgb(147, 51, 234) 50%,
-      rgb(236, 72, 153) 58%,
+      rgb(198, 121, 196) 40%,
+      rgb(250, 61, 29) 45%,
+      rgb(255, 176, 5) 50%,
+      rgb(225, 225, 254) 55%,
+      rgb(3, 88, 247) 60%,
       transparent 66.67%,
       transparent);
-  animation-delay: 0.1s;
-  animation-duration: 0.9s;
+  animation-delay: 0.2s;
+  animation-duration: 0.8s;
 }
 
 * {
@@ -113,6 +82,15 @@
 }
 
 :root {
+  /* Osmo Scaling System - adapted for sidepanel */
+  --size-unit: 14;
+  --size-container-ideal: 400;
+  --size-container-min: 300px;
+  --size-container-max: 500px;
+  --size-container: clamp(var(--size-container-min), 100vw, var(--size-container-max));
+  --size-font: calc((var(--size-container) / var(--size-container-ideal)) * var(--size-unit) * 1px);
+
+  /* Dark theme colors */
   --bg: #000000;
   --bg-secondary: #080808;
   --bg-tertiary: #0f0f0f;
@@ -140,8 +118,8 @@
 }
 
 body {
-  font-family: 'Adobe Garamond Pro', Georgia, serif;
-  font-size: 14px;
+  font-family: 'HarmonyOS Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: var(--size-font);
   line-height: 1.5;
   background: var(--bg);
   color: var(--text);
@@ -187,7 +165,7 @@ body {
 }
 
 .header h1 {
-  font-family: 'Fascinate', 'Kelvinch', serif;
+  font-family: 'Fascinate', sans-serif;
   font-size: 22px;
   font-weight: 400;
   letter-spacing: 1px;
@@ -219,7 +197,7 @@ body {
 
 .status-text {
   color: var(--text-secondary);
-  font-family: 'Adobe Garamond Pro', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
   font-size: 12px;
   letter-spacing: 0.5px;
 }
@@ -263,7 +241,7 @@ body {
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  font-family: 'Adobe Garamond Pro', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -309,11 +287,80 @@ body {
   padding: 8px 0 0;
 }
 
-.privacy-note {
-  text-align: center;
-  font-size: 11px;
+/* Compact Website-Style Footer */
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 4px 0;
+}
+
+.footer-logo-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer-tr {
+  font-family: 'Fascinate', sans-serif;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: -1px;
+  color: var(--text);
+}
+
+.footer-checkerboard {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  width: 16px;
+  height: 16px;
+}
+
+.cb-cell {
+  background: transparent;
+}
+
+.cb-cell.filled {
+  background: var(--text);
+}
+
+.footer-tagline {
+  display: flex;
+  flex-direction: column;
+  font-family: 'Fascinate', sans-serif;
+  font-size: 7px;
+  line-height: 1.1;
+  text-align: right;
+}
+
+.footer-tagline .muted {
   color: var(--text-muted);
-  font-style: italic;
+}
+
+.footer-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  font-family: 'Fascinate', sans-serif;
+  font-size: 6px;
+  letter-spacing: 0.5px;
+}
+
+.footer-ecosystem {
+  color: var(--text-muted);
+}
+
+.footer-year {
+  color: var(--text-muted);
+}
+
+.footer-copyright {
+  color: var(--text-secondary);
+  font-size: 7px;
+  margin-top: 2px;
 }
 
 .tab-panel.active {
@@ -341,7 +388,7 @@ body {
 }
 
 .field label {
-  font-family: 'Adobe Garamond Pro', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
@@ -361,7 +408,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--input-radius);
   color: var(--text);
-  font-family: 'Adobe Garamond Pro', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
   font-size: 14px;
   transition: all 0.3s ease;
 }
@@ -388,7 +435,7 @@ body {
   border: none;
   border-radius: 8px;
   color: var(--text-secondary);
-  font-family: 'Adobe Garamond Pro', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
   font-size: 11px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -412,7 +459,7 @@ body {
   border-radius: var(--btn-radius);
   background: var(--bg-card);
   transition: all 0.3s ease;
-  font-family: 'Adobe Garamond Pro', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
   letter-spacing: 0.3px;
   width: fit-content;
 }
@@ -438,7 +485,7 @@ body {
   border-radius: var(--btn-radius);
   background: var(--bg-card);
   color: var(--text);
-  font-family: 'Adobe Garamond Pro', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -543,7 +590,8 @@ body {
 }
 
 .stat-value {
-  font-family: 'Kelvinch', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
+  font-weight: 600;
   font-size: 28px;
   font-weight: 700;
   color: var(--text);
@@ -551,7 +599,7 @@ body {
 }
 
 .stat-label {
-  font-family: 'Adobe Garamond Pro', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
   font-size: 11px;
   color: var(--text-secondary);
   letter-spacing: 0.5px;
@@ -590,7 +638,8 @@ body {
 }
 
 .platform-count {
-  font-family: 'Kelvinch', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
+  font-weight: 600;
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
@@ -608,7 +657,8 @@ body {
 .recent h3,
 .time-tracking h3,
 .mistake-tags h3 {
-  font-family: 'Kelvinch', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
+  font-weight: 600;
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
@@ -782,7 +832,8 @@ body {
 }
 
 .prediction-title {
-  font-family: 'Kelvinch', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
+  font-weight: 600;
   font-size: 16px;
   font-weight: 600;
   color: var(--text);
@@ -792,7 +843,7 @@ body {
 }
 
 .beta-tag {
-  font-family: 'Adobe Garamond Pro', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
   font-size: 10px;
   font-weight: 600;
   color: var(--accent);
@@ -837,7 +888,8 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--text);
-  font-family: 'Kelvinch', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
+  font-weight: 600;
   font-size: 14px;
   text-align: center;
   transition: all 0.2s ease;
@@ -961,7 +1013,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);
-  font-family: 'Adobe Garamond Pro', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
   font-size: 13px;
   transition: all 0.2s ease;
 }
@@ -994,7 +1046,8 @@ body {
 }
 
 .mini-stat-value {
-  font-family: 'Kelvinch', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
+  font-weight: 600;
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
@@ -1040,7 +1093,8 @@ body {
   padding: 0 6px;
   background: var(--accent);
   color: var(--bg);
-  font-family: 'Kelvinch', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
+  font-weight: 600;
   font-size: 11px;
   font-weight: 700;
   border-radius: 10px;
@@ -1411,7 +1465,8 @@ body {
 }
 
 .settings-section h3 {
-  font-family: 'Kelvinch', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
+  font-weight: 600;
   font-size: 15px;
   font-weight: 600;
   color: var(--text);
@@ -1473,7 +1528,7 @@ body {
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  font-family: 'Adobe Garamond Pro', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
   font-size: 13px;
   font-weight: 600;
   padding: 12px 14px;
@@ -1590,7 +1645,7 @@ body {
   border-radius: var(--btn-radius);
   background: transparent;
   color: var(--text-secondary);
-  font-family: 'Adobe Garamond Pro', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
@@ -1682,7 +1737,8 @@ body {
 }
 
 .auth-user-name {
-  font-family: 'Kelvinch', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
+  font-weight: 600;
   font-size: 16px;
   font-weight: 600;
   color: var(--text);
@@ -1930,7 +1986,8 @@ body {
 }
 
 .settings-section h3 {
-  font-family: 'Kelvinch', serif;
+  font-family: 'HarmonyOS Sans', sans-serif;
+  font-weight: 600;
   font-size: 14px;
   font-weight: 600;
   color: var(--text);

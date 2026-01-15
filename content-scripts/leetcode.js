@@ -37,7 +37,7 @@
       this.aiAnalysis = null; // Store Gemini AI analysis
       this.aiTags = []; // Store Gemini mistake tags
       this.shouldAnalyzeWithGemini = false; // Flag to run Gemini on submit
-      this.problemStartTime = null; // Track when user started on this problem
+      // Note: problemStartTime and pausedTime are now managed by ProblemTimer utility
     }
 
     async initialize() {
@@ -63,6 +63,11 @@
           this.resetCounters();
           this.currentProblemUrl = currentUrl;
           await this.savePersistedState();
+        }
+
+        // Start the unified problem timer (handles visibility tracking & overlay)
+        if (window.ProblemTimer) {
+          window.ProblemTimer.getInstance().startTimer(currentUrl);
         }
 
         DSAUtils.logDebug(PLATFORM, 'LeetCode extractor initialized');
@@ -164,12 +169,11 @@
           this.aiAnalysis = problemData.aiAnalysis || null;
           this.aiTags = problemData.aiTags || [];
           this.shouldAnalyzeWithGemini = problemData.shouldAnalyzeWithGemini || false;
-          this.problemStartTime = problemData.problemStartTime || Date.now();
+          // Note: problemStartTime and pausedTime are now managed by ProblemTimer utility
 
           console.log(`[LeetCode] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}`);
         } else {
           console.log(`[LeetCode] No problem data found - starting fresh`);
-          this.problemStartTime = Date.now(); // Start tracking time for new problem
         }
       } catch (error) {
         console.error('[LeetCode] Error loading problem data:', error);
@@ -183,6 +187,9 @@
         // Load existing problem data to merge with tracking state
         const result = await chrome.storage.local.get([`problem_data_${currentUrl}`]);
         let problemData = result[`problem_data_${currentUrl}`] || {};
+
+        // Get time values from ProblemTimer utility
+        const timer = window.ProblemTimer ? window.ProblemTimer.getInstance() : null;
 
         // Merge tracking state into problem data
         problemData = {
@@ -198,7 +205,9 @@
           aiAnalysis: overrides.aiAnalysis ?? this.aiAnalysis,
           aiTags: overrides.aiTags ?? this.aiTags,
           shouldAnalyzeWithGemini: overrides.shouldAnalyzeWithGemini ?? this.shouldAnalyzeWithGemini,
-          problemStartTime: overrides.problemStartTime ?? this.problemStartTime,
+          // Time values from ProblemTimer
+          problemStartTime: timer?.getStartTime() || problemData.problemStartTime || Date.now(),
+          pausedTime: timer?.getPausedTime() || problemData.pausedTime || 0,
           timestamp: overrides.timestamp ?? new Date().toISOString()
         };
 
@@ -237,6 +246,9 @@
           };
         }
 
+        // Get time values from ProblemTimer utility
+        const timer = window.ProblemTimer ? window.ProblemTimer.getInstance() : null;
+
         const problemData = {
           ...existingData,
           name: problemInfo.title || existingData.name || 'Unknown Problem',
@@ -257,7 +269,9 @@
           submitCounter: this.submitCounter || 0,
           aiAnalysis: this.aiAnalysis || null,
           aiTags: this.aiTags || [],
-          problemStartTime: this.problemStartTime || Date.now(),
+          // Time values from ProblemTimer
+          problemStartTime: timer?.getStartTime() || existingData.problemStartTime || Date.now(),
+          pausedTime: timer?.getPausedTime() || existingData.pausedTime || 0,
           timestamp: new Date().toISOString()
         };
 
@@ -296,12 +310,16 @@
       this.aiAnalysis = null;
       this.aiTags = [];
       this.shouldAnalyzeWithGemini = false;
-      this.problemStartTime = Date.now(); // Reset start time for new problem
       console.log(`[LeetCode] Counters reset for new problem`);
 
       // Clean up any stored problem data for this problem
       const currentUrl = this.getCurrentProblemUrl();
       chrome.storage.local.remove([`problem_data_${currentUrl}`]).catch(console.error);
+
+      // Reset the unified problem timer
+      if (window.ProblemTimer) {
+        window.ProblemTimer.getInstance().reset();
+      }
     }
     setupEventListeners() {
       // Listen for URL changes (LeetCode is SPA)
@@ -312,6 +330,8 @@
 
       // Listen for run button clicks
       this.observeRunButton();
+
+      // Note: visibility tracking is now handled by ProblemTimer utility
     }
 
     observeUrlChanges() {

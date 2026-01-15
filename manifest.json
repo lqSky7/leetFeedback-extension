@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Traverse",
-    "version": "1.3.2",
+    "version": "1.3.9",
     "description": "Chrome extension for Traverse Ecosystem",
     "icons": {
         "16": "icons/16.png",
@@ -40,9 +40,8 @@
                 "utils/github-api.js",
                 "utils/gemini-api.js",
                 "utils/backend-api.js",
-                "utils/time-tracker.js",
+                "utils/problem-timer.js",
                 "utils/toast.js",
-                "utils/timer-overlay.js",
                 "content-scripts/leetcode.js"
             ],
             "run_at": "document_end"
@@ -57,9 +56,8 @@
                 "utils/github-api.js",
                 "utils/gemini-api.js",
                 "utils/backend-api.js",
-                "utils/time-tracker.js",
+                "utils/problem-timer.js",
                 "utils/toast.js",
-                "utils/timer-overlay.js",
                 "content-scripts/geeksforgeeks.js"
             ],
             "run_at": "document_end"
@@ -73,9 +71,8 @@
                 "utils/github-api.js",
                 "utils/gemini-api.js",
                 "utils/backend-api.js",
-                "utils/time-tracker.js",
+                "utils/problem-timer.js",
                 "utils/toast.js",
-                "utils/timer-overlay.js",
                 "content-scripts/takeuforward.js"
             ],
             "run_at": "document_end"

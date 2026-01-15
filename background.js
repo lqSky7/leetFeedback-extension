@@ -10,23 +10,11 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log("DSA to GitHub Extension installed.");
 
   // Initialize default settings
-  chrome.storage.sync.get(['github_branch', 'time_tracking'], (data) => {
+  chrome.storage.sync.get(['github_branch'], (data) => {
     const updates = {};
 
     if (!data.github_branch) {
       updates.github_branch = 'main';
-    }
-
-    // Initialize time tracking data if it doesn't exist (with simplified structure)
-    if (!data.time_tracking) {
-      updates.time_tracking = {
-        platforms: {
-          leetcode: { totalTime: 0 },
-          geeksforgeeks: { totalTime: 0 },
-          takeuforward: { totalTime: 0 }
-        },
-        lastUpdated: new Date().toISOString()
-      };
     }
 
     if (Object.keys(updates).length > 0) {
@@ -52,16 +40,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     if (request.type === 'initializeConfig') {
       handleInitializeConfig(request, sender, sendResponse);
-      return true;
-    }
-
-    if (request.type === 'updateTimeTracking') {
-      handleUpdateTimeTracking(request, sender, sendResponse);
-      return true;
-    }
-
-    if (request.type === 'getTimeTracking') {
-      handleGetTimeTracking(request, sender, sendResponse);
       return true;
     }
 
@@ -425,54 +403,6 @@ async function handleBackendAPIFetch(request, sender, sendResponse) {
       success: false,
       error: error.message
     });
-  }
-}
-
-async function handleUpdateTimeTracking(request, sender, sendResponse) {
-  try {
-    const { platform, timeSpent } = request;
-
-    const result = await chrome.storage.sync.get(['time_tracking']);
-    const timeTracking = result.time_tracking || {
-      platforms: {
-        leetcode: { totalTime: 0 },
-        geeksforgeeks: { totalTime: 0 },
-        takeuforward: { totalTime: 0 }
-      },
-      lastUpdated: new Date().toISOString()
-    };
-
-    if (!timeTracking.platforms[platform]) {
-      timeTracking.platforms[platform] = { totalTime: 0 };
-    }
-
-    timeTracking.platforms[platform].totalTime += timeSpent;
-    timeTracking.lastUpdated = new Date().toISOString();
-
-    await chrome.storage.sync.set({ time_tracking: timeTracking });
-    sendResponse({ success: true, timeTracking });
-  } catch (error) {
-    console.error('Error updating time tracking:', error);
-    sendResponse({ success: false, error: error.message });
-  }
-}
-
-async function handleGetTimeTracking(request, sender, sendResponse) {
-  try {
-    const result = await chrome.storage.sync.get(['time_tracking']);
-    const timeTracking = result.time_tracking || {
-      platforms: {
-        leetcode: { totalTime: 0 },
-        geeksforgeeks: { totalTime: 0 },
-        takeuforward: { totalTime: 0 }
-      },
-      lastUpdated: new Date().toISOString()
-    };
-
-    sendResponse({ success: true, timeTracking });
-  } catch (error) {
-    console.error('Error getting time tracking:', error);
-    sendResponse({ success: false, error: error.message });
   }
 }
 

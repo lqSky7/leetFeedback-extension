@@ -24,7 +24,7 @@
       this.sessionStartTime = null;
       this.lastActivityTime = Date.now();
       this.currentPathname = window.location.pathname;
-      this.problemStartTime = null;
+      // Note: problemStartTime and pausedTime are now managed by ProblemTimer utility
 
       // Run tracking for Gemini analysis
       this.attempts = [];
@@ -49,8 +49,13 @@
         this.setupEventListeners();
         this.injectInterceptor();
         this.checkPageType();
-        this.startTimeTracking();
         this.pollForQuestionDetails();
+
+        // Start the unified problem timer
+        const problemSlug = this.getProblemSlugFromUrl();
+        if (window.ProblemTimer && problemSlug) {
+          window.ProblemTimer.getInstance().startTimer(problemSlug);
+        }
 
         DSAUtils.logDebug(PLATFORM, 'TakeUforward extractor initialized');
         console.log('[TakeUforward] Extension fully initialized');
@@ -87,7 +92,12 @@
           this.shouldAnalyzeWithGemini = false;
           this.aiAnalysis = null;
           this.aiTags = [];
-          this.problemStartTime = Date.now();
+
+          // Reset the unified problem timer
+          if (window.ProblemTimer) {
+            window.ProblemTimer.getInstance().reset();
+            window.ProblemTimer.getInstance().startTimer(this.getProblemSlugFromUrl());
+          }
 
           setTimeout(() => {
             this.fetchQuestionDetails();
@@ -98,7 +108,6 @@
       // Clean up on page unload
       window.addEventListener('beforeunload', () => {
         clearInterval(urlChangeDetector);
-        this.updateTimeTracking();
       });
     }
 
@@ -207,9 +216,6 @@
     setupActivityTracking() {
       const handleUserActivity = () => {
         this.lastActivityTime = Date.now();
-        if (!this.sessionStartTime && !this.isTabHidden) {
-          this.startTimeTracking();
-        }
       };
 
       document.addEventListener('click', handleUserActivity);
@@ -217,61 +223,7 @@
       document.addEventListener('scroll', handleUserActivity);
       document.addEventListener('mousemove', handleUserActivity);
 
-      // Track tab visibility - pause timer when tab is not visible
-      this.isTabHidden = document.hidden;
-      this.pausedTime = 0; // Track time spent paused
-
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-          // Tab is now hidden - pause the timer
-          this.isTabHidden = true;
-          this.tabHiddenAt = Date.now();
-          DSAUtils.logDebug(PLATFORM, 'Tab hidden, pausing timer');
-        } else {
-          // Tab is now visible - resume the timer
-          this.isTabHidden = false;
-          if (this.tabHiddenAt && this.problemStartTime) {
-            // Add the hidden duration to our paused time accumulator
-            const hiddenDuration = Date.now() - this.tabHiddenAt;
-            this.pausedTime += hiddenDuration;
-            DSAUtils.logDebug(PLATFORM, `Tab visible, was hidden for ${Math.floor(hiddenDuration / 1000)}s`);
-          }
-          this.tabHiddenAt = null;
-        }
-      });
-
-      // Update time every 5 minutes if user is active
-      setInterval(() => {
-        const timeSinceLastActivity = Date.now() - this.lastActivityTime;
-        if (timeSinceLastActivity < 300000) { // 5 minutes
-          this.updateTimeTracking();
-        }
-      }, 300000);
-    }
-
-    startTimeTracking() {
-      // Always start fresh - never load from storage
-      // This ensures page refresh resets the timer
-      this.sessionStartTime = Date.now();
-      this.problemStartTime = Date.now();
-      this.pausedTime = 0; // Reset paused time on fresh start
-      chrome.storage.sync.set({ last_session_start: new Date().toISOString() });
-      DSAUtils.logDebug(PLATFORM, 'Started fresh time tracking on TakeUforward');
-    }
-
-    updateTimeTracking() {
-      if (this.sessionStartTime) {
-        const sessionDuration = Math.floor((Date.now() - this.sessionStartTime) / 60000); // in minutes
-        chrome.storage.sync.get(['takeuforward_time'], (data) => {
-          const currentTime = data.takeuforward_time || 0;
-          const newTotalTime = currentTime + sessionDuration;
-          chrome.storage.sync.set({
-            takeuforward_time: newTotalTime,
-            last_activity: new Date().toISOString()
-          });
-        });
-        this.sessionStartTime = Date.now(); // Reset session start
-      }
+      // Note: visibility tracking is now handled by ProblemTimer utility
     }
 
     pollForQuestionDetails() {
@@ -435,6 +387,9 @@
           };
         }
 
+        // Get time values from ProblemTimer utility
+        const timer = window.ProblemTimer ? window.ProblemTimer.getInstance() : null;
+
         const problemData = {
           ...existingData,
           name: problemInfo.title,
@@ -445,11 +400,9 @@
           parent_topic: problemInfo.topics || existingData.parent_topic || ['General'],
           problem_link: problemInfo.url,
           language: problemInfo.language || existingData.language || 'python',  // Store language
-          // Always use current instance's problemStartTime (fresh on page refresh)
-          // Don't load from storage - timer resets on page refresh
-          problemStartTime: this.problemStartTime || Date.now(),
-          // Track paused time (when tab was hidden) to subtract from total time
-          pausedTime: this.pausedTime || 0,
+          // Time values from ProblemTimer utility
+          problemStartTime: timer?.getStartTime() || existingData.problemStartTime || Date.now(),
+          pausedTime: timer?.getPausedTime() || existingData.pausedTime || 0,
           // Gemini analysis data
           aiAnalysis: this.aiAnalysis || null,
           aiTags: this.aiTags || [],

@@ -1,7 +1,6 @@
 class PopupController {
   constructor() {
     this.config = {};
-    this.timeTracking = {};
     this.connectionStatus = false;
     this.authStatus = { isAuthenticated: false, user: null, token: null };
     this.initialize();
@@ -20,33 +19,8 @@ class PopupController {
   }
 
   initializeChromaText() {
-    // Generate random vibrant colors for ChromaText effect
-    const logo = document.querySelector('[data-chroma-id="traverse-logo"]');
-    if (!logo) return;
-
-    // Generate 3 random vibrant colors using HSL for better color harmony
-    const generateVibrantColor = () => {
-      const hue = Math.floor(Math.random() * 360);
-      const saturation = 70 + Math.floor(Math.random() * 30); // 70-100%
-      const lightness = 50 + Math.floor(Math.random() * 20); // 50-70%
-      return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-    };
-
-    const color1 = generateVibrantColor();
-    const color2 = generateVibrantColor();
-    const color3 = generateVibrantColor();
-
-    // Apply gradient with white base text and colorful sweep
-    const gradient = `linear-gradient(90deg,
-      rgb(255, 255, 255) 0px,
-      rgb(255, 255, 255) 33.33%,
-      ${color1} 42%,
-      ${color2} 50%,
-      ${color3} 58%,
-      transparent 66.67%,
-      transparent)`;
-
-    logo.style.backgroundImage = gradient;
+    // ChromaText colors are defined in CSS to match website
+    // No JavaScript override needed
   }
 
   initializePlatformIcons() {
@@ -290,7 +264,6 @@ class PopupController {
           "github_branch",
           "gemini_api_key",
           "debug_mode",
-          "time_tracking",
           "mistake_tags",
           "github_push_enabled",
           "timer_overlay_enabled",
@@ -305,18 +278,6 @@ class PopupController {
             debugMode: data.debug_mode || false,
             githubPushEnabled: data.github_push_enabled !== false, // Default true
             timerOverlayEnabled: data.timer_overlay_enabled !== false, // Default true
-          };
-          this.timeTracking = data.time_tracking || {
-            platforms: {
-              leetcode: { totalTime: 0, lastActive: null, isActive: false },
-              geeksforgeeks: {
-                totalTime: 0,
-                lastActive: null,
-                isActive: false,
-              },
-              takeuforward: { totalTime: 0, lastActive: null, isActive: false },
-            },
-            lastUpdated: new Date().toISOString(),
           };
           this.mistakeTags = data.mistake_tags || {};
           resolve();
@@ -421,114 +382,6 @@ class PopupController {
     } else {
       statusDot.classList.remove("connected");
       statusText.textContent = "Not Connected";
-    }
-  }
-
-  async loadTimeTracking() {
-    try {
-      // Get the latest time tracking data
-      const response = await this.sendMessageToBackground({
-        type: "getTimeTracking",
-      });
-
-      if (response.success) {
-        this.timeTracking = response.timeTracking;
-        this.updateTimeTrackingUI();
-      }
-    } catch (error) {
-      console.error("Error loading time tracking data:", error);
-    }
-  }
-
-  updateTimeTrackingUI() {
-    const { platforms } = this.timeTracking;
-
-    // Update platform times
-    document.getElementById("leetcode-time").textContent = this.formatTime(
-      platforms.leetcode.totalTime,
-    );
-    document.getElementById("geeksforgeeks-time").textContent = this.formatTime(
-      platforms.geeksforgeeks.totalTime,
-    );
-    document.getElementById("takeuforward-time").textContent = this.formatTime(
-      platforms.takeuforward.totalTime,
-    );
-
-    // Calculate and update total time
-    const totalTime = Object.values(platforms).reduce(
-      (sum, platform) => sum + platform.totalTime,
-      0,
-    );
-    document.getElementById("total-time").textContent =
-      this.formatTime(totalTime);
-
-    // Create time chart visualization
-    this.createTimeChart();
-  }
-
-  createTimeChart() {
-    const chartElement = document.getElementById("time-chart");
-    const { platforms } = this.timeTracking;
-
-    // Get time values
-    const leetcodeTime = platforms.leetcode.totalTime;
-    const geeksforgeeksTime = platforms.geeksforgeeks.totalTime;
-    const takeuforwardTime = platforms.takeuforward.totalTime;
-    const totalTime = leetcodeTime + geeksforgeeksTime + takeuforwardTime;
-
-    // Don't display chart if no time tracked yet
-    if (totalTime === 0) {
-      chartElement.innerHTML =
-        '<div class="time-chart-empty">Tracking time spent on DSA platforms</div>';
-      return;
-    }
-
-    // Calculate percentages
-    const leetcodePercent = (leetcodeTime / totalTime) * 100;
-    const geeksforgeeksPercent = (geeksforgeeksTime / totalTime) * 100;
-    const takeuforwardPercent = (takeuforwardTime / totalTime) * 100;
-
-    // Create bar chart HTML with staggered animations - white bars as requested
-    const chartHtml = `
-      <div class="chart-bars">
-        <div class="chart-bar-container">
-          <div class="chart-bar leetcode" style="width: ${leetcodePercent}%; animation-delay: 0.1s;"></div>
-          <div class="chart-label">LeetCode: ${this.formatTime(leetcodeTime)}</div>
-        </div>
-        <div class="chart-bar-container">
-          <div class="chart-bar gfg" style="width: ${geeksforgeeksPercent}%; animation-delay: 0.2s;"></div>
-          <div class="chart-label">GFG: ${this.formatTime(geeksforgeeksTime)}</div>
-        </div>
-        <div class="chart-bar-container">
-          <div class="chart-bar tuf" style="width: ${takeuforwardPercent}%; animation-delay: 0.3s;"></div>
-          <div class="chart-label">TUF: ${this.formatTime(takeuforwardTime)}</div>
-        </div>
-      </div>
-    `;
-
-    chartElement.innerHTML = chartHtml;
-  }
-
-  formatTime(milliseconds) {
-    if (!milliseconds || milliseconds < 1000) return "0h";
-
-    const seconds = Math.floor(milliseconds / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m`;
-    } else if (minutes > 0) {
-      return `${minutes}m`;
-    } else {
-      return `${seconds}s`;
-    }
-  }
-
-  // Clean up timers when popup is closed
-  disconnected() {
-    if (this.timeTrackingInterval) {
-      clearInterval(this.timeTrackingInterval);
     }
   }
 
@@ -874,8 +727,10 @@ class PopupController {
       const oneDay = 24 * 60 * 60 * 1000;
 
       if (cache && cache.timestamp && (now - cache.timestamp) < oneDay) {
-        // Use cached result
-        this.renderUpdateNotification(cache.hasUpdate, cache.latestVersion, cache.currentVersion);
+        // Use cached latest version but compare against CURRENT manifest version
+        const currentVersion = chrome.runtime.getManifest().version;
+        const hasUpdate = this.compareVersions(cache.latestVersion, currentVersion) > 0;
+        this.renderUpdateNotification(hasUpdate, cache.latestVersion, currentVersion);
         return;
       }
 
