@@ -39,101 +39,95 @@ class ToastNotification {
         const toast = document.createElement('div');
         toast.className = `leetfeedback-toast leetfeedback-toast-${type}`;
 
-        // Colors based on type
+        // Colors based on type - matching sidebar design
         const colors = {
-            success: { bg: '#10b981', border: '#059669', icon: '✓' },
-            error: { bg: '#ef4444', border: '#dc2626', icon: '✕' },
-            info: { bg: '#3b82f6', border: '#2563eb', icon: 'ℹ' }
+            success: { bg: '#0a0a0a', border: '#22c55e', text: '#22c55e' },
+            error: { bg: '#0a0a0a', border: '#ef4444', text: '#ef4444' },
+            info: { bg: '#0a0a0a', border: '#1c1c1c', text: '#b8b8b8' }
         };
 
         const color = colors[type] || colors.info;
 
         toast.style.cssText = `
       display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 14px 18px;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
       background: ${color.bg};
       border: 1px solid ${color.border};
-      border-radius: 12px;
-      color: white;
-      font-size: 14px;
+      border-radius: 10px;
+      color: ${color.text};
+      font-size: 13px;
       line-height: 1.4;
-      max-width: 380px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2);
+      width: 280px;
+      min-height: 44px;
+      max-height: 44px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
       pointer-events: auto;
       transform: translateX(120%);
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, background 0.3s ease, border-color 0.3s ease;
       opacity: 0;
+      font-family: 'HarmonyOS Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
 
-        // Icon
-        const iconSpan = document.createElement('span');
-        iconSpan.style.cssText = `
+        // Status indicator dot
+        const dotSpan = document.createElement('span');
+        dotSpan.className = 'toast-dot';
+        dotSpan.style.cssText = `
       flex-shrink: 0;
-      width: 22px;
-      height: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255, 255, 255, 0.2);
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      font-size: 12px;
-      font-weight: bold;
+      background: ${color.border};
+      transition: background 0.3s ease;
     `;
-        iconSpan.textContent = color.icon;
-
-        // Message content
-        const messageDiv = document.createElement('div');
-        messageDiv.style.cssText = `
-      flex: 1;
-      word-wrap: break-word;
-    `;
-
-        // Title
-        const titleSpan = document.createElement('div');
-        titleSpan.style.cssText = `
-      font-weight: 600;
-      margin-bottom: 2px;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      opacity: 0.9;
-    `;
-        titleSpan.textContent = type === 'success' ? 'Traverse' : type === 'error' ? 'Error' : 'Info';
 
         // Message text
         const textSpan = document.createElement('div');
-        textSpan.style.cssText = `font-size: 14px;`;
+        textSpan.className = 'toast-text';
+        textSpan.style.cssText = `
+      flex: 1;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    `;
         textSpan.textContent = message;
-
-        messageDiv.appendChild(titleSpan);
-        messageDiv.appendChild(textSpan);
 
         // Close button
         const closeBtn = document.createElement('button');
+        closeBtn.className = 'toast-close';
         closeBtn.style.cssText = `
       flex-shrink: 0;
-      background: rgba(255, 255, 255, 0.2);
+      background: transparent;
       border: none;
-      color: white;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
+      color: ${color.text};
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: background 0.2s ease;
+      opacity: 0.6;
     `;
         closeBtn.textContent = '×';
-        closeBtn.onmouseover = () => { closeBtn.style.background = 'rgba(255, 255, 255, 0.3)'; };
-        closeBtn.onmouseout = () => { closeBtn.style.background = 'rgba(255, 255, 255, 0.2)'; };
+        closeBtn.onmouseover = () => { 
+            closeBtn.style.background = 'rgba(255, 255, 255, 0.1)'; 
+            closeBtn.style.opacity = '1';
+        };
+        closeBtn.onmouseout = () => { 
+            closeBtn.style.background = 'transparent'; 
+            closeBtn.style.opacity = '0.6';
+        };
         closeBtn.onclick = () => this.dismiss(toast);
 
-        toast.appendChild(iconSpan);
-        toast.appendChild(messageDiv);
+        toast.appendChild(dotSpan);
+        toast.appendChild(textSpan);
         toast.appendChild(closeBtn);
 
         this.container.appendChild(toast);
@@ -149,10 +143,63 @@ class ToastNotification {
 
         // Auto dismiss
         if (duration > 0) {
-            setTimeout(() => this.dismiss(toast), duration);
+            toast._autoDismissTimeout = setTimeout(() => this.dismiss(toast), duration);
         }
 
         return toast;
+    }
+
+    /**
+     * Update an existing toast with new message and type
+     * @param {HTMLElement} toast - The toast element to update
+     * @param {string} message - The new message
+     * @param {string} type - The new type ('success', 'error', or 'info')
+     * @param {number} duration - Duration in ms (default 5000)
+     */
+    update(toast, message, type = 'info', duration = 5000) {
+        if (!toast || !toast.parentNode) return;
+
+        // Clear any existing auto-dismiss timeout
+        if (toast._autoDismissTimeout) {
+            clearTimeout(toast._autoDismissTimeout);
+            toast._autoDismissTimeout = null;
+        }
+
+        // Colors based on type - matching sidebar design
+        const colors = {
+            success: { bg: '#0a0a0a', border: '#22c55e', text: '#22c55e' },
+            error: { bg: '#0a0a0a', border: '#ef4444', text: '#ef4444' },
+            info: { bg: '#0a0a0a', border: '#1c1c1c', text: '#b8b8b8' }
+        };
+
+        const color = colors[type] || colors.info;
+
+        // Update background and border with transition
+        toast.style.borderColor = color.border;
+        toast.style.color = color.text;
+
+        // Update dot color
+        const dotSpan = toast.querySelector('.toast-dot');
+        if (dotSpan) {
+            dotSpan.style.background = color.border;
+        }
+
+        // Update message text
+        const textSpan = toast.querySelector('.toast-text');
+        if (textSpan) {
+            textSpan.textContent = message;
+        }
+
+        // Update close button color
+        const closeBtn = toast.querySelector('.toast-close');
+        if (closeBtn) {
+            closeBtn.style.color = color.text;
+        }
+
+        // Set new auto-dismiss timeout
+        if (duration > 0) {
+            toast._autoDismissTimeout = setTimeout(() => this.dismiss(toast), duration);
+        }
     }
 
     dismiss(toast) {

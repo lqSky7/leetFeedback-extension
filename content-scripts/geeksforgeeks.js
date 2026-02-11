@@ -983,9 +983,9 @@
         debugLog(`[GeeksforGeeks Submission] Step 1: Pushing to backend...`);
         try {
           // Show immediate feedback that push is starting
-          let pushingToast = null;
+          let syncToast = null;
           if (window.LeetFeedbackToast) {
-            pushingToast = window.LeetFeedbackToast.info('Syncing to Traverse...', 0); // 0 = no auto-dismiss
+            syncToast = window.LeetFeedbackToast.info('Analyzing solution...', 0); // 0 = no auto-dismiss
           }
 
           if (!backendAPI) {
@@ -999,35 +999,26 @@
 
           const backendResult = await backendAPI.pushCurrentProblemData(currentUrl);
 
-          // Dismiss the "syncing" toast
-          if (pushingToast && window.LeetFeedbackToast) {
-            window.LeetFeedbackToast.dismiss(pushingToast);
-          }
-
           if (backendResult.success) {
             debugLog(`[GeeksforGeeks Submission] Backend push successful!`, backendResult.data);
-            // Show success toast
-            if (window.LeetFeedbackToast) {
+            // Update toast to success
+            if (syncToast && window.LeetFeedbackToast) {
               const message = backendResult.data?.message || 'Solution synced to Traverse!';
-              window.LeetFeedbackToast.success(message);
+              window.LeetFeedbackToast.update(syncToast, message, 'success', 5000);
             }
           } else {
             debugLog(`[GeeksforGeeks Submission] Backend push failed: ${backendResult.error}`);
-            // Show error toast
-            if (window.LeetFeedbackToast) {
-              window.LeetFeedbackToast.error(`Sync failed: ${backendResult.error}`);
+            // Update toast to error
+            if (syncToast && window.LeetFeedbackToast) {
+              window.LeetFeedbackToast.update(syncToast, `Sync failed: ${backendResult.error}`, 'error', 6000);
             }
             // Continue with GitHub push even if backend fails
           }
         } catch (error) {
           debugError(`[GeeksforGeeks Submission] Backend push error:`, error);
-          // Dismiss the "syncing" toast
-          if (pushingToast && window.LeetFeedbackToast) {
-            window.LeetFeedbackToast.dismiss(pushingToast);
-          }
-          // Show error toast
-          if (window.LeetFeedbackToast) {
-            window.LeetFeedbackToast.error(`Sync error: ${error.message}`);
+          // Update toast to error
+          if (syncToast && window.LeetFeedbackToast) {
+            window.LeetFeedbackToast.update(syncToast, `Sync error: ${error.message}`, 'error', 6000);
           }
           // Continue with GitHub push even if backend fails
         }

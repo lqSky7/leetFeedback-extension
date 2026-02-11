@@ -2,6 +2,11 @@
 // Handles visibility tracking, pausedTime calculation, and timer overlay display
 // Used by content scripts (leetcode.js, takeuforward.js, geeksforgeeks.js)
 
+// Constants for sanity checks
+const MAX_SESSION_TIME_MS = 8 * 60 * 60 * 1000; // 8 hours max per session
+const MAX_HIDDEN_TIME_MS = 30 * 60 * 1000; // 30 min max hidden time before auto-reset
+const SESSION_STALENESS_MS = 12 * 60 * 60 * 1000; // 12 hours - consider session stale
+
 class ProblemTimer {
     constructor() {
         // Singleton pattern
@@ -120,14 +125,36 @@ class ProblemTimer {
                 this.isTabHidden = false;
                 if (this.tabHiddenAt && this.startTime) {
                     const hiddenDuration = Date.now() - this.tabHiddenAt;
-                    this.pausedTime += hiddenDuration;
-                    console.log(`[ProblemTimer] Tab visible, was hidden for ${Math.floor(hiddenDuration / 1000)}s, total paused: ${Math.floor(this.pausedTime / 1000)}s`);
-                    // Save updated pausedTime to storage
-                    await this.saveToStorage();
+
+                    // If hidden for too long (e.g., browser was closed), reset instead of accumulating
+                    if (hiddenDuration > MAX_HIDDEN_TIME_MS) {
+                        console.warn(`[ProblemTimer] Hidden for too long (${Math.floor(hiddenDuration / 1000 / 60)} min), resetting timer`);
+                        this.startTime = Date.now();
+                        this.pausedTime = 0;
+                        await this.saveToStorage();
+                    } else {
+                        this.pausedTime += hiddenDuration;
+                        console.log(`[ProblemTimer] Tab visible, was hidden for ${Math.floor(hiddenDuration / 1000)}s, total paused: ${Math.floor(this.pausedTime / 1000)}s`);
+                        await this.saveToStorage();
+                    }
                 }
                 this.tabHiddenAt = null;
             }
         });
+    }
+
+    // Check if startTime is valid (not stale from a previous browser session)
+    isStartTimeValid(startTime) {
+        if (!startTime) return false;
+        const now = Date.now();
+        const age = now - startTime;
+
+        // If startTime is in the future or older than staleness threshold, it's invalid
+        if (startTime > now || age > SESSION_STALENESS_MS) {
+            console.warn(`[ProblemTimer] Stale startTime detected (age: ${Math.floor(age / 1000 / 60)} min)`);
+            return false;
+        }
+        return true;
     }
 
     // Get current elapsed active time in milliseconds
@@ -135,6 +162,17 @@ class ProblemTimer {
         if (!this.startTime) return 0;
 
         const now = Date.now();
+
+        // Validate startTime hasn't gone stale
+        if (!this.isStartTimeValid(this.startTime)) {
+            console.warn('[ProblemTimer] StartTime became stale, resetting timer');
+            this.startTime = now;
+            this.pausedTime = 0;
+            this.tabHiddenAt = null;
+            this.saveToStorage();
+            return 0;
+        }
+
         let elapsed = now - this.startTime - this.pausedTime;
 
         // If currently hidden, don't count the current hidden duration
@@ -143,13 +181,20 @@ class ProblemTimer {
             elapsed -= currentHiddenDuration;
         }
 
-        // Ensure elapsed time is always positive
+        // Sanity check: elapsed time should never be negative
         if (elapsed < 0) {
             console.warn('[ProblemTimer] Negative elapsed time detected, resetting timer');
             this.startTime = now;
             this.pausedTime = 0;
             this.tabHiddenAt = null;
+            this.saveToStorage();
             return 0;
+        }
+
+        // Sanity check: cap at maximum session time
+        if (elapsed > MAX_SESSION_TIME_MS) {
+            console.warn(`[ProblemTimer] Elapsed time exceeded max (${Math.floor(elapsed / 1000 / 60)} min), capping at ${MAX_SESSION_TIME_MS / 1000 / 60} min`);
+            return MAX_SESSION_TIME_MS;
         }
 
         return elapsed;
@@ -185,25 +230,30 @@ class ProblemTimer {
         if (!this.problemUrl) return;
 
         try {
-            // Check if browser was restarted
-            const sessionResult = await chrome.storage.local.get(['browser_session_restarted', 'session_start_time']);
-            
-            if (sessionResult.browser_session_restarted) {
-                console.log('[ProblemTimer] Browser session restarted - resetting timer');
-                // Clear the restart flag
-                await chrome.storage.local.remove(['browser_session_restarted']);
-                // Don't load old timer data, start fresh
-                return;
-            }
-
             const storageKey = `problem_data_${this.problemUrl}`;
             const result = await chrome.storage.local.get([storageKey]);
             const problemData = result[storageKey];
 
             if (problemData && problemData.problemStartTime) {
+                // Validate the stored startTime before using it
+                if (!this.isStartTimeValid(problemData.problemStartTime)) {
+                    console.log('[ProblemTimer] Stored timer data is stale, starting fresh');
+                    // Clear stale data
+                    await chrome.storage.local.remove([storageKey]);
+                    return;
+                }
+
+                // Additional check: if pausedTime is unreasonably large, reset
+                const pausedTime = problemData.pausedTime || 0;
+                if (pausedTime > SESSION_STALENESS_MS) {
+                    console.warn(`[ProblemTimer] Unreasonable pausedTime (${Math.floor(pausedTime / 1000 / 60)} min), resetting`);
+                    await chrome.storage.local.remove([storageKey]);
+                    return;
+                }
+
                 this.startTime = problemData.problemStartTime;
-                this.pausedTime = problemData.pausedTime || 0;
-                console.log('[ProblemTimer] Loaded from storage - startTime:', this.startTime, 'pausedTime:', this.pausedTime);
+                this.pausedTime = pausedTime;
+                console.log('[ProblemTimer] Loaded from storage - startTime:', this.startTime, 'pausedTime:', Math.floor(this.pausedTime / 1000), 's');
             }
         } catch (error) {
             console.error('[ProblemTimer] Error loading from storage:', error);
@@ -311,7 +361,7 @@ class ProblemTimer {
     `;
         closeBtn.textContent = '×';
         closeBtn.title = 'Hide timer (re-enable in extension settings)';
-        
+
         // Add event listeners instead of inline handlers
         closeBtn.addEventListener('mouseover', () => {
             closeBtn.style.background = 'rgba(255, 255, 255, 0.2)';
@@ -346,7 +396,7 @@ class ProblemTimer {
     `;
         resetBtn.textContent = '↺';
         resetBtn.title = 'Reset timer';
-        
+
         // Add event listeners instead of inline handlers
         resetBtn.addEventListener('mouseover', () => {
             resetBtn.style.background = 'rgba(255, 255, 255, 0.2)';
