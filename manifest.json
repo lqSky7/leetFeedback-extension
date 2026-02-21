@@ -20,12 +20,14 @@
         "https://*.geeksforgeeks.org/*",
         "https://practice.geeksforgeeks.org/*",
         "https://*.takeuforward.org/*",
+        "https://*.codechef.com/*",
         "https://api.github.com/*",
         "https://generativelanguage.googleapis.com/*",
         "https://traverse-backend-api.azurewebsites.net/*",
         "https://leet-feedback.vercel.app/*",
         "https://*.vercel.app/*",
-        "https://*.netlify.app/*"
+        "https://*.netlify.app/*",
+        "https://g4f.space/*"
     ],
     "background": {
         "service_worker": "background.js"
@@ -74,6 +76,21 @@
                 "utils/problem-timer.js",
                 "utils/toast.js",
                 "content-scripts/takeuforward.js"
+            ],
+            "run_at": "document_end"
+        },
+        {
+            "matches": [
+                "https://*.codechef.com/*"
+            ],
+            "js": [
+                "utils/common.js",
+                "utils/github-api.js",
+                "utils/gemini-api.js",
+                "utils/backend-api.js",
+                "utils/problem-timer.js",
+                "utils/toast.js",
+                "content-scripts/codechef.js"
             ],
             "run_at": "document_end"
         }

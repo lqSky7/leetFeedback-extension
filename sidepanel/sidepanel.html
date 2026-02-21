@@ -91,14 +91,22 @@
                                 target="_blank" class="token-link">Generate Token</a>
                         </div>
 
+                        <div class="field">
+                            <label for="repo-url">Repository URL</label>
+                            <input type="text" id="repo-url" placeholder="https://github.com/username/repo or https://github.com/username/repo.git" />
+                            <div class="settings-option-description" style="margin-top: 4px;">
+                                Paste your repo link; username and repository below are filled automatically.
+                            </div>
+                        </div>
+
                         <div class="field-group">
                             <div class="field">
-                                <label for="owner">Owner</label>
-                                <input type="text" id="owner" placeholder="username" required />
+                                <label for="owner">Username (Owner)</label>
+                                <input type="text" id="owner" placeholder="username" />
                             </div>
                             <div class="field">
                                 <label for="repo">Repository</label>
-                                <input type="text" id="repo" placeholder="repo-name" required />
+                                <input type="text" id="repo" placeholder="repo-name" />
                             </div>
                         </div>
 
@@ -111,12 +119,21 @@
 
                 <div class="separator"></div>
 
-                <!-- Gemini API Section -->
+                <!-- AI for Mistake Analysis: default G4F, optional Gemini -->
                 <div class="settings-section" id="gemini-section">
-                    <h3>Gemini API</h3>
+                    <h3>Mistake Analysis (AI)</h3>
                     <div class="field">
-                        <label for="gemini-key">API Key (Required for Mistake Tags & Revision Cards, Stored
-                            Locally!)</label>
+                        <label for="ai-provider">Provider</label>
+                        <select id="ai-provider" class="input-group">
+                            <option value="g4f">G4F (free, no key)</option>
+                            <option value="gemini">Gemini (API key)</option>
+                        </select>
+                        <div class="settings-option-description" style="margin-top: 6px;">
+                            Default: G4F. Use Gemini if you have an API key.
+                        </div>
+                    </div>
+                    <div class="field" id="gemini-key-field">
+                        <label for="gemini-key">Gemini API Key (only if Provider = Gemini)</label>
                         <div class="input-group">
                             <input type="password" id="gemini-key" placeholder="AI..." />
                             <button type="button" class="toggle-btn" id="toggle-gemini">

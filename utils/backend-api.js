@@ -101,14 +101,14 @@ class BackendAPI {
 
       if (!this.authToken) {
         this._warn('[Backend API] No authentication token found in storage');
-        
+
         // Debug: Check all storage keys
         const allAuthData = await chrome.storage.local.get(null);
-        const authKeys = Object.keys(allAuthData).filter(key => 
+        const authKeys = Object.keys(allAuthData).filter(key =>
           key.includes('auth') || key.includes('token') || key.includes('user')
         );
         this._log('[Backend API] Available auth-related keys:', authKeys);
-        
+
         return false;
       }
 
@@ -180,7 +180,12 @@ class BackendAPI {
           }
         }, (response) => {
           if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
+            const errorMsg = chrome.runtime.lastError.message;
+            if (errorMsg && errorMsg.includes('Extension context invalidated')) {
+              reject(new Error('Extension was updated. Please refresh the page to submit again.'));
+            } else {
+              reject(new Error(errorMsg));
+            }
           } else if (!response) {
             reject(new Error('No response from background script'));
           } else {
@@ -327,6 +332,11 @@ class BackendAPI {
       return await this.pushSubmissionData(formattedData);
 
     } catch (error) {
+      const errorMsg = error.message || String(error);
+      if (errorMsg.includes('Extension context invalidated')) {
+        console.warn('[Backend API] Extension was updated. Please refresh the page to submit again.');
+        return { success: false, error: 'Extension was updated. Please refresh the page.' };
+      }
       console.error('[Backend API] Error pushing submission:', error);
       return { success: false, error: error.message };
     }

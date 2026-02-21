@@ -74,10 +74,19 @@ class PopupController {
     // Debounced save for config form
     const debouncedSave = this.debounce(() => this.saveConfiguration(), 500);
 
-    ["token", "owner", "repo", "gemini-key", "branch"].forEach((id) => {
+    ["token", "repo-url", "owner", "repo", "gemini-key", "branch"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.addEventListener("input", () => {
+          if (id === "repo-url") {
+            const parsed = this.parseGitHubRepoUrl(element.value.trim());
+            if (parsed) {
+              const ownerEl = document.getElementById("owner");
+              const repoEl = document.getElementById("repo");
+              if (ownerEl) ownerEl.value = parsed.owner;
+              if (repoEl) repoEl.value = parsed.repo;
+            }
+          }
           debouncedSave();
         });
       }
@@ -88,6 +97,16 @@ class PopupController {
     if (toggleTokenBtn) {
       toggleTokenBtn.addEventListener("click", () => {
         this.togglePasswordVisibility("token", "toggle-token");
+      });
+    }
+
+    const aiProviderSelect = document.getElementById("ai-provider");
+    if (aiProviderSelect) {
+      aiProviderSelect.addEventListener("change", (e) => {
+        this.config.aiProvider = e.target.value;
+        chrome.storage.sync.set({ ai_provider: e.target.value });
+        this.toggleGeminiKeyField(e.target.value === "gemini");
+        this.debounce(() => this.saveConfiguration(), 500)();
       });
     }
 
@@ -140,6 +159,13 @@ class PopupController {
     }
 
     // All event listeners set up
+  }
+
+  toggleGeminiKeyField(show) {
+    const field = document.getElementById("gemini-key-field");
+    if (field) {
+      field.style.display = show ? "" : "none";
+    }
   }
 
   // Toggle GitHub config accordion visibility
@@ -278,6 +304,15 @@ class PopupController {
     }
   }
 
+  /** Parse GitHub repo URL to { owner, repo }. Supports https://github.com/owner/repo and .git suffix. */
+  parseGitHubRepoUrl(url) {
+    if (!url || typeof url !== "string") return null;
+    const trimmed = url.trim();
+    const match = trimmed.match(/^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/]+)\/([^/\s]+?)(?:\.git)?\/?$/i);
+    if (!match) return null;
+    return { owner: match[1], repo: match[2].replace(/\.git$/i, "") };
+  }
+
   refreshAuthConfigSummary() {
     const summaryEl = document.getElementById("auth-config-summary");
     if (!summaryEl) return;
@@ -318,6 +353,7 @@ class PopupController {
           "github_repo",
           "github_branch",
           "gemini_api_key",
+          "ai_provider",
           "debug_mode",
           "mistake_tags",
           "github_push_enabled",
@@ -330,6 +366,7 @@ class PopupController {
             repo: data.github_repo || "",
             branch: data.github_branch || "main",
             geminiKey: data.gemini_api_key || "",
+            aiProvider: data.ai_provider || "g4f",
             debugMode: data.debug_mode || false,
             githubPushEnabled: data.github_push_enabled !== false, // Default true
             timerOverlayEnabled: data.timer_overlay_enabled !== false, // Default true
@@ -343,11 +380,25 @@ class PopupController {
 
   updateUI() {
     document.getElementById("token").value = this.config.token;
-    document.getElementById("owner").value = this.config.owner;
-    document.getElementById("repo").value = this.config.repo;
+    const repoUrlEl = document.getElementById("repo-url");
+    if (repoUrlEl) {
+      if (this.config.owner && this.config.repo) {
+        repoUrlEl.value = `https://github.com/${this.config.owner}/${this.config.repo}`;
+      } else {
+        repoUrlEl.value = this.config.repoUrl || "";
+      }
+    }
+    document.getElementById("owner").value = this.config.owner || "";
+    document.getElementById("repo").value = this.config.repo || "";
     document.getElementById("branch").value = this.config.branch;
     document.getElementById("gemini-key").value = this.config.geminiKey;
     document.getElementById("debug-mode").checked = this.config.debugMode;
+
+    const aiProviderSelect = document.getElementById("ai-provider");
+    if (aiProviderSelect) {
+      aiProviderSelect.value = this.config.aiProvider || "g4f";
+      this.toggleGeminiKeyField(aiProviderSelect.value === "gemini");
+    }
 
     // New settings
     const githubPushCheckbox = document.getElementById("github-push-enabled");
@@ -392,6 +443,7 @@ class PopupController {
           github_repo: formData.repo,
           github_branch: formData.branch,
           gemini_api_key: formData.geminiKey,
+          ai_provider: formData.aiProvider || "g4f",
           debug_mode: formData.debugMode,
         },
         () => { },
@@ -410,12 +462,18 @@ class PopupController {
   }
 
   collectFormData() {
+    const aiProviderEl = document.getElementById("ai-provider");
+    const owner = document.getElementById("owner")?.value.trim() || "";
+    const repo = document.getElementById("repo")?.value.trim() || "";
+    const repoUrlRaw = document.getElementById("repo-url")?.value.trim() || "";
     return {
       token: document.getElementById("token").value.trim(),
-      owner: document.getElementById("owner").value.trim(),
-      repo: document.getElementById("repo").value.trim(),
+      owner,
+      repo,
+      repoUrl: repoUrlRaw,
       branch: document.getElementById("branch").value.trim() || "main",
       geminiKey: document.getElementById("gemini-key").value.trim(),
+      aiProvider: aiProviderEl ? aiProviderEl.value : "g4f",
       debugMode: document.getElementById("debug-mode").checked,
     };
   }

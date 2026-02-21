@@ -66,8 +66,12 @@ class GitHubAPI {
   }
 
   async checkRepository() {
-    if (!this.config) {
+    if (!this.config || !DSAUtils.isConfigComplete(this.config)) {
       await this.initialize();
+    }
+
+    if (!this.config || !DSAUtils.isConfigComplete(this.config)) {
+      return { success: false, error: 'GitHub configuration is incomplete' };
     }
 
     try {
@@ -93,8 +97,13 @@ class GitHubAPI {
   }
 
   async getFileContent(filePath) {
-    if (!this.config) {
+    if (!this.config || !DSAUtils.isConfigComplete(this.config)) {
       await this.initialize();
+    }
+
+    if (!this.config || !DSAUtils.isConfigComplete(this.config)) {
+      this._warn('[GitHub API] Configuration incomplete, skipping getFileContent');
+      return { exists: false, sha: null, content: null, error: 'GitHub configuration is incomplete' };
     }
 
     try {
@@ -124,8 +133,12 @@ class GitHubAPI {
   }
 
   async createOrUpdateFile(filePath, content, commitMessage, sha = null) {
-    if (!this.config) {
+    if (!this.config || !DSAUtils.isConfigComplete(this.config)) {
       await this.initialize();
+    }
+
+    if (!this.config || !DSAUtils.isConfigComplete(this.config)) {
+      return { success: false, error: 'GitHub configuration is incomplete' };
     }
 
     try {
@@ -168,7 +181,7 @@ class GitHubAPI {
   // Unified push method that handles both solutions and mistake analysis
   async pushContent(problemInfo, platform, contentType = 'solution') {
     try {
-      if (!this.config) {
+      if (!this.config || !DSAUtils.isConfigComplete(this.config)) {
         const initialized = await this.initialize();
         if (!initialized) {
           throw new Error('GitHub configuration is incomplete');
