@@ -1,5 +1,5 @@
 // CodeChef content script for DSA to GitHub extension
-console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
+
 
 (function () {
   'use strict';
@@ -11,38 +11,6 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
   let submissionInProgress = false;
   let extractorInstance = null; // Global singleton instance
 
-  const debugLog = (...args) => {
-    if (typeof DSAUtils !== 'undefined') {
-      DSAUtils.logDebug(PLATFORM, ...args);
-    } else {
-      console.log(`[${PLATFORM}]`, ...args);
-    }
-  };
-
-  // CodeChef specific selectors
-  const SELECTORS = {
-    problemTitle: 'h1, h2, h3, .problems_header_content__title h3, [class*="problems_header_content__title"] h3, .problem-title, [class*="title"], [class*="header"] h1, [class*="header"] h2, [class*="header"] h3',
-    problemDescription: '[class*="problems_problem_content"], .problem-description, [class*="problem_content"], .problem-statement, [class*="description"], [class*="statement"], .content, main',
-    difficulty: '[class*="problems_header_description"] span:first-child, .difficulty-tag, .difficulty, [class*="difficulty"], [class*="level"], span[class*="tag"]',
-    submitButton: '.ui.button.problems_submit_button__6QoNQ, [class*="ui button problems_submit_button"], .submit-button, button[class*="submit"], [class*="submit"], input[type="submit"]',
-    submissionResult: '[class*="problems_content"], .submission-result, .result, [class*="result"], [class*="status"], [class*="verdict"]',
-    languageSelector: 'div.problems_language_dropdown__DgjFb .menu [role="option"].active.selected',
-    codeEditor: '.ace_content, .CodeMirror-code, .monaco-editor, .ace_editor, [class*="editor"], textarea, [class*="code"], .ace_text-input',
-    companyTags: '.problems_tag_container__kWANg:contains("Company Tags") + .content, [class*="company"] [class*="tag"], [class*="tag"][class*="company"]',
-    topicTags: '.problems_tag_container__kWANg:contains("Topic Tags") + .content, [class*="topic"] [class*="tag"], [class*="tag"][class*="topic"]'
-  };
-
-  // Language mappings for CodeChef
-  const GFG_LANGUAGES = {
-    'C': '.c',
-    'C++': '.cpp',
-    'Java': '.java',
-    'Python': '.py',
-    'Python3': '.py',
-    'JavaScript': '.js',
-    'Javascript': '.js',
-    'C#': '.cs'
-  };
 
   class CodeChefExtractor {
     constructor() {
@@ -62,13 +30,13 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
 
     async initialize() {
       try {
-        console.log('[Traverse-CodeChef] Initializing CodeChef extractor...');
+        DSAUtils.logDebug(PLATFORM, 'Initializing CodeChef extractor...');
         // Load persisted state from Chrome storage
         await this.loadPersistedState();
 
         githubAPI = new GitHubAPI();
         await githubAPI.initialize();
-        console.log('[Traverse-CodeChef] GitHubAPI initialized, configured:', githubAPI.isConfigured?.() ?? 'unknown');
+        DSAUtils.logDebug(PLATFORM, 'GitHubAPI initialized, configured:', githubAPI.isConfigured?.() ?? 'unknown');
 
         backendAPI = new BackendAPI();
         await backendAPI.initialize();
@@ -79,16 +47,16 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
         // Detect if we've changed problems - reset counters if so
         const currentUrl = this.getCurrentProblemUrl();
         if (this.currentProblemUrl !== currentUrl) {
-          debugLog(`[CodeChef Run Counter] Problem changed - resetting counters`);
+          DSAUtils.logDebug(PLATFORM, `Problem changed - resetting counters`);
           this.resetCounters();
           this.currentProblemUrl = currentUrl;
           await this.savePersistedState();
         }
 
-        console.log('[Traverse-CodeChef] ✅ CodeChef extractor fully initialized');
+        DSAUtils.logDebug(PLATFORM, '✅ CodeChef extractor fully initialized');
         isInitialized = true;
       } catch (error) {
-        console.error('[Traverse-CodeChef] ❌ Failed to initialize:', error);
+        DSAUtils.logError(PLATFORM, '❌ Failed to initialize:', error);
       }
     }
 
@@ -100,7 +68,7 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
         const problemData = result[`problem_data_${currentUrl}`];
 
         if (problemData) {
-          debugLog(`[CodeChef] Loaded problem data:`, problemData);
+          DSAUtils.logDebug(PLATFORM, `Loaded problem data:`, problemData);
 
           // Extract tracking info from problem data if available
           this.attempts = problemData.attempts || [];
@@ -113,13 +81,13 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
           this.currentProblemUrl = problemData.currentProblemUrl || currentUrl;
           this.topics = problemData.parent_topic || [];
 
-          debugLog(`[CodeChef] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}, ShouldAnalyze: ${this.shouldAnalyzeWithGemini}`);
+          DSAUtils.logDebug(PLATFORM, `Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}, ShouldAnalyze: ${this.shouldAnalyzeWithGemini}`);
         } else {
-          debugLog(`[CodeChef] No problem data found - starting fresh`);
+          DSAUtils.logDebug(PLATFORM, `No problem data found - starting fresh`);
           this.topics = [];
         }
       } catch (error) {
-        debugError('[CodeChef] Error loading problem data:', error);
+        DSAUtils.logError(PLATFORM, 'Error loading problem data:', error);
       }
     }
 
@@ -148,9 +116,9 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
         };
 
         await chrome.storage.local.set({ [`problem_data_${currentUrl}`]: problemData });
-        debugLog(`[CodeChef] Saved problem data for: ${currentUrl}`);
+        DSAUtils.logDebug(PLATFORM, `Saved problem data for: ${currentUrl}`);
       } catch (error) {
-        debugError('[CodeChef] Error saving problem data:', error);
+        DSAUtils.logError(PLATFORM, 'Error saving problem data:', error);
       }
     }
 
@@ -205,10 +173,10 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
         };
 
         await chrome.storage.local.set({ [storageKey]: problemData });
-        debugLog(`[CodeChef] Stored problem data:`, problemData);
+        DSAUtils.logDebug(PLATFORM, `Stored problem data:`, problemData);
         return problemData;
       } catch (error) {
-        debugError('[CodeChef] Error storing problem data:', error);
+        DSAUtils.logError(PLATFORM, 'Error storing problem data:', error);
       }
     }
 
@@ -237,11 +205,11 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
       this.aiAnalysis = null;
       this.aiTags = [];
       this.topics = [];
-      debugLog(`[CodeChef] Counters reset for new problem`);
+      DSAUtils.logDebug(PLATFORM, `Counters reset for new problem`);
 
       // Clean up any stored problem data for this problem
       const currentUrl = this.getCurrentProblemUrl();
-      chrome.storage.local.remove([`problem_data_${currentUrl}`]).catch(debugError);
+      chrome.storage.local.remove([`problem_data_${currentUrl}`]).catch(e => DSAUtils.logError(PLATFORM, e));
     }
 
     setupEventListeners() {
@@ -328,7 +296,7 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
     async handleRunAttempt() {
       try {
         this.runCounter++;
-        debugLog(`[CodeChef Run Counter] Run attempt #${this.runCounter}`);
+        DSAUtils.logDebug(PLATFORM, `Run attempt #${this.runCounter}`);
 
         const code = this.getCurrentCode();
         const language = this.getCurrentLanguage();
@@ -346,7 +314,7 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
           };
 
           this.attempts.push(attempt);
-          debugLog(`[CodeChef Run Counter] Stored run attempt #${this.runCounter}`);
+          DSAUtils.logDebug(PLATFORM, `Stored run attempt #${this.runCounter}`);
 
           // Save state after adding attempt
           await this.savePersistedState();
@@ -355,7 +323,7 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
           await this.observeRunResult(attempt);
 
         } else {
-          debugLog(`[CodeChef Run Counter] Run #${this.runCounter} - Code too short or empty`);
+          DSAUtils.logDebug(PLATFORM, `Run #${this.runCounter} - Code too short or empty`);
         }
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error storing run attempt', error);
@@ -388,7 +356,7 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
               // Guard against multiple increments for the same attempt
               if (attempt.successful !== true) {
                 attempt.successful = true;
-                debugLog(`[CodeChef Run Counter] Run #${attempt.runNumber} - SUCCESS (Expected output matched)`);
+                DSAUtils.logDebug(PLATFORM, `Run #${attempt.runNumber} - SUCCESS (Expected output matched)`);
 
                 // Save state after successful attempt
                 await this.savePersistedState();
@@ -408,8 +376,8 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
               if (attempt.successful !== false) {
                 attempt.successful = false;
                 this.incorrectRunCounter++;
-                debugLog(`[CodeChef Run Counter] Run #${attempt.runNumber} - FAILED (Incorrect output)`);
-                debugLog(`[CodeChef Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
+                DSAUtils.logDebug(PLATFORM, `Run #${attempt.runNumber} - FAILED (Incorrect output)`);
+                DSAUtils.logDebug(PLATFORM, `Total failed runs: ${this.incorrectRunCounter}/3`);
 
                 // Save state after failed attempt
                 await this.savePersistedState();
@@ -447,8 +415,8 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
             // If we can't determine the result, assume it's a failed run for safety
             attempt.successful = false;
             this.incorrectRunCounter++;
-            debugLog(`[CodeChef Run Counter] Run #${attempt.runNumber} - TIMEOUT → Counted as FAILED (safety measure)`);
-            debugLog(`[CodeChef Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
+            DSAUtils.logDebug(PLATFORM, `Run #${attempt.runNumber} - TIMEOUT → Counted as FAILED (safety measure)`);
+            DSAUtils.logDebug(PLATFORM, `Total failed runs: ${this.incorrectRunCounter}/3`);
 
             // Save state after failed attempt
             await this.savePersistedState();
@@ -464,7 +432,7 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
 
     async handleThreeIncorrectRuns() {
       // Just set flag - Gemini analysis will run on successful submit before backend push
-      debugLog(`[CodeChef] 3 failed runs detected - flagging for Gemini analysis on submit`);
+      DSAUtils.logDebug(PLATFORM, `3 failed runs detected - flagging for Gemini analysis on submit`);
       this.hasAnalyzedMistakes = true;
       this.shouldAnalyzeWithGemini = true;
       await this.savePersistedState({
@@ -487,46 +455,46 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
 
           // Direct native click listener
           btn.addEventListener('click', (e) => {
-            console.log('[Traverse-CodeChef] Submit button clicked!');
+            DSAUtils.logDebug(PLATFORM, 'Submit button clicked!');
             this.handleSubmissionAttempt();
           }, true); // Use capture to fire before React
 
-          console.log('[Traverse-CodeChef] Bound click listener to submit button');
+          DSAUtils.logDebug(PLATFORM, 'Bound click listener to submit button');
         }
       }, 1000); // Check more frequently
     }
 
     async handleSubmissionAttempt() {
-      console.log('[Traverse-CodeChef] handleSubmissionAttempt called, submissionInProgress:', submissionInProgress);
+      DSAUtils.logDebug(PLATFORM, 'handleSubmissionAttempt called, submissionInProgress:', submissionInProgress);
       if (submissionInProgress) {
-        console.log('[Traverse-CodeChef] Submission already in progress, skipping');
+        DSAUtils.logDebug(PLATFORM, 'Submission already in progress, skipping');
         return;
       }
 
       submissionInProgress = true;
-      console.log('[Traverse-CodeChef] Submission attempt started');
+      DSAUtils.logDebug(PLATFORM, 'Submission attempt started');
 
       try {
         // Extract problem info before submission
         await this.extractProblemInfo();
-        console.log('[Traverse-CodeChef] Problem info extracted:', this.currentProblem?.title);
+        DSAUtils.logDebug(PLATFORM, 'Problem info extracted:', this.currentProblem?.title);
 
         // Monitor for submission result
         this.monitorSubmissionResult();
       } catch (error) {
-        console.error('[Traverse-CodeChef] Error in handleSubmissionAttempt:', error);
+        DSAUtils.logError(PLATFORM, 'Error in handleSubmissionAttempt:', error);
         submissionInProgress = false;
       }
     }
 
     monitorSubmissionResult() {
-      console.log('[Traverse-CodeChef] Starting submission result monitoring...');
+      DSAUtils.logDebug(PLATFORM, 'Starting submission result monitoring...');
       let checkCount = 0;
 
       const checkInterval = setInterval(() => {
         checkCount++;
         if (checkCount <= 5 || checkCount % 10 === 0) {
-          console.log(`[Traverse-CodeChef] Checking for result... attempt ${checkCount}`);
+          DSAUtils.logDebug(PLATFORM, `Checking for result... attempt ${checkCount}`);
         }
 
         // Try multiple selectors for result
@@ -551,30 +519,33 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
         }
 
         if (resultElement && resultText && resultText.length > 2) {
-          console.log(`[Traverse-CodeChef] Found result text: "${resultText}"`);
+          DSAUtils.logDebug(PLATFORM, `Found result text: "${resultText}"`);
 
-          if (resultText.includes('correct') ||
-            resultText.includes('accepted') ||
-            resultText.includes('success')) {
-            console.log('[Traverse-CodeChef] ✅ Successful submission detected!');
-            clearInterval(checkInterval);
-            submissionInProgress = false;
-            this.handleSuccessfulSubmission();
-          } else if (resultText.includes('compilation error') ||
+          // Check for failure conditions FIRST (before success)
+          if (resultText.includes('partially correct') ||
+            resultText.includes('partial') ||
+            resultText.includes('compilation error') ||
             resultText.includes('wrong answer') ||
             resultText.includes('time limit') ||
             resultText.includes('runtime error') ||
             resultText.includes('failed')) {
-            console.log('[Traverse-CodeChef] ❌ Submission failed');
+            DSAUtils.logDebug(PLATFORM, '❌ Submission failed or partial');
             clearInterval(checkInterval);
             submissionInProgress = false;
+          } else if (resultText.includes('correct') ||
+            resultText.includes('accepted') ||
+            resultText.includes('success')) {
+            DSAUtils.logDebug(PLATFORM, '✅ Successful submission detected!');
+            clearInterval(checkInterval);
+            submissionInProgress = false;
+            this.handleSuccessfulSubmission();
           }
         }
       }, 1500);
 
       // Stop monitoring after 60 seconds
       setTimeout(() => {
-        console.log('[Traverse-CodeChef] Stopping result monitoring after 60 seconds');
+        DSAUtils.logDebug(PLATFORM, 'Stopping result monitoring after 60 seconds');
         clearInterval(checkInterval);
         submissionInProgress = false;
       }, 60000);
@@ -641,7 +612,7 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
     }
 
     getProblemTitle() {
-      console.log('[Traverse-CodeChef] getProblemTitle called, document.title:', document.title);
+      DSAUtils.logDebug(PLATFORM, 'getProblemTitle called, document.title:', document.title);
 
       // Priority 1: document title (most reliable on IDE tab)
       // CodeChef titles look like: "Water Consumption Practice Coding Problem | CodeChef"
@@ -655,7 +626,7 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
           .trim();
 
         if (cleanTitle.length > 2) {
-          console.log('[Traverse-CodeChef] Extracted title from document.title:', cleanTitle);
+          DSAUtils.logDebug(PLATFORM, 'Extracted title from document.title:', cleanTitle);
           return cleanTitle;
         }
       }
@@ -672,7 +643,7 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
         if (element && element.textContent.trim()) {
           const title = element.textContent.trim();
           if (title.length > 3 && !title.toLowerCase().includes('codechef')) {
-            console.log('[Traverse-CodeChef] Found title with selector:', selector, title);
+            DSAUtils.logDebug(PLATFORM, 'Found title with selector:', selector, title);
             return title;
           }
         }
@@ -682,11 +653,11 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
       const pathMatch = window.location.pathname.match(/problems\/([^\/\?]+)/);
       if (pathMatch) {
         const urlTitle = pathMatch[1].replace(/-/g, ' ');
-        console.log('[Traverse-CodeChef] Using URL-based title:', urlTitle);
+        DSAUtils.logDebug(PLATFORM, 'Using URL-based title:', urlTitle);
         return urlTitle;
       }
 
-      console.error('[Traverse-CodeChef] No title found');
+      DSAUtils.logError(PLATFORM, 'No title found');
       return null;
     }
 
@@ -789,11 +760,11 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
 
       if (ratingText) {
         const rating = parseInt(ratingText, 10);
-        console.log('[Traverse-CodeChef] Found difficulty rating:', rating);
+        DSAUtils.logDebug(PLATFORM, 'Found difficulty rating:', rating);
         return this.mapRatingToTier(rating);
       }
 
-      console.log('[Traverse-CodeChef] Could not find difficulty rating');
+      DSAUtils.logDebug(PLATFORM, 'Could not find difficulty rating');
       return null;
     }
 
@@ -955,20 +926,20 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
 
     async handleSuccessfulSubmission() {
       try {
-        console.log('[Traverse-CodeChef] 🎯 SUCCESSFUL SUBMISSION - Starting GitHub push flow');
+        DSAUtils.logDebug(PLATFORM, '🎯 SUCCESSFUL SUBMISSION - Starting GitHub push flow');
 
         // Get the solution code from the editor directly
         const solution = this.getCurrentCode();
-        console.log('[Traverse-CodeChef] Solution code length:', solution ? solution.length : 0);
+        DSAUtils.logDebug(PLATFORM, 'Solution code length:', solution ? solution.length : 0);
 
         if (!this.currentProblem) {
-          console.log('[Traverse-CodeChef] No currentProblem, extracting...');
+          DSAUtils.logDebug(PLATFORM, 'No currentProblem, extracting...');
           await this.extractProblemInfo();
         }
 
         // FALLBACK: If extractProblemInfo still failed, build problem info inline
         if (!this.currentProblem) {
-          console.log('[Traverse-CodeChef] extractProblemInfo failed, using inline fallback...');
+          DSAUtils.logDebug(PLATFORM, 'extractProblemInfo failed, using inline fallback...');
 
           // Extract title from document.title
           let title = document.title
@@ -983,11 +954,11 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
             title = pathMatch ? pathMatch[1].replace(/-/g, ' ') : 'Unknown Problem';
           }
 
-          console.log('[Traverse-CodeChef] Inline title extraction:', title);
+          DSAUtils.logDebug(PLATFORM, 'Inline title extraction:', title);
 
           // Extract difficulty from page
           let difficulty = this.getDifficulty() || 'Unknown';
-          console.log('[Traverse-CodeChef] Inline difficulty extraction:', difficulty);
+          DSAUtils.logDebug(PLATFORM, 'Inline difficulty extraction:', difficulty);
 
           this.currentProblem = {
             title: title,
@@ -1003,15 +974,15 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
           };
         }
 
-        console.log('[Traverse-CodeChef] Problem title:', this.currentProblem?.title);
+        DSAUtils.logDebug(PLATFORM, 'Problem title:', this.currentProblem?.title);
 
         if (!this.currentProblem) {
-          console.error('[Traverse-CodeChef] ❌ Could not extract problem information - aborting');
+          DSAUtils.logError(PLATFORM, '❌ Could not extract problem information - aborting');
           return;
         }
 
         if (!solution) {
-          console.error('[Traverse-CodeChef] ❌ Could not extract solution code - aborting');
+          DSAUtils.logError(PLATFORM, '❌ Could not extract solution code - aborting');
           return;
         }
 
@@ -1047,7 +1018,7 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
 
         // Step 0: Run Gemini analysis if flagged (before backend push)
         if (this.shouldAnalyzeWithGemini) {
-          debugLog(`[CodeChef Submission] Step 0: Running Gemini analysis before backend push...`);
+          DSAUtils.logDebug(PLATFORM, `Step 0: Running Gemini analysis before backend push...`);
           try {
             const geminiAPI = new GeminiAPI();
             const geminiConfigured = await geminiAPI.initialize();
@@ -1055,32 +1026,32 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
             if (geminiConfigured) {
               // Send ALL attempts (not just failed) to Gemini for full context
               const allAttempts = this.attempts.filter(a => a.code && a.code.length > 10);
-              debugLog(`[CodeChef] Sending ${allAttempts.length} code iterations to Gemini`);
+              DSAUtils.logDebug(PLATFORM, `Sending ${allAttempts.length} code iterations to Gemini`);
 
               const geminiResult = await geminiAPI.analyzeMistakes(allAttempts, this.currentProblem);
 
               if (geminiResult.success) {
                 this.aiAnalysis = geminiResult.analysis;
                 this.aiTags = geminiResult.tags || [];
-                debugLog(`[CodeChef] Gemini analysis complete. Tags: ${this.aiTags.join(', ')}`);
+                DSAUtils.logDebug(PLATFORM, `Gemini analysis complete. Tags: ${this.aiTags.join(', ')}`);
               } else {
-                debugLog(`[CodeChef] Gemini analysis failed: ${geminiResult.error}`);
+                DSAUtils.logDebug(PLATFORM, `Gemini analysis failed: ${geminiResult.error}`);
               }
             } else {
-              debugLog(`[CodeChef] Gemini API key not configured - skipping analysis`);
+              DSAUtils.logDebug(PLATFORM, `Gemini API key not configured - skipping analysis`);
             }
           } catch (error) {
-            debugError(`[CodeChef] Gemini analysis error:`, error);
+            DSAUtils.logError(PLATFORM, `Gemini analysis error:`, error);
             // Continue with submission even if Gemini fails
           }
         }
 
         // Store problem data with AI analysis (will be picked up by backend push)
         await this.storeProblemData(this.currentProblem, true, totalTries);
-        debugLog(`[CodeChef Submission] Stored problem as solved with ${totalTries} tries`);
+        DSAUtils.logDebug(PLATFORM, `Stored problem as solved with ${totalTries} tries`);
 
         // Step 1: Push to Backend API
-        debugLog(`[CodeChef Submission] Step 1: Pushing to backend...`);
+        DSAUtils.logDebug(PLATFORM, `Step 1: Pushing to backend...`);
         try {
           // Show immediate feedback that push is starting
           let syncToast = null;
@@ -1089,25 +1060,25 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
           }
 
           if (!backendAPI) {
-            debugLog(`[CodeChef Submission] Initializing BackendAPI...`);
+            DSAUtils.logDebug(PLATFORM, `Initializing BackendAPI...`);
             backendAPI = new BackendAPI();
             await backendAPI.initialize();
           }
 
           const currentUrl = this.getCurrentProblemUrl();
-          debugLog(`[CodeChef Submission] Current problem URL: ${currentUrl}`);
+          DSAUtils.logDebug(PLATFORM, `Current problem URL: ${currentUrl}`);
 
           const backendResult = await backendAPI.pushCurrentProblemData(currentUrl);
 
           if (backendResult.success) {
-            debugLog(`[CodeChef Submission] Backend push successful!`, backendResult.data);
+            DSAUtils.logDebug(PLATFORM, `Backend push successful!`, backendResult.data);
             // Update toast to success
             if (syncToast && window.LeetFeedbackToast) {
               const message = backendResult.data?.message || 'Solution synced to Traverse!';
               window.LeetFeedbackToast.update(syncToast, message, 'success', 5000);
             }
           } else {
-            debugLog(`[CodeChef Submission] Backend push failed: ${backendResult.error}`);
+            DSAUtils.logDebug(PLATFORM, `Backend push failed: ${backendResult.error}`);
             // Update toast to error
             if (syncToast && window.LeetFeedbackToast) {
               window.LeetFeedbackToast.update(syncToast, `Sync failed: ${backendResult.error}`, 'error', 6000);
@@ -1115,7 +1086,7 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
             // Continue with GitHub push even if backend fails
           }
         } catch (error) {
-          debugError(`[CodeChef Submission] Backend push error:`, error);
+          DSAUtils.logError(PLATFORM, `Backend push error:`, error);
           // Update toast to error
           if (syncToast && window.LeetFeedbackToast) {
             window.LeetFeedbackToast.update(syncToast, `Sync error: ${error.message}`, 'error', 6000);
@@ -1129,13 +1100,13 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
 
         if (githubPushEnabled) {
           // Step 2: Push to GitHub
-          console.log('[Traverse-CodeChef] Step 2: Pushing to GitHub...');
+          DSAUtils.logDebug(PLATFORM, 'Step 2: Pushing to GitHub...');
           const result = await githubAPI.pushSolution(this.currentProblem, PLATFORM);
-          console.log('[Traverse-CodeChef] GitHub push result:', result);
+          DSAUtils.logDebug(PLATFORM, 'GitHub push result:', result);
 
           if (result.success) {
-            console.log('[Traverse-CodeChef] ✅ Solution pushed to GitHub successfully!');
-            debugLog(`[CodeChef Submission] Solution pushed to GitHub successfully!`);
+            DSAUtils.logDebug(PLATFORM, '✅ Solution pushed to GitHub successfully!');
+            DSAUtils.logDebug(PLATFORM, `Solution pushed to GitHub successfully!`);
 
             // Reset counters after successful submission
             this.runCounter = 0;
@@ -1158,10 +1129,10 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
             });
           } else {
             DSAUtils.logError(PLATFORM, 'Push failed:', result.error);
-            debugLog(`[CodeChef Submission] Failed to push solution:`, result.error);
+            DSAUtils.logDebug(PLATFORM, `Failed to push solution:`, result.error);
           }
         } else {
-          debugLog(`[CodeChef Submission] GitHub push disabled by user - skipping`);
+          DSAUtils.logDebug(PLATFORM, `GitHub push disabled by user - skipping`);
           // Still reset counters
           this.runCounter = 0;
           this.incorrectRunCounter = 0;
@@ -1262,9 +1233,9 @@ console.log('[Traverse-CodeChef] ==== codechef.js script LOADED ====');
     // Use singleton pattern to maintain state across page changes
     if (!extractorInstance) {
       extractorInstance = new CodeChefExtractor();
-      debugLog(`[CodeChef Run Counter] Created new extractor instance`);
+      DSAUtils.logDebug(PLATFORM, `Created new extractor instance`);
     } else {
-      debugLog(`[CodeChef Run Counter] Reusing existing extractor instance`);
+      DSAUtils.logDebug(PLATFORM, `Reusing existing extractor instance`);
     }
 
     await extractorInstance.initialize();

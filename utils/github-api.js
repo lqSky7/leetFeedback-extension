@@ -144,7 +144,7 @@ class GitHubAPI {
     try {
       // UTF-8 safe encoding with better error handling
       const encodedContent = this.encodeContentSafely(content);
-      
+
       const payload = {
         message: commitMessage,
         content: encodedContent
@@ -194,7 +194,7 @@ class GitHubAPI {
       // Create directory path and always use solution.md
       const dirPath = DSAUtils.createDirectoryPath(platform, problemInfo);
       const filePath = `${dirPath}/solution.md`;
-      
+
       let content, commitMessage, analysisResult;
 
       if (contentType === 'solution') {
@@ -202,11 +202,11 @@ class GitHubAPI {
         content = this.generateSolutionContent(problemInfo, platform);
         commitMessage = `Add solution for ${title}`;
         this._log(`[GitHub API] Creating successful solution`);
-        
+
       } else if (contentType === 'mistake-analysis') {
         // Failed attempts - solution + mistake analysis
         const failedAttempts = problemInfo.attempts || [];
-        
+
         if (failedAttempts.length < 3) {
           return { success: false, error: `Need at least 3 failed attempts for mistake analysis. Found: ${failedAttempts.length}` };
         }
@@ -225,7 +225,7 @@ class GitHubAPI {
 
         // Get the final (latest) solution from attempts
         const finalAttempt = failedAttempts[failedAttempts.length - 1];
-        
+
         // Create combined content: final solution + mistake analysis
         content = this.generateSolutionWithMistakeAnalysis(problemInfo, platform, finalAttempt, analysisResult.analysis, failedAttempts);
         commitMessage = `Add solution with mistake analysis for ${title} (${failedAttempts.length} attempts analyzed)`;
@@ -243,7 +243,7 @@ class GitHubAPI {
       if (result.success) {
         this._log(`[GitHub API] Content pushed successfully: ${filePath}`);
         // Return analysis with result so it can be stored for backend submission
-        return { ...result, analysis: analysisResult.analysis };
+        return { ...result, analysis: analysisResult?.analysis };
       }
 
       return result;
@@ -325,7 +325,7 @@ ${mistakeAnalysis}
 
   getLanguageForMarkdown(language) {
     if (!language) return 'text';
-    
+
     const languageMap = {
       'javascript': 'javascript',
       'python': 'python',
@@ -341,7 +341,7 @@ ${mistakeAnalysis}
       'rust': 'rust',
       'typescript': 'typescript'
     };
-    
+
     return languageMap[language.toLowerCase()] || 'text';
   }
 

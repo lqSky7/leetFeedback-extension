@@ -1,62 +1,64 @@
-# Changelog / Changes in this repo
+# Changes — CodeChef Integration Fix
 
-Summary of notable changes from the upstream [leetFeedback-extension](https://github.com/lqSky7/leetFeedback-extension) / Traverse ecosystem.
+## Bug Fixes
 
----
+### Critical: CodeChef Script Syntax Error
+- Fixed a `SyntaxError` in `getProblemTitle()` where the `selectors` array was empty and missing its closing bracket, preventing the entire `codechef.js` script from loading.
 
-## CodeChef support
+### Critical: Title Extraction Failing
+- `getProblemTitle()` was filtering out all CodeChef page titles because `document.title` contains "CodeChef" (e.g. "Water Consumption Practice Coding Problem | CodeChef").
+- Fixed to properly strip the " | CodeChef" and "Practice Coding Problem" suffixes instead of rejecting the title entirely.
+- Added URL path fallback (`/problems/WATERCONS` → "WATERCONS") as a last resort.
 
-- **New content script:** `content-scripts/codechef.js`
-  - Full CodeChef integration: run/submit tracking, problem extraction, persistence (`problem_data_<url>`), optional AI (G4F/Gemini) on failed runs, backend push, optional GitHub push.
-  - CodeChef-specific selectors, title parsing (e.g. strip ` | CodeChef`), difficulty mapping, solution extraction.
-- **Manifest:** Host permission `https://*.codechef.com/*` and content script entry for `*.codechef.com` with the same utils stack + `codechef.js`.
-- **Utils:** `utils/common.js` — `DSA_PLATFORMS.CODECHEF` and `getPlatformFromUrl()` handling for `codechef.com`.
-- **Sidepanel:** CodeChef icon/link in the platform icons section.
+### Inline Problem Info Fallback
+- Added an inline fallback in `handleSuccessfulSubmission()` that constructs `this.currentProblem` directly from `document.title` and page data when `extractProblemInfo()` fails, ensuring the GitHub push always has data to work with.
 
----
+### Partially Correct Answer Sync
+- Fixed a bug where "Partially Correct Answer" was being synced to GitHub because it contains the word "correct", matching the success condition.
+- Failure conditions (including `partially correct`, `partial`) are now checked before success conditions.
 
-## Understand folder (documentation)
+### `analysisResult` Crash
+- Fixed `Cannot read properties of undefined (reading 'analysis')` in `github-api.js` by using optional chaining (`analysisResult?.analysis`).
 
-- **New folder:** `Understand/`
-  - **ARCHITECTURE.md** — Manifest, script load order, background/sidepanel/content roles, storage, diagram.
-  - **WORKFLOWS.md** — Page load, run, submit, sidepanel flows; message flows (content ↔ background, Monaco bridge).
-  - **LEETCODE.md** — How `leetcode.js` works (entry, LeetCodeExtractor, bridge, persistence, success path).
-  - **CONTENT-SCRIPTS-AND-UTILS.md** — Platform scripts and shared utils.
-  - **README.md** — Index of the above.
+### `submissionInProgress` Deadlock
+- Added `try...catch` in `handleSubmissionAttempt()` to ensure `submissionInProgress` is always reset to `false`, preventing subsequent submissions from being silently blocked.
 
----
+### Undefined `debugError`
+- `debugError` was referenced in error paths but never defined, causing silent crashes in error handlers.
 
-## G4F as default AI for mistake analysis
+## New Features
 
-- Mistake analysis uses **G4F** (no API key) by default; **Gemini** is optional when an API key is set.
-- **`utils/gemini-api.js`:**
-  - `analyzeWithG4F()` — `https://g4f.space/api/pollinations/v1/chat/completions`, model `openai-large`.
-  - `analyzeWithGemini()` — unchanged when user chooses Gemini.
-  - `initialize()` reads `ai_provider` (default `"g4f"`) and `gemini_api_key`.
-- **Manifest:** Host permission `https://g4f.space/*`.
-- **Sidepanel:** "Mistake Analysis (AI)" — Provider dropdown (G4F (free) / Gemini (API key)); Gemini key field shown only when Gemini is selected. Storage: `ai_provider`, `gemini_api_key`.
-- **Test:** `tests/g4f-api-test.mjs` — Verifies G4F endpoint (run: `node tests/g4f-api-test.mjs`).
+### CodeChef Difficulty Tier Mapping
+- CodeChef numeric difficulty ratings are now mapped to named tiers for the GitHub folder structure:
 
----
+| Rating     | Tier       | Description                          |
+|------------|------------|--------------------------------------|
+| 0 – 500    | Basic      | Syntax, I/O, simple logic            |
+| 500 – 1000 | Easy       | Arrays, loops, basic math            |
+| 1000 – 1400| Medium     | Standard Division 4 problems         |
+| 1400 – 2000| Hard       | Competitive programming              |
+| 2000+      | Advanced   | Expert-level CP                      |
 
-## GitHub config: repo URL bar + username/repo fields
+- Folder structure now matches LeetCode: `codechef/{tier}/{problem-name}/solution.md`
 
-- **Single "Repository URL" bar** — User can paste e.g. `https://github.com/username/repo` or `https://github.com/username/repo.git`.
-- **Parsing:** `parseGitHubRepoUrl()` in the sidepanel extracts **owner** and **repo** and fills the Username (Owner) and Repository fields.
-- **Username (Owner) and Repository fields kept** — Shown under the URL bar; auto-filled when a valid GitHub repo URL is pasted; user can still edit them; saved as `github_owner` and `github_repo` in sync storage.
-- **Files:** `sidepanel/sidepanel.html`, `sidepanel/sidepanel.js`.
+### Improved Difficulty Extraction
+- `getDifficulty()` now uses multiple DOM selectors and a full-page text fallback to reliably find the `Difficulty: NNN` rating on both Statement and IDE tabs.
 
----
+## Code Cleanup
 
-## Quick reference
+### Removed Dead Code
+- **`SELECTORS`** constant — defined but never used anywhere.
+- **`GFG_LANGUAGES`** constant — copy-pasted from GeeksforGeeks, never referenced.
+- **`debugLog` function** — redundant wrapper around `DSAUtils.logDebug`.
+- **`debugError`** — referenced but never defined (replaced with `DSAUtils.logError`).
 
-| Area           | Change                                                                 |
-|----------------|------------------------------------------------------------------------|
-| **CodeChef**   | New `codechef.js`, manifest + host, `DSA_PLATFORMS.CODECHEF`, sidepanel icon. |
-| **Docs**       | New `Understand/` (architecture, workflows, leetcode, content-scripts & utils). |
-| **AI**         | Default G4F; optional Gemini; sidepanel provider dropdown; `g4f.space` permission; G4F test. |
-| **GitHub config** | Repo URL bar; parse URL → fill Owner + Repository; both fields kept.   |
+### Standardized Logging
+- All `console.log` / `console.error` calls replaced with `DSAUtils.logDebug(PLATFORM, ...)` / `DSAUtils.logError(PLATFORM, ...)`.
+- All `debugLog()` / `debugError()` calls replaced with direct `DSAUtils` calls.
 
----
+### Removed Documentation
+- Deleted `Understand/` directory (5 markdown files not meant for commit).
 
-For the Android app that uses this extension, see [traverse-android](https://github.com/iamawanishmaurya/traverse-android) and the [usage guide](https://leet-feedback.vercel.app/guide).
+## Files Modified
+- `content-scripts/codechef.js` — All fixes and cleanup above
+- `utils/github-api.js` — `analysisResult?.analysis` fix
