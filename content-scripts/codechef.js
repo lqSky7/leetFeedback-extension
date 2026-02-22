@@ -472,6 +472,7 @@
       }
 
       submissionInProgress = true;
+      this.submitCounter = (this.submitCounter || 0) + 1;
       DSAUtils.logDebug(PLATFORM, 'Submission attempt started');
 
       try {
@@ -479,15 +480,32 @@
         await this.extractProblemInfo();
         DSAUtils.logDebug(PLATFORM, 'Problem info extracted:', this.currentProblem?.title);
 
+        // Capture code IMMEDIATELY before knowing the result (like LeetCode)
+        const code = this.getCurrentCode();
+        const language = this.getCurrentLanguage();
+
+        const attempt = {
+          code,
+          language,
+          timestamp: new Date().toISOString(),
+          type: 'submit',
+          submissionNumber: this.submitCounter,
+          successful: null
+        };
+
+        this.attempts.push(attempt);
+        DSAUtils.logDebug(PLATFORM, `Recorded submission attempt #${this.submitCounter}`);
+        await this.savePersistedState();
+
         // Monitor for submission result
-        this.monitorSubmissionResult();
+        this.monitorSubmissionResult(attempt);
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error in handleSubmissionAttempt:', error);
         submissionInProgress = false;
       }
     }
 
-    monitorSubmissionResult() {
+    monitorSubmissionResult(attempt) {
       DSAUtils.logDebug(PLATFORM, 'Starting submission result monitoring...');
       let checkCount = 0;
 
@@ -530,6 +548,15 @@
             resultText.includes('runtime error') ||
             resultText.includes('failed')) {
             DSAUtils.logDebug(PLATFORM, '❌ Submission failed or partial');
+            attempt.successful = false;
+            this.incorrectRunCounter++;
+            this.savePersistedState();
+            DSAUtils.logDebug(PLATFORM, `Failed submission #${this.attempts.length}, total failures: ${this.incorrectRunCounter}/3`);
+
+            if (this.incorrectRunCounter >= 3 && !this.hasAnalyzedMistakes) {
+              this.handleThreeIncorrectRuns();
+            }
+
             clearInterval(checkInterval);
             submissionInProgress = false;
           } else if (resultText.includes('correct') ||

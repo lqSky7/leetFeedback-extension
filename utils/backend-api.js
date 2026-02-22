@@ -260,7 +260,7 @@ class BackendAPI {
         // Validation matches problem-timer.js getElapsedActiveTime()
         // Ensure elapsed time is always positive and reasonable
         if (activeTime < 0) {
-          console.warn('[Backend API] Negative active time detected, resetting to 0. Active time:', activeTime, 'ms');
+          this._warn('[Backend API] Negative active time detected, resetting to 0. Active time:', activeTime, 'ms');
           timeTaken = 0;
         } else {
           // Cap at 24 hours (86400 seconds) to prevent overflow issues
@@ -268,7 +268,7 @@ class BackendAPI {
           const rawTimeTaken = Math.floor(activeTime / 1000); // Convert ms to seconds
 
           if (rawTimeTaken > MAX_TIME_SECONDS) {
-            console.warn('[Backend API] Time taken exceeds 24 hours, capping. Raw value:', rawTimeTaken);
+            this._warn('[Backend API] Time taken exceeds 24 hours, capping. Raw value:', rawTimeTaken);
             timeTaken = MAX_TIME_SECONDS;
           } else {
             timeTaken = rawTimeTaken;
@@ -296,13 +296,13 @@ class BackendAPI {
         category: mapTopicToCategory(parent_topic) // Map topic to category ID for ML model
       };
 
-      console.log('[Backend API] Formatted submission data:', formattedData);
-      console.log('[Backend API] Topics:', parent_topic, '-> Category:', formattedData.category);
+      this._log('[Backend API] Formatted submission data:', formattedData);
+      this._log('[Backend API] Topics:', parent_topic, '-> Category:', formattedData.category);
 
       return formattedData;
 
     } catch (error) {
-      console.error('[Backend API] Error formatting submission data:', error);
+      this._error('[Backend API] Error formatting submission data:', error);
       throw new Error('Failed to format submission data for backend');
     }
   }
@@ -323,7 +323,7 @@ class BackendAPI {
         throw new Error(`No problem data found for: ${currentProblemUrl}`);
       }
 
-      console.log('[Backend API] Retrieved stored problem data:', storedData);
+      this._log('[Backend API] Retrieved stored problem data:', storedData);
 
       // Format data for backend API
       const formattedData = this.formatProblemDataForBackend(storedData);
@@ -334,10 +334,10 @@ class BackendAPI {
     } catch (error) {
       const errorMsg = error.message || String(error);
       if (errorMsg.includes('Extension context invalidated')) {
-        console.warn('[Backend API] Extension was updated. Please refresh the page to submit again.');
+        this._warn('[Backend API] Extension was updated. Please refresh the page to submit again.');
         return { success: false, error: 'Extension was updated. Please refresh the page.' };
       }
-      console.error('[Backend API] Error pushing submission:', error);
+      this._error('[Backend API] Error pushing submission:', error);
       return { success: false, error: error.message };
     }
   }
@@ -345,4 +345,4 @@ class BackendAPI {
 
 // Make BackendAPI available globally
 window.BackendAPI = BackendAPI;
-console.log(`[Backend API] BackendAPI class loaded and made available globally`);
+// BackendAPI class loaded and made available globally

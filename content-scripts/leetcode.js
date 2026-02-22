@@ -1012,13 +1012,13 @@
         debugLog(`[LeetCode Submission] Step 1: Pushing to backend...`);
         debugLog(`[LeetCode Debug] BackendAPI available:`, typeof BackendAPI !== 'undefined');
         debugLog(`[LeetCode Debug] backendAPI instance:`, backendAPI);
-        
+
         // Show immediate feedback that push is starting
         let syncToast = null;
         if (window.LeetFeedbackToast) {
           syncToast = window.LeetFeedbackToast.info('Analyzing solution...', 0); // 0 = no auto-dismiss
         }
-        
+
         try {
           if (!backendAPI) {
             debugLog(`[LeetCode Submission] Initializing BackendAPI...`);

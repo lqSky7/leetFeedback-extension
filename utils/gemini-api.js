@@ -118,10 +118,8 @@ class GeminiAPI {
     }
 
     _logError(label, text) {
-        if (typeof debugError === "function") {
-            debugError(label, text);
-        } else if (typeof window !== "undefined" && typeof window.isDebugMode === "function" && window.isDebugMode()) {
-            console.error(label, text);
+        if (typeof DSAUtils !== "undefined") {
+            DSAUtils.logError("AI", label, text);
         }
     }
 
