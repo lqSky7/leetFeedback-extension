@@ -10,6 +10,23 @@ class ProblemTimer {
     }
     window._problemTimerInstance = this;
 
+    // Debug-aware logging
+    this._log = (...args) => {
+      if (typeof DSAUtils !== 'undefined' && DSAUtils.getDebugMode && DSAUtils.getDebugMode()) {
+        console.log(...args);
+      }
+    };
+    this._error = (...args) => {
+      if (typeof DSAUtils !== 'undefined' && DSAUtils.getDebugMode && DSAUtils.getDebugMode()) {
+        console.error(...args);
+      }
+    };
+    this._warn = (...args) => {
+      if (typeof DSAUtils !== 'undefined' && DSAUtils.getDebugMode && DSAUtils.getDebugMode()) {
+        console.warn(...args);
+      }
+    };
+
     // Timer state
     this.problemUrl = null;
     this.startTime = null;
@@ -62,7 +79,7 @@ class ProblemTimer {
         this.currentY = positionResult.timer_overlay_position.y;
       }
     } catch (error) {
-      console.error("[ProblemTimer] Error checking settings:", error);
+      this._error("[ProblemTimer] Error checking settings:", error);
     }
 
     // Setup visibility tracking
@@ -87,7 +104,7 @@ class ProblemTimer {
       }
     });
 
-    console.log("[ProblemTimer] Initialized");
+    this._log("[ProblemTimer] Initialized");
   }
 
   // Start tracking time for a problem
@@ -96,13 +113,13 @@ class ProblemTimer {
     await this._initPromise;
 
     if (!problemUrl) {
-      console.warn("[ProblemTimer] No problem URL provided");
+      this._warn("[ProblemTimer] No problem URL provided");
       return;
     }
 
     // If same problem, just update overlay
     if (this.problemUrl === problemUrl && this.startTime) {
-      console.log("[ProblemTimer] Same problem, continuing timer");
+      this._log("[ProblemTimer] Same problem, continuing timer");
       if (this.isEnabled) this.showOverlay();
       return;
     }
@@ -116,7 +133,7 @@ class ProblemTimer {
     if (!this.startTime) {
       this.startTime = Date.now();
       this.pausedTime = 0;
-      console.log("[ProblemTimer] Started fresh timer for:", problemUrl);
+      this._log("[ProblemTimer] Started fresh timer for:", problemUrl);
     } else {
       console.log(
         "[ProblemTimer] Resumed timer for:",
@@ -144,7 +161,7 @@ class ProblemTimer {
     this.tabHiddenAt = null;
     this.isPaused = false;
     this.pausedAt = null;
-    console.log("[ProblemTimer] Timer reset");
+    this._log("[ProblemTimer] Timer reset");
   }
 
   // Setup visibility change tracking
@@ -154,7 +171,7 @@ class ProblemTimer {
         // Tab is now hidden - record when we started being hidden
         this.isTabHidden = true;
         this.tabHiddenAt = Date.now();
-        console.log("[ProblemTimer] Tab hidden, pausing timer");
+        this._log("[ProblemTimer] Tab hidden, pausing timer");
       } else {
         // Tab is now visible - add the hidden duration to pausedTime (unless paused)
         this.isTabHidden = false;
@@ -220,7 +237,7 @@ class ProblemTimer {
     // Update display immediately
     this.updateDisplay();
 
-    console.log("[ProblemTimer] Timer reset for current problem");
+    this._log("[ProblemTimer] Timer reset for current problem");
   }
 
   // Pause the timer (does not change startTime, accumulates pausedAt until resumed)
@@ -333,7 +350,7 @@ class ProblemTimer {
         this.currentY,
       );
     } catch (error) {
-      console.error("[ProblemTimer] Error loading from storage:", error);
+      this._error("[ProblemTimer] Error loading from storage:", error);
     }
   }
 
@@ -364,7 +381,7 @@ class ProblemTimer {
 
         await chrome.storage.local.set({ [storageKey]: problemData });
       } catch (error) {
-        console.error("[ProblemTimer] Error saving to storage:", error);
+        this._error("[ProblemTimer] Error saving to storage:", error);
       }
     });
 
@@ -379,7 +396,7 @@ class ProblemTimer {
         timer_overlay_position: { x: this.currentX, y: this.currentY },
       });
     } catch (error) {
-      console.error("[ProblemTimer] Error saving overlay position:", error);
+      this._error("[ProblemTimer] Error saving overlay position:", error);
     }
   }
 
@@ -426,7 +443,7 @@ class ProblemTimer {
       position: fixed;
       top: ${this.currentY}px;
       left: ${this.currentX}px;
-      z-index: 999998;
+      z-index: 2147483647;
       background: rgba(0, 0, 0, 0.85);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 12px;
@@ -721,4 +738,4 @@ window.ProblemTimer = ProblemTimer;
 // Auto-initialize
 const problemTimer = ProblemTimer.getInstance();
 
-console.log("[ProblemTimer] Problem timer utility loaded");
+// ProblemTimer utility loaded

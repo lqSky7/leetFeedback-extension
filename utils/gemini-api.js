@@ -1,98 +1,135 @@
-// Gemini API utility for mistake analysis
+// AI analysis for mistake analysis: default G4F (free), optional Gemini when API key is set
+
+const G4F_BASE_URL = "https://g4f.space/api/pollinations";
+const G4F_CHAT_URL = `${G4F_BASE_URL}/v1/chat/completions`;
+const G4F_DEFAULT_MODEL = "openai-large";
 
 class GeminiAPI {
     constructor() {
-        this.baseURL =
+        this.geminiBaseURL =
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
         this.apiKey = null;
+        this.aiProvider = "g4f"; // "g4f" | "gemini"
     }
 
     async initialize() {
         return new Promise((resolve) => {
-            chrome.storage.sync.get(["gemini_api_key"], (data) => {
-                this.apiKey = data.gemini_api_key || null;
-                resolve(!!this.apiKey);
+            chrome.storage.sync.get(["gemini_api_key", "ai_provider"], (data) => {
+                this.apiKey = (data.gemini_api_key || "").trim() || null;
+                this.aiProvider = (data.ai_provider || "g4f").toLowerCase();
+                if (this.aiProvider !== "gemini" && this.aiProvider !== "g4f") {
+                    this.aiProvider = "g4f";
+                }
+                // Configured if: using G4F (no key needed) or using Gemini with key
+                const configured = this.aiProvider === "g4f" || !!this.apiKey;
+                resolve(configured);
             });
         });
     }
 
     async analyzeMistakes(attempts, problemInfo) {
-        if (!this.apiKey) {
-            const initialized = await this.initialize();
-            if (!initialized) {
-                return {
-                    success: false,
-                    error: "Gemini API key not configured",
-                };
-            }
+        const initialized = await this.initialize();
+        if (!initialized) {
+            return {
+                success: false,
+                error: "AI not configured: use G4F (default) or set Gemini API key and choose Gemini.",
+            };
         }
 
         if (!attempts || attempts.length === 0) {
             return { success: false, error: "No attempts to analyze" };
         }
 
-        try {
-            const prompt = this.buildAnalysisPrompt(attempts, problemInfo);
+        const prompt = this.buildAnalysisPrompt(attempts, problemInfo);
 
-            const response = await fetch(`${this.baseURL}?key=${this.apiKey}`, {
+        if (this.aiProvider === "gemini" && this.apiKey) {
+            return this.analyzeWithGemini(prompt);
+        }
+        return this.analyzeWithG4F(prompt);
+    }
+
+    async analyzeWithG4F(prompt) {
+        try {
+            const response = await fetch(G4F_CHAT_URL, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    contents: [
-                        {
-                            parts: [
-                                {
-                                    text: prompt,
-                                },
-                            ],
-                        },
+                    model: G4F_DEFAULT_MODEL,
+                    temperature: 0.3,
+                    messages: [
+                        { role: "system", content: "You are a coding mentor. Reply with TAGS: then a brief analysis." },
+                        { role: "user", content: prompt },
                     ],
                 }),
             });
 
             if (!response.ok) {
                 const errorText = await response.text();
-                // Use debug-aware error logging
-                if (typeof debugError === 'function') {
-                    debugError(`[Gemini API] Error ${response.status}:`, errorText);
-                } else if (typeof window !== 'undefined' && typeof window.isDebugMode === 'function' && window.isDebugMode()) {
-                    console.error(`[Gemini API] Error ${response.status}:`, errorText);
-                }
-                throw new Error(
-                    `Gemini API responded with ${response.status}: ${errorText}`,
-                );
+                this._logError("[G4F] Error " + response.status, errorText);
+                throw new Error(`G4F responded with ${response.status}: ${errorText.slice(0, 200)}`);
             }
 
             const data = await response.json();
+            const rawAnalysis =
+                data.choices?.[0]?.message?.content ||
+                data.choices?.[0]?.text ||
+                "";
 
-            if (
-                data.candidates &&
-                data.candidates[0] &&
-                data.candidates[0].content
-            ) {
-                const rawAnalysis = data.candidates[0].content.parts[0].text;
-                const parsed = this.parseAnalysisResponse(rawAnalysis);
-                return { success: true, analysis: parsed.summary, tags: parsed.tags };
-            } else {
-                throw new Error("Invalid response format from Gemini API");
+            if (!rawAnalysis.trim()) {
+                throw new Error("Empty response from G4F");
             }
+
+            const parsed = this.parseAnalysisResponse(rawAnalysis);
+            return { success: true, analysis: parsed.summary, tags: parsed.tags };
         } catch (error) {
             return { success: false, error: error.message };
         }
     }
 
-    // Parse the Gemini response to extract tags and summary
+    async analyzeWithGemini(prompt) {
+        if (!this.apiKey) {
+            return { success: false, error: "Gemini API key not configured" };
+        }
+        try {
+            const response = await fetch(`${this.geminiBaseURL}?key=${this.apiKey}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                this._logError("[Gemini API] Error " + response.status, errorText);
+                throw new Error(`Gemini API responded with ${response.status}: ${errorText.slice(0, 200)}`);
+            }
+
+            const data = await response.json();
+            if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                const rawAnalysis = data.candidates[0].content.parts[0].text;
+                const parsed = this.parseAnalysisResponse(rawAnalysis);
+                return { success: true, analysis: parsed.summary, tags: parsed.tags };
+            }
+            throw new Error("Invalid response format from Gemini API");
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    _logError(label, text) {
+        if (typeof DSAUtils !== "undefined") {
+            DSAUtils.logError("AI", label, text);
+        }
+    }
+
     parseAnalysisResponse(rawAnalysis) {
-        // Extract "TAGS: tag1, tag2, tag3" line from response
         const tagsMatch = rawAnalysis.match(/^TAGS:\s*(.+)$/m);
         const tags = tagsMatch
-            ? tagsMatch[1].split(',').map(t => t.trim()).filter(t => t.length > 0)
+            ? tagsMatch[1].split(",").map((t) => t.trim()).filter((t) => t.length > 0)
             : [];
 
-        // Remove the TAGS line from summary for cleaner storage
-        const summary = rawAnalysis.replace(/^TAGS:\s*.+$/m, '').trim();
+        const summary = rawAnalysis.replace(/^TAGS:\s*.+$/m, "").trim();
 
         return { tags, summary };
     }
@@ -147,5 +184,4 @@ Keep under 100 words total. Focus only on technical programming concepts.`;
     }
 }
 
-// Make GeminiAPI available globally
 window.GeminiAPI = GeminiAPI;
