@@ -1,4 +1,4 @@
-{   
+{
     "manifest_version": 3,
     "name": "Traverse",
     "version": "1.5.2",
@@ -12,7 +12,8 @@
         "storage",
         "scripting",
         "activeTab",
-        "tabs"
+        "tabs",
+        "sidePanel"
     ],
     "host_permissions": [
         "https://*.leetcode.com/*",
@@ -29,8 +30,7 @@
         "https://g4f.space/*"
     ],
     "background": {
-        "service_worker": "background.js",
-        "scripts": ["background.js"]
+        "service_worker": "background.js"
     },
     "content_scripts": [
         {
@@ -97,12 +97,14 @@
     ],
     "action": {
         "default_title": "Open LeetFeedback",
-        "default_popup": "sidepanel/sidepanel.html",
         "default_icon": {
             "16": "icons/16.png",
             "48": "icons/48.png",
             "128": "icons/128.png"
         }
+    },
+    "side_panel": {
+        "default_path": "sidepanel/sidepanel.html"
     },
     "web_accessible_resources": [
         {
@@ -114,11 +116,5 @@
                 "<all_urls>"
             ]
         }
-    ],
-        "browser_specific_settings": {
-        "gecko": {
-        "id": "traverse@fire.com",
-        "strict_min_version": "113.0"
-        }
-    }
+    ]
 }

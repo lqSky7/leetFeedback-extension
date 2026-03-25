@@ -1,10 +1,9 @@
-// Fixed background script
-
-// cross-browser polyfill for chrome and firefox both
+// Cross-browser polyfill: makes chrome.* work in Firefox and keeps Chrome happy
 if (typeof chrome === "undefined" && typeof browser !== "undefined") {
 globalThis.chrome = browser;
 }
 
+// Fixed background script
 
 // Global debug mode cache for background script
 let _bgDebugMode = false;
@@ -43,9 +42,11 @@ function bgWarn(...args) {
 bgLog("Background script starting...");
 
 // Allow users to open the side panel by clicking on the action toolbar icon
+if (chrome.sidePanel && typeof chrome.sidePanel.setPanelBehavior === 'function') {
 chrome.sidePanel
-  .setPanelBehavior({ openPanelOnActionClick: true })
-  .catch((error) => bgError(error));
+.setPanelBehavior({ openPanelOnActionClick: true })
+.catch((error) => bgError(error));
+}
 
 chrome.runtime.onInstalled.addListener(() => {
   bgLog("DSA to GitHub Extension installed.");
