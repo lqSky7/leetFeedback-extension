@@ -119,6 +119,10 @@ async function testLoginStoresActiveAccount() {
   assert.strictEqual(Array.isArray(stored.auth_accounts), true);
   assert.strictEqual(stored.auth_accounts.length, 1);
   assert.strictEqual(stored.auth_accounts[0].user.username, 'admin');
+  assert.strictEqual(
+    Number.isFinite(stored.auth_accounts[0].timestamp),
+    true,
+  );
   assert.strictEqual(stored.auth_user.username, 'admin');
   assert.strictEqual(stored.auth_token, 'admin-token');
   assert.strictEqual(

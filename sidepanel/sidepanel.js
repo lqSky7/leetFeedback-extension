@@ -701,7 +701,7 @@ class PopupController {
           </div>
           <div class="profile-right">
             <button class="btn" id="add-account-btn">Add Account</button>
-            <button class="btn" id="sign-out-btn">Sign Out Current Account</button>
+            <button class="btn" id="sign-out-btn">Sign Out</button>
           </div>
         </div>
         <div class="account-controls">

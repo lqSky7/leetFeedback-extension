@@ -148,17 +148,8 @@ class ExtensionAuth {
   buildAccountId(user, token = null) {
     const provider = user?.provider || 'backend';
     const username = user?.username || user?.email || user?.name || 'user';
-    const tokenFingerprint = token ? this.hashValue(token) : 'no-token';
-    return `${provider}:${username}:${tokenFingerprint}`;
-  }
-
-  hashValue(value) {
-    if (!value) return 'empty';
-    let hash = 0;
-    for (let i = 0; i < value.length; i += 1) {
-      hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
-    }
-    return hash.toString(16);
+    const stableIdentity = user?.id || user?.sub || username;
+    return `${provider}:${stableIdentity}`;
   }
 
   getActiveAccountEntry() {
@@ -476,7 +467,7 @@ class ExtensionAuth {
 
   async switchAccount(accountId) {
     if (!accountId) {
-      throw new Error('Account ID is required.');
+      throw new Error('Cannot switch accounts: no account ID provided.');
     }
 
     const targetAccount = this.accounts.find((account) => account.id === accountId);
