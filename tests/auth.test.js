@@ -97,6 +97,25 @@ async function testPickers() {
   assert.strictEqual(ExtensionAuth.pickUser(null, fallback), fallback);
 }
 
+async function testNormalizeAccountsGuards() {
+  const auth = new ExtensionAuth({ fetch: createMockFetch() });
+
+  assert.deepStrictEqual(auth.normalizeAccounts(null), []);
+  assert.deepStrictEqual(auth.normalizeAccounts({}), []);
+
+  const normalized = auth.normalizeAccounts([
+    null,
+    {},
+    { id: 'missing-user', token: 'abc' },
+    { id: 'missing-token', user: { username: 'x' } },
+    { user: { username: 'ok' }, token: 'ok-token' },
+  ]);
+
+  assert.strictEqual(normalized.length, 1);
+  assert.strictEqual(normalized[0].user.username, 'ok');
+  assert.strictEqual(normalized[0].token, 'ok-token');
+}
+
 async function testLoginStoresActiveAccount() {
   resetStorage();
   const auth = new ExtensionAuth({ fetch: createMockFetch() });
@@ -196,6 +215,7 @@ async function testSignOutRemovesOnlyActiveAccount() {
 (async () => {
   try {
     await testPickers();
+    await testNormalizeAccountsGuards();
     await testLoginStoresActiveAccount();
     await testSwitchingBetweenMultipleAccounts();
     await testSignOutRemovesOnlyActiveAccount();

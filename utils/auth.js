@@ -148,11 +148,22 @@ class ExtensionAuth {
   buildAccountId(user) {
     const provider = user?.provider || 'backend';
     const username = user?.username || user?.email || user?.name;
+    let objectFingerprint = 'anonymous';
+    if (user && typeof user === 'object') {
+      const entries = Object.entries(user)
+        .filter(([key, value]) => key !== 'token' && value !== undefined && value !== null)
+        .sort(([left], [right]) => left.localeCompare(right));
+      if (entries.length > 0) {
+        objectFingerprint = entries
+          .map(([key, value]) => `${key}:${String(value)}`)
+          .join('|');
+      }
+    }
     const stableIdentity =
       user?.id ||
       user?.sub ||
       username ||
-      `anonymous-${Date.now()}`;
+      objectFingerprint;
     return `${provider}:${stableIdentity}`;
   }
 
@@ -471,7 +482,7 @@ class ExtensionAuth {
 
   async switchAccount(accountId) {
     if (!accountId) {
-      throw new Error('Cannot switch accounts: no account ID provided.');
+      throw new Error('Account ID is required to switch accounts. Please provide a valid account ID.');
     }
 
     const targetAccount = this.accounts.find((account) => account.id === accountId);
@@ -486,7 +497,11 @@ class ExtensionAuth {
 
     return {
       id: targetAccount.id,
-      user: targetAccount.user,
+      user: {
+        username: targetAccount.user?.username || null,
+        email: targetAccount.user?.email || null,
+        displayName: targetAccount.user?.displayName || null,
+      },
     };
   }
 

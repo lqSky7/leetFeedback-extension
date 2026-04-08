@@ -26,7 +26,7 @@ function spError(...args) {
   }
 }
 
-const LEGACY_ACCOUNT_ID = "legacy-account";
+const LEGACY_ACCOUNT_ID = "internal://legacy-account";
 
 class PopupController {
   constructor() {
@@ -287,7 +287,7 @@ class PopupController {
     const accountId = event?.target?.value;
     if (!accountId) return;
     if (typeof extensionAuth === "undefined") {
-      this.showMessage("Account switching is unavailable right now.", "error");
+      this.showMessage("Account switching is not available - authentication service not loaded.", "error");
       return;
     }
 
