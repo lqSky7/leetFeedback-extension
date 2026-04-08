@@ -2157,6 +2157,13 @@ body {
   display: block;
 }
 
+.account-form-title {
+  margin: 0 0 10px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
 /* Compact auth login form */
 .auth-login-compact {
   padding: 16px;

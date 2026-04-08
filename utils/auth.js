@@ -90,7 +90,7 @@ class ExtensionAuth {
 
       const hasSession = Boolean(data.auth_user && data.auth_token);
       if (hasSession) {
-        const accountId = this.buildAccountId(data.auth_user, data.auth_token);
+        const accountId = this.buildAccountId(data.auth_user);
         this.accounts = [
           {
             id: accountId,
@@ -131,7 +131,7 @@ class ExtensionAuth {
         if (!account || typeof account !== 'object') return null;
         const user = account.user || null;
         const token = account.token || null;
-        const id = account.id || this.buildAccountId(user, token);
+        const id = account.id || this.buildAccountId(user);
 
         if (!user || !token || !id) return null;
 
@@ -145,10 +145,14 @@ class ExtensionAuth {
       .filter(Boolean);
   }
 
-  buildAccountId(user, token = null) {
+  buildAccountId(user) {
     const provider = user?.provider || 'backend';
-    const username = user?.username || user?.email || user?.name || 'user';
-    const stableIdentity = user?.id || user?.sub || username;
+    const username = user?.username || user?.email || user?.name;
+    const stableIdentity =
+      user?.id ||
+      user?.sub ||
+      username ||
+      `anonymous-${Date.now()}`;
     return `${provider}:${stableIdentity}`;
   }
 
@@ -285,7 +289,7 @@ class ExtensionAuth {
       authDbgLog('[ExtensionAuth] Token received from login');
     }
 
-    const accountId = this.buildAccountId(user, token || null);
+    const accountId = this.buildAccountId(user);
     await this.updateAuthStatus(true, user, token || null, { accountId });
 
     return { token: token || null, user, data };
@@ -382,7 +386,7 @@ class ExtensionAuth {
     this.token = this.isAuthenticated ? token || null : null;
 
     if (this.isAuthenticated && this.user && this.token) {
-      const accountId = options.accountId || this.buildAccountId(this.user, this.token);
+      const accountId = options.accountId || this.buildAccountId(this.user);
       this.activeAccountId = accountId;
 
       const existingIndex = this.accounts.findIndex((account) => account.id === accountId);

@@ -26,6 +26,8 @@ function spError(...args) {
   }
 }
 
+const LEGACY_ACCOUNT_ID = "legacy-account";
+
 class PopupController {
   constructor() {
     this.config = {};
@@ -599,11 +601,11 @@ class PopupController {
             token: result.auth_token || null,
             accounts: [
               {
-                id: "legacy-account",
+                id: LEGACY_ACCOUNT_ID,
                 user: result.auth_user,
               },
             ],
-            activeAccountId: "legacy-account",
+            activeAccountId: LEGACY_ACCOUNT_ID,
           };
           this.updateAuthSection();
         }
@@ -617,11 +619,11 @@ class PopupController {
             token: result.auth_token || null,
             accounts: [
               {
-                id: "legacy-account",
+                id: LEGACY_ACCOUNT_ID,
                 user: result.firebase_user,
               },
             ],
-            activeAccountId: "legacy-account",
+            activeAccountId: LEGACY_ACCOUNT_ID,
           };
           this.updateAuthSection();
         }
@@ -722,7 +724,8 @@ class PopupController {
           </select>
         </div>
         <div class="add-account-panel" id="add-account-panel">
-          <form class="auth-form active" id="auth-add-account-form" data-form="add-account">
+          <h4 class="account-form-title">Add Another Account</h4>
+          <form class="auth-form active" id="auth-add-account-form" data-form="add-account" aria-label="Add another account">
             <div class="field">
               <label for="auth-add-username">Username</label>
               <input type="text" id="auth-add-username" name="username" placeholder="johndoe" autocomplete="username" required />
