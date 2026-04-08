@@ -283,7 +283,11 @@ class PopupController {
 
   async handleAccountSwitch(event) {
     const accountId = event?.target?.value;
-    if (!accountId || typeof extensionAuth === "undefined") return;
+    if (!accountId) return;
+    if (typeof extensionAuth === "undefined") {
+      this.showMessage("Account switching is unavailable right now.", "error");
+      return;
+    }
 
     try {
       await extensionAuth.switchAccount(accountId);
@@ -697,7 +701,7 @@ class PopupController {
           </div>
           <div class="profile-right">
             <button class="btn" id="add-account-btn">Add Account</button>
-            <button class="btn" id="sign-out-btn">Sign Out Active</button>
+            <button class="btn" id="sign-out-btn">Sign Out Current Account</button>
           </div>
         </div>
         <div class="account-controls">
@@ -727,7 +731,7 @@ class PopupController {
               <label for="auth-add-password">Password</label>
               <input type="password" id="auth-add-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
             </div>
-            <button type="submit" class="btn btn-primary">Add & Switch</button>
+            <button type="submit" class="btn btn-primary">Add Account & Switch</button>
           </form>
           <div class="auth-form-message" id="auth-form-message"></div>
         </div>

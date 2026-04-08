@@ -62,8 +62,9 @@ const authModule = require('../utils/auth.js');
 const { ExtensionAuth } = authModule;
 
 function createMockFetch() {
-  return async (_url, options) => {
-    const body = JSON.parse(options.body || '{}');
+  return async (_url, options = {}) => {
+    const body =
+      typeof options.body === 'string' ? JSON.parse(options.body) : {};
     const username = body.username || 'unknown';
 
     return {

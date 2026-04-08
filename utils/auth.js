@@ -148,8 +148,17 @@ class ExtensionAuth {
   buildAccountId(user, token = null) {
     const provider = user?.provider || 'backend';
     const username = user?.username || user?.email || user?.name || 'user';
-    const tokenSuffix = token ? token.slice(-8) : 'no-token';
-    return `${provider}:${username}:${tokenSuffix}`;
+    const tokenFingerprint = token ? this.hashValue(token) : 'no-token';
+    return `${provider}:${username}:${tokenFingerprint}`;
+  }
+
+  hashValue(value) {
+    if (!value) return 'empty';
+    let hash = 0;
+    for (let i = 0; i < value.length; i += 1) {
+      hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+    }
+    return hash.toString(16);
   }
 
   getActiveAccountEntry() {
@@ -291,6 +300,10 @@ class ExtensionAuth {
     return { token: token || null, user, data };
   }
 
+  /**
+   * Signs out the current account.
+   * @param {{ clearAll?: boolean }} options - Pass clearAll=true to remove all stored accounts.
+   */
   async signOut(options = {}) {
     const clearAll = Boolean(options.clearAll);
 
@@ -463,7 +476,7 @@ class ExtensionAuth {
 
   async switchAccount(accountId) {
     if (!accountId) {
-      throw new Error('Account id is required.');
+      throw new Error('Account ID is required.');
     }
 
     const targetAccount = this.accounts.find((account) => account.id === accountId);
