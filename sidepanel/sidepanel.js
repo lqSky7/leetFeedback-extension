@@ -30,7 +30,13 @@ class PopupController {
   constructor() {
     this.config = {};
     this.connectionStatus = false;
-    this.authStatus = { isAuthenticated: false, user: null, token: null };
+    this.authStatus = {
+      isAuthenticated: false,
+      user: null,
+      token: null,
+      accounts: [],
+      activeAccountId: null,
+    };
     this.initialize();
   }
 
@@ -273,6 +279,37 @@ class PopupController {
     } finally {
       this.toggleAuthLoading(submitBtn, false);
     }
+  }
+
+  async handleAccountSwitch(event) {
+    const accountId = event?.target?.value;
+    if (!accountId || typeof extensionAuth === "undefined") return;
+
+    try {
+      await extensionAuth.switchAccount(accountId);
+      const switchedAccount = extensionAuth
+        .getAccounts()
+        .find((account) => account.id === accountId);
+      const switchedName =
+        switchedAccount?.user?.username ||
+        switchedAccount?.user?.displayName ||
+        switchedAccount?.user?.name ||
+        switchedAccount?.user?.email ||
+        "User";
+      this.showMessage(`Switched to ${switchedName}`, "success");
+    } catch (error) {
+      this.showMessage(error?.message || "Failed to switch account.", "error");
+    }
+  }
+
+  toggleAddAccountForm() {
+    const panel = document.getElementById("add-account-panel");
+    if (!panel) return;
+    panel.classList.toggle("active");
+
+    if (!panel.classList.contains("active")) return;
+    const usernameInput = panel.querySelector('input[name="username"]');
+    if (usernameInput) usernameInput.focus();
   }
 
   toggleAuthLoading(button, isLoading, loadingText = "Working...") {
@@ -520,6 +557,8 @@ class PopupController {
 
       // Check local storage for cached auth data first
       const result = await chrome.storage.local.get([
+        "auth_accounts",
+        "auth_active_account_id",
         "auth_user",
         "auth_token",
         "auth_timestamp",
@@ -529,7 +568,24 @@ class PopupController {
       const now = Date.now();
       const maxAge = 24 * 60 * 60 * 1000; // 24 hours
 
-      if (result.auth_user && result.auth_timestamp) {
+      if (Array.isArray(result.auth_accounts) && result.auth_accounts.length > 0) {
+        const activeId = result.auth_active_account_id || result.auth_accounts[0]?.id || null;
+        const activeAccount =
+          result.auth_accounts.find((account) => account.id === activeId) ||
+          result.auth_accounts[0] ||
+          null;
+
+        if (activeAccount?.user && activeAccount?.token) {
+          this.authStatus = {
+            isAuthenticated: true,
+            user: activeAccount.user,
+            token: activeAccount.token,
+            accounts: result.auth_accounts,
+            activeAccountId: activeAccount.id || activeId,
+          };
+          this.updateAuthSection();
+        }
+      } else if (result.auth_user && result.auth_timestamp) {
         const cacheAge = now - result.auth_timestamp;
         if (cacheAge < maxAge) {
           spLog("[Popup] Found cached backend auth data");
@@ -537,6 +593,13 @@ class PopupController {
             isAuthenticated: true,
             user: result.auth_user,
             token: result.auth_token || null,
+            accounts: [
+              {
+                id: "legacy-account",
+                user: result.auth_user,
+              },
+            ],
+            activeAccountId: "legacy-account",
           };
           this.updateAuthSection();
         }
@@ -548,6 +611,13 @@ class PopupController {
             isAuthenticated: true,
             user: result.firebase_user,
             token: result.auth_token || null,
+            accounts: [
+              {
+                id: "legacy-account",
+                user: result.firebase_user,
+              },
+            ],
+            activeAccountId: "legacy-account",
           };
           this.updateAuthSection();
         }
@@ -562,6 +632,10 @@ class PopupController {
             isAuthenticated: authStatus.isAuthenticated,
             user: authStatus.user || null,
             token: authStatus.token || null,
+            accounts: Array.isArray(authStatus.accounts)
+              ? authStatus.accounts
+              : [],
+            activeAccountId: authStatus.activeAccountId || null,
           };
           this.updateAuthSection();
           this.updateConnectionStatus();
@@ -590,6 +664,11 @@ class PopupController {
 
     if (isAuthenticated) {
       const user = this.authStatus.user || {};
+      const accountOptions = (this.authStatus.accounts || []).length > 0
+        ? this.authStatus.accounts
+        : [{ id: this.authStatus.activeAccountId || "active-account", user }];
+      const currentAccountId =
+        this.authStatus.activeAccountId || accountOptions[0]?.id;
       const displayName =
         user.username ||
         user.displayName ||
@@ -617,14 +696,62 @@ class PopupController {
             </div>
           </div>
           <div class="profile-right">
-            <button class="btn" id="sign-out-btn">Sign Out</button>
+            <button class="btn" id="add-account-btn">Add Account</button>
+            <button class="btn" id="sign-out-btn">Sign Out Active</button>
           </div>
+        </div>
+        <div class="account-controls">
+          <label for="active-account-select">Active Account</label>
+          <select id="active-account-select" class="account-select">
+            ${accountOptions
+              .map((account) => {
+                const accountName =
+                  account?.user?.username ||
+                  account?.user?.displayName ||
+                  account?.user?.name ||
+                  account?.user?.email ||
+                  "User";
+                const selected = account.id === currentAccountId ? "selected" : "";
+                return `<option value="${account.id}" ${selected}>${accountName}</option>`;
+              })
+              .join("")}
+          </select>
+        </div>
+        <div class="add-account-panel" id="add-account-panel">
+          <form class="auth-form active" id="auth-add-account-form" data-form="add-account">
+            <div class="field">
+              <label for="auth-add-username">Username</label>
+              <input type="text" id="auth-add-username" name="username" placeholder="johndoe" autocomplete="username" required />
+            </div>
+            <div class="field">
+              <label for="auth-add-password">Password</label>
+              <input type="password" id="auth-add-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Add & Switch</button>
+          </form>
+          <div class="auth-form-message" id="auth-form-message"></div>
         </div>
       `;
 
       const signOutBtn = document.getElementById("sign-out-btn");
       if (signOutBtn) {
         signOutBtn.addEventListener("click", () => this.signOut());
+      }
+      const accountSelect = document.getElementById("active-account-select");
+      if (accountSelect) {
+        accountSelect.addEventListener("change", (event) =>
+          this.handleAccountSwitch(event),
+        );
+      }
+      const addAccountBtn = document.getElementById("add-account-btn");
+      if (addAccountBtn) {
+        addAccountBtn.addEventListener("click", () => this.toggleAddAccountForm());
+      }
+      const addAccountForm = document.getElementById("auth-add-account-form");
+      if (addAccountForm) {
+        addAccountForm.addEventListener("submit", (event) =>
+          this.handleLoginSubmit(event),
+        );
       }
     } else {
       authSection.innerHTML = `
@@ -769,20 +896,26 @@ class PopupController {
     try {
       if (typeof extensionAuth !== "undefined") {
         await extensionAuth.signOut();
-        // Update local auth status
-        this.authStatus = { isAuthenticated: false, user: null, token: null };
-        this.updateAuthSection();
-        this.showMessage("Signed out successfully", "success");
-        this.showAuthFeedback("success", "Signed out successfully.");
+        await extensionAuth.requestAuthStatus();
+        this.showMessage("Signed out active account", "success");
+        this.showAuthFeedback("success", "Signed out active account.");
       } else {
         // Fallback: clear local storage
         await chrome.storage.local.remove([
+          "auth_accounts",
+          "auth_active_account_id",
           "auth_user",
           "auth_token",
           "auth_timestamp",
           "firebase_user",
         ]);
-        this.authStatus = { isAuthenticated: false, user: null, token: null };
+        this.authStatus = {
+          isAuthenticated: false,
+          user: null,
+          token: null,
+          accounts: [],
+          activeAccountId: null,
+        };
         this.updateAuthSection();
         this.showMessage("Signed out locally", "success");
         this.showAuthFeedback("success", "Signed out locally.");
@@ -791,12 +924,20 @@ class PopupController {
       spError("Error signing out:", error);
       // Even if sign out fails, clear local state
       await chrome.storage.local.remove([
+        "auth_accounts",
+        "auth_active_account_id",
         "auth_user",
         "auth_token",
         "auth_timestamp",
         "firebase_user",
       ]);
-      this.authStatus = { isAuthenticated: false, user: null, token: null };
+      this.authStatus = {
+        isAuthenticated: false,
+        user: null,
+        token: null,
+        accounts: [],
+        activeAccountId: null,
+      };
       this.updateAuthSection();
       this.showMessage(
         "Failed to sign out from website, but cleared local session.",

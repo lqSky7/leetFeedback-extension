@@ -2107,11 +2107,54 @@ body {
 
 .profile-right {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .profile-right .btn {
   padding: 8px 14px;
   font-size: 12px;
+}
+
+.account-controls {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-controls label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.account-select {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--input-radius);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.account-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.add-account-panel {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  display: none;
+}
+
+.add-account-panel.active {
+  display: block;
 }
 
 /* Compact auth login form */
