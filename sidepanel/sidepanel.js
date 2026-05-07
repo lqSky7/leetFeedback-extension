@@ -1055,15 +1055,34 @@ class PopupController {
       }
 
       const payload = this.buildLeetcodeImportPayload(username, bundle);
+      const existingSolveSlugs = await this.fetchExistingLeetcodeSolveSlugs();
+      const originalImportCount = payload.submissions.length;
+      payload.submissions = payload.submissions.filter(
+        (submission) => !existingSolveSlugs.has(submission.problemSlug)
+      );
+      const existingInTraverse = originalImportCount - payload.submissions.length;
+
+      if (payload.submissions.length === 0) {
+        this.setLeetcodeImportStatus(
+          "warning",
+          `All ${originalImportCount} solved LeetCode questions are already in Traverse for this account.`
+        );
+        return;
+      }
+
       this.pendingLeetcodeImport = {
         username,
         payload,
-        stats: bundle.stats,
+        stats: {
+          ...bundle.stats,
+          existingInTraverse,
+          originalImportCount,
+        },
       };
       this.openLeetcodeImportModal(this.pendingLeetcodeImport);
       this.setLeetcodeImportStatus(
         "success",
-        `Ready to import ${payload.submissions.length} unique solved questions.`
+        `Ready to import ${payload.submissions.length} new solved questions. ${existingInTraverse} already exist in Traverse.`
       );
     } catch (error) {
       spError("[LeetCode Import] Preview failed:", error);
@@ -1111,7 +1130,7 @@ class PopupController {
       this.pendingLeetcodeImport = null;
       this.setLeetcodeImportStatus(
         "success",
-        `Imported ${imported.importedSolves || 0} new solves. Skipped ${imported.skippedExistingSolves || 0} existing questions and ${imported.skippedDuplicateProblems || 0} duplicates.`
+        `Imported ${imported.importedSolves || 0} new solves. ${pendingImport.stats.existingInTraverse || 0} were already in Traverse before posting; backend skipped ${imported.skippedExistingSolves || 0} more.`
       );
     } catch (error) {
       spError("[LeetCode Import] Confirm failed:", error);
@@ -1137,10 +1156,10 @@ class PopupController {
     const stats = pendingImport.stats;
     summary.textContent = `Import solved LeetCode data for ${pendingImport.username}?`;
     grid.innerHTML = [
-      ["Unique solved", pendingImport.payload.submissions.length],
+      ["New to import", pendingImport.payload.submissions.length],
+      ["Already in Traverse", stats.existingInTraverse || 0],
       ["Duplicates removed", stats.duplicatesRemoved],
       ["Details fetched", stats.detailsFetched],
-      ["Details skipped", stats.detailsFailed],
     ]
       .map(([label, value]) => `
         <div class="import-summary-item">
@@ -1201,6 +1220,46 @@ class PopupController {
         detailsFailed: detailResult.detailsFailed,
       },
     };
+  }
+
+  async fetchExistingLeetcodeSolveSlugs() {
+    const slugs = new Set();
+    const limit = 100;
+    let offset = 0;
+
+    while (true) {
+      const response = await this.fetchViaBackground(
+        `${this.getBackendBaseUrl()}/api/solves?platform=leetcode&limit=${limit}&offset=${offset}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${this.authStatus.token}`,
+          },
+        },
+        30000
+      );
+
+      if (!response.success) {
+        const errorText = response.data?.error || response.error || `Backend returned ${response.status}`;
+        throw new Error(`Could not check existing Traverse solves: ${errorText}`);
+      }
+
+      const solves = Array.isArray(response.data?.solves) ? response.data.solves : [];
+      solves.forEach((solve) => {
+        const slug = solve?.problem?.slug;
+        if (slug) slugs.add(this.slugify(slug));
+      });
+
+      const total = response.data?.pagination?.total;
+      offset += solves.length;
+
+      if (solves.length < limit || (typeof total === "number" && offset >= total)) {
+        break;
+      }
+    }
+
+    return slugs;
   }
 
   async fetchAlfaLeetcode(path, timeoutMs = 30000) {
