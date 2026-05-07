@@ -27,6 +27,7 @@ function spError(...args) {
 }
 
 const LEGACY_ACCOUNT_ID = "internal://legacy-account";
+const ALFA_LEETCODE_API_BASE = "https://alfa-leetcode-api.onrender.com";
 
 class PopupController {
   constructor() {
@@ -39,6 +40,7 @@ class PopupController {
       accounts: [],
       activeAccountId: null,
     };
+    this.pendingLeetcodeImport = null;
     this.initialize();
   }
 
@@ -167,6 +169,31 @@ class PopupController {
     }
 
     // All event listeners set up
+    const importPreviewBtn = document.getElementById("leetcode-import-preview");
+    if (importPreviewBtn) {
+      importPreviewBtn.addEventListener("click", () => this.previewLeetcodeImport());
+    }
+
+    const importUsernameInput = document.getElementById("leetcode-username");
+    if (importUsernameInput) {
+      importUsernameInput.addEventListener("input", (event) => {
+        chrome.storage.sync.set({
+          leetcode_import_username: event.target.value.trim(),
+        });
+      });
+    }
+
+    ["leetcode-import-cancel", "leetcode-import-back"].forEach((id) => {
+      const button = document.getElementById(id);
+      if (button) {
+        button.addEventListener("click", () => this.closeLeetcodeImportModal());
+      }
+    });
+
+    const importConfirmBtn = document.getElementById("leetcode-import-confirm");
+    if (importConfirmBtn) {
+      importConfirmBtn.addEventListener("click", () => this.confirmLeetcodeImport());
+    }
   }
 
   toggleGeminiKeyField(show) {
@@ -401,6 +428,7 @@ class PopupController {
           "mistake_tags",
           "github_push_enabled",
           "timer_overlay_enabled",
+          "leetcode_import_username",
         ],
         (data) => {
           this.config = {
@@ -413,6 +441,7 @@ class PopupController {
             debugMode: data.debug_mode || false,
             githubPushEnabled: data.github_push_enabled !== false, // Default true
             timerOverlayEnabled: data.timer_overlay_enabled !== false, // Default true
+            leetcodeImportUsername: data.leetcode_import_username || "",
           };
           this.mistakeTags = data.mistake_tags || {};
           resolve();
@@ -436,6 +465,10 @@ class PopupController {
     document.getElementById("branch").value = this.config.branch;
     document.getElementById("gemini-key").value = this.config.geminiKey;
     document.getElementById("debug-mode").checked = this.config.debugMode;
+    const leetcodeUsernameEl = document.getElementById("leetcode-username");
+    if (leetcodeUsernameEl) {
+      leetcodeUsernameEl.value = this.config.leetcodeImportUsername || "";
+    }
 
     const aiProviderSelect = document.getElementById("ai-provider");
     if (aiProviderSelect) {
@@ -955,6 +988,469 @@ class PopupController {
         "Failed to sign out remotely. Local session cleared.",
       );
     }
+  }
+
+  setLeetcodeImportStatus(type = "", message = "") {
+    const status = document.getElementById("leetcode-import-status");
+    if (!status) return;
+
+    status.textContent = message || "";
+    status.className = "leetcode-import-status";
+    if (type && message) {
+      status.classList.add("active", type);
+    }
+  }
+
+  setButtonLoading(button, isLoading, loadingText = "Working...") {
+    if (!button) return;
+    if (isLoading) {
+      button.dataset.originalText = button.textContent;
+      button.textContent = loadingText;
+      button.disabled = true;
+      return;
+    }
+
+    if (button.dataset.originalText) {
+      button.textContent = button.dataset.originalText;
+      delete button.dataset.originalText;
+    }
+    button.disabled = false;
+  }
+
+  async previewLeetcodeImport() {
+    const usernameInput = document.getElementById("leetcode-username");
+    const previewButton = document.getElementById("leetcode-import-preview");
+    const username = usernameInput?.value.trim();
+
+    if (!this.authStatus?.isAuthenticated || !this.authStatus?.token) {
+      this.setLeetcodeImportStatus("error", "Login to Traverse before importing LeetCode data.");
+      return;
+    }
+
+    if (!username) {
+      this.setLeetcodeImportStatus("error", "Enter your LeetCode username.");
+      usernameInput?.focus();
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_-]{1,40}$/.test(username)) {
+      this.setLeetcodeImportStatus("error", "Use a valid LeetCode username.");
+      usernameInput?.focus();
+      return;
+    }
+
+    try {
+      await chrome.storage.sync.set({ leetcode_import_username: username });
+      this.pendingLeetcodeImport = null;
+      this.setButtonLoading(previewButton, true, "Reading LeetCode...");
+      this.setLeetcodeImportStatus("info", "Fetching accepted submissions from LeetCode.");
+
+      const bundle = await this.fetchLeetcodeImportBundle(username, (message) => {
+        this.setLeetcodeImportStatus("info", message);
+      });
+
+      if (bundle.submissions.length === 0) {
+        this.setLeetcodeImportStatus("warning", "No solved LeetCode questions were found for this username.");
+        return;
+      }
+
+      const payload = this.buildLeetcodeImportPayload(username, bundle);
+      this.pendingLeetcodeImport = {
+        username,
+        payload,
+        stats: bundle.stats,
+      };
+      this.openLeetcodeImportModal(this.pendingLeetcodeImport);
+      this.setLeetcodeImportStatus(
+        "success",
+        `Ready to import ${payload.submissions.length} unique solved questions.`
+      );
+    } catch (error) {
+      spError("[LeetCode Import] Preview failed:", error);
+      this.setLeetcodeImportStatus(
+        "error",
+        error?.message || "Unable to prepare the LeetCode import."
+      );
+    } finally {
+      this.setButtonLoading(previewButton, false);
+    }
+  }
+
+  async confirmLeetcodeImport() {
+    const pendingImport = this.pendingLeetcodeImport;
+    const confirmButton = document.getElementById("leetcode-import-confirm");
+
+    if (!pendingImport) {
+      this.closeLeetcodeImportModal();
+      this.setLeetcodeImportStatus("error", "Import preview expired. Run preview again.");
+      return;
+    }
+
+    try {
+      this.setButtonLoading(confirmButton, true, "Importing...");
+      const response = await this.fetchViaBackground(
+        `${this.getBackendBaseUrl()}/api/submissions/bulk-import`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.authStatus.token}`,
+          },
+          body: JSON.stringify(pendingImport.payload),
+        },
+        60000
+      );
+
+      if (!response.success) {
+        const errorText = response.data?.error || response.error || `Backend returned ${response.status}`;
+        throw new Error(errorText);
+      }
+
+      const imported = response.data?.import || {};
+      this.closeLeetcodeImportModal();
+      this.pendingLeetcodeImport = null;
+      this.setLeetcodeImportStatus(
+        "success",
+        `Imported ${imported.importedSolves || 0} new solves. Skipped ${imported.skippedExistingSolves || 0} existing questions and ${imported.skippedDuplicateProblems || 0} duplicates.`
+      );
+    } catch (error) {
+      spError("[LeetCode Import] Confirm failed:", error);
+      this.setLeetcodeImportStatus("error", error?.message || "Import failed.");
+    } finally {
+      this.setButtonLoading(confirmButton, false);
+    }
+  }
+
+  getBackendBaseUrl() {
+    if (typeof extensionAuth !== "undefined" && typeof extensionAuth.getApiBaseUrl === "function") {
+      return extensionAuth.getApiBaseUrl();
+    }
+    return "https://traverse-backend-api.azurewebsites.net";
+  }
+
+  openLeetcodeImportModal(pendingImport) {
+    const modal = document.getElementById("leetcode-import-modal");
+    const summary = document.getElementById("leetcode-import-summary");
+    const grid = document.getElementById("leetcode-import-summary-grid");
+    if (!modal || !summary || !grid) return;
+
+    const stats = pendingImport.stats;
+    summary.textContent = `Import solved LeetCode data for ${pendingImport.username}?`;
+    grid.innerHTML = [
+      ["Unique solved", pendingImport.payload.submissions.length],
+      ["Duplicates removed", stats.duplicatesRemoved],
+      ["Details fetched", stats.detailsFetched],
+      ["Details skipped", stats.detailsFailed],
+    ]
+      .map(([label, value]) => `
+        <div class="import-summary-item">
+          <span class="import-summary-value">${value}</span>
+          <span class="import-summary-label">${label}</span>
+        </div>
+      `)
+      .join("");
+
+    modal.classList.add("active");
+    modal.setAttribute("aria-hidden", "false");
+    document.getElementById("leetcode-import-confirm")?.focus();
+  }
+
+  closeLeetcodeImportModal() {
+    const modal = document.getElementById("leetcode-import-modal");
+    if (!modal) return;
+    modal.classList.remove("active");
+    modal.setAttribute("aria-hidden", "true");
+  }
+
+  async fetchLeetcodeImportBundle(username, onProgress) {
+    const encodedUsername = encodeURIComponent(username);
+    const [profile, solved, languageStats, skillStats, calendar, acceptedRaw] = await Promise.all([
+      this.fetchAlfaLeetcode(`${encodedUsername}/profile`, 30000).catch((error) => ({ error: error.message })),
+      this.fetchAlfaLeetcode(`${encodedUsername}/solved`, 30000).catch((error) => ({ error: error.message })),
+      this.fetchAlfaLeetcode(`${encodedUsername}/language`, 30000).catch((error) => ({ error: error.message })),
+      this.fetchAlfaLeetcode(`${encodedUsername}/skill`, 30000).catch((error) => ({ error: error.message })),
+      this.fetchAlfaLeetcode(`${encodedUsername}/calendar`, 30000).catch((error) => ({ error: error.message })),
+      this.fetchAlfaLeetcode(`${encodedUsername}/acSubmission?limit=5000`, 45000),
+    ]);
+
+    const accepted = this.extractSolvedSubmissionCandidates(acceptedRaw);
+    const progressCandidates = accepted.length > 0
+      ? []
+      : this.extractSolvedSubmissionCandidates(
+        await this.fetchAlfaLeetcode(`${encodedUsername}/progress`, 30000).catch(() => ({}))
+      );
+    const baseCandidates = accepted.length > 0 ? accepted : progressCandidates;
+    const deduped = this.dedupeLeetcodeSolvedItems(baseCandidates);
+
+    onProgress?.(`Found ${deduped.items.length} unique solved questions. Fetching problem metadata.`);
+
+    const detailResult = await this.fetchLeetcodeQuestionDetails(deduped.items, onProgress);
+
+    return {
+      submissions: detailResult.items,
+      metadata: {
+        profile,
+        solved,
+        languageStats,
+        skillStats,
+        calendar,
+      },
+      stats: {
+        duplicatesRemoved: deduped.duplicates,
+        detailsFetched: detailResult.detailsFetched,
+        detailsFailed: detailResult.detailsFailed,
+      },
+    };
+  }
+
+  async fetchAlfaLeetcode(path, timeoutMs = 30000) {
+    const cleanPath = path.replace(/^\/+/, "");
+    const response = await this.fetchViaBackground(
+      `${ALFA_LEETCODE_API_BASE}/${cleanPath}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      },
+      timeoutMs
+    );
+
+    if (!response.success) {
+      const errorText = response.data?.error || response.error || `alfa LeetCode API returned ${response.status}`;
+      throw new Error(errorText);
+    }
+
+    return response.data || {};
+  }
+
+  async fetchViaBackground(url, options, timeoutMs = 30000) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        {
+          type: "BACKEND_API_FETCH",
+          url,
+          options,
+          timeoutMs,
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+
+          if (!response) {
+            reject(new Error("No response from background worker."));
+            return;
+          }
+
+          resolve(response);
+        }
+      );
+    });
+  }
+
+  extractSolvedSubmissionCandidates(payload) {
+    const candidates = [];
+    const seenArrays = new Set();
+
+    const visit = (value) => {
+      if (!value || typeof value !== "object") return;
+
+      if (Array.isArray(value)) {
+        if (seenArrays.has(value)) return;
+        seenArrays.add(value);
+
+        const arrayLooksRelevant = value.some((item) =>
+          item &&
+          typeof item === "object" &&
+          (item.titleSlug || item.slug || item.title || item.problemTitle)
+        );
+
+        if (arrayLooksRelevant) {
+          value.forEach((item) => {
+            const normalized = this.normalizeLeetcodeCandidate(item);
+            if (normalized) candidates.push(normalized);
+          });
+        }
+        return;
+      }
+
+      Object.values(value).forEach(visit);
+    };
+
+    visit(payload);
+    return candidates;
+  }
+
+  normalizeLeetcodeCandidate(item) {
+    if (!item || typeof item !== "object") return null;
+
+    const rawSlug = item.titleSlug || item.problemSlug || item.slug || item.questionSlug;
+    const title = item.title || item.problemTitle || item.questionTitle || rawSlug;
+    const slug = rawSlug || this.slugify(title);
+    if (!slug) return null;
+
+    const status = (item.statusDisplay || item.status || item.result || "").toString().toLowerCase();
+    if (status && !["accepted", "ac", "solved"].some((accepted) => status.includes(accepted))) {
+      return null;
+    }
+
+    return {
+      problemSlug: this.slugify(slug),
+      problemTitle: title?.toString() || slug,
+      difficulty: this.normalizeLeetcodeDifficulty(item.difficulty),
+      language: item.lang || item.language || "unknown",
+      timestamp: item.timestamp || item.submittedAt || item.date || null,
+      topicTags: Array.isArray(item.topicTags) ? item.topicTags : [],
+      questionId: item.questionId || item.id || null,
+      frontendQuestionId: item.frontendQuestionId || item.questionFrontendId || null,
+    };
+  }
+
+  dedupeLeetcodeSolvedItems(items) {
+    const bySlug = new Map();
+    let duplicates = 0;
+
+    items.forEach((item) => {
+      if (!item.problemSlug) return;
+      const existing = bySlug.get(item.problemSlug);
+      if (!existing) {
+        bySlug.set(item.problemSlug, item);
+        return;
+      }
+
+      duplicates += 1;
+      const existingTime = this.timestampToMillis(existing.timestamp);
+      const itemTime = this.timestampToMillis(item.timestamp);
+      if (itemTime && (!existingTime || itemTime < existingTime)) {
+        bySlug.set(item.problemSlug, item);
+      }
+    });
+
+    return {
+      items: Array.from(bySlug.values()),
+      duplicates,
+    };
+  }
+
+  async fetchLeetcodeQuestionDetails(items, onProgress) {
+    const enriched = new Array(items.length);
+    let cursor = 0;
+    let detailsFetched = 0;
+    let detailsFailed = 0;
+    const concurrency = 3;
+
+    const worker = async () => {
+      while (cursor < items.length) {
+        const index = cursor;
+        cursor += 1;
+        const item = items[index];
+
+        try {
+          const detailPayload = await this.fetchAlfaLeetcode(`select?titleSlug=${encodeURIComponent(item.problemSlug)}`, 15000);
+          const detail = this.extractQuestionDetail(detailPayload);
+          enriched[index] = this.mergeLeetcodeDetail(item, detail);
+          detailsFetched += detail ? 1 : 0;
+          detailsFailed += detail ? 0 : 1;
+        } catch (error) {
+          enriched[index] = item;
+          detailsFailed += 1;
+        }
+
+        if ((index + 1) % 10 === 0 || index === items.length - 1) {
+          onProgress?.(`Fetched metadata for ${index + 1}/${items.length} solved questions.`);
+        }
+      }
+    };
+
+    await Promise.all(
+      Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+    );
+
+    return {
+      items: enriched.filter(Boolean),
+      detailsFetched,
+      detailsFailed,
+    };
+  }
+
+  extractQuestionDetail(payload) {
+    if (!payload || typeof payload !== "object") return null;
+    return payload.question || payload.data?.question || payload.data || payload;
+  }
+
+  mergeLeetcodeDetail(item, detail) {
+    if (!detail || typeof detail !== "object") return item;
+
+    return {
+      ...item,
+      problemSlug: this.slugify(detail.titleSlug || detail.slug || item.problemSlug),
+      problemTitle: detail.title || detail.problemTitle || item.problemTitle,
+      difficulty: this.normalizeLeetcodeDifficulty(detail.difficulty || item.difficulty),
+      topicTags: Array.isArray(detail.topicTags) ? detail.topicTags : item.topicTags,
+      questionId: detail.questionId || item.questionId,
+      frontendQuestionId: detail.questionFrontendId || detail.frontendQuestionId || item.frontendQuestionId,
+    };
+  }
+
+  buildLeetcodeImportPayload(username, bundle) {
+    return {
+      source: "leetcode",
+      username,
+      submissions: bundle.submissions.map((item) => {
+        const happenedAt = this.timestampToIso(item.timestamp);
+        return {
+          problemSlug: item.problemSlug,
+          problemTitle: item.problemTitle,
+          difficulty: this.normalizeLeetcodeDifficulty(item.difficulty),
+          language: item.language || "unknown",
+          happenedAt,
+          timestamp: item.timestamp || null,
+          idempotencyKey: `leetcode-import:${item.problemSlug}`,
+          topicTags: item.topicTags || [],
+          questionId: item.questionId || null,
+          frontendQuestionId: item.frontendQuestionId || null,
+        };
+      }),
+      metadata: bundle.metadata,
+    };
+  }
+
+  normalizeLeetcodeDifficulty(value) {
+    const normalized = value?.toString().trim().toLowerCase();
+    if (normalized === "easy" || normalized === "medium" || normalized === "hard") {
+      return normalized;
+    }
+    return "medium";
+  }
+
+  slugify(value) {
+    if (!value) return "";
+    return value
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  timestampToMillis(value) {
+    if (value === null || value === undefined || value === "") return null;
+    if (typeof value === "string" && Number.isNaN(Number(value))) {
+      const parsed = Date.parse(value);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return null;
+    return numeric < 10000000000 ? numeric * 1000 : numeric;
+  }
+
+  timestampToIso(value) {
+    const millis = this.timestampToMillis(value);
+    const date = millis ? new Date(millis) : new Date();
+    return date.toISOString();
   }
 
   // Check for extension updates from GitHub releases

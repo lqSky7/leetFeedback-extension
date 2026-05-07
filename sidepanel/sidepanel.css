@@ -2184,3 +2184,170 @@ body {
   width: 100%;
   margin-top: 4px;
 }
+
+/* LeetCode Import */
+.leetcode-import {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+}
+
+.leetcode-import .btn {
+  width: 100%;
+}
+
+.leetcode-import-status {
+  display: none;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-radius: var(--input-radius);
+  padding: 10px 12px;
+}
+
+.leetcode-import-status.active {
+  display: block;
+}
+
+.leetcode-import-status.info {
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-color: rgba(0, 212, 255, 0.24);
+}
+
+.leetcode-import-status.success {
+  color: var(--success);
+  background: var(--success-dim);
+  border-color: rgba(34, 197, 94, 0.24);
+}
+
+.leetcode-import-status.warning {
+  color: var(--warning);
+  background: var(--warning-dim);
+  border-color: rgba(245, 158, 11, 0.24);
+}
+
+.leetcode-import-status.error {
+  color: var(--error);
+  background: var(--error-dim);
+  border-color: rgba(239, 68, 68, 0.24);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.confirm-modal {
+  width: min(100%, 380px);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+}
+
+.confirm-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.confirm-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.modal-close {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: var(--text);
+  border-color: var(--border-hover);
+}
+
+.confirm-modal-body {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.confirm-modal-body p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.import-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.import-summary-item {
+  padding: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--input-radius);
+}
+
+.import-summary-value {
+  display: block;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.import-summary-label {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.confirm-warning {
+  padding: 10px 12px;
+  color: var(--warning) !important;
+  background: var(--warning-dim);
+  border: 1px solid rgba(245, 158, 11, 0.24);
+  border-radius: var(--input-radius);
+}
+
+.confirm-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.confirm-modal-actions .btn {
+  width: 100%;
+}
