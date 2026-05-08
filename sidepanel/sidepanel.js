@@ -1013,19 +1013,7 @@ class PopupController {
   }
 
   setButtonLoading(button, isLoading, loadingText = "Working...") {
-    if (!button) return;
-    if (isLoading) {
-      button.dataset.originalText = button.textContent;
-      button.textContent = loadingText;
-      button.disabled = true;
-      return;
-    }
-
-    if (button.dataset.originalText) {
-      button.textContent = button.dataset.originalText;
-      delete button.dataset.originalText;
-    }
-    button.disabled = false;
+    this.toggleAuthLoading(button, isLoading, loadingText);
   }
 
   async previewLeetcodeImport() {
