@@ -607,23 +607,34 @@ class PopupController {
       const now = Date.now();
       const maxAge = 24 * 60 * 60 * 1000; // 24 hours
 
-      if (Array.isArray(result.auth_accounts) && result.auth_accounts.length > 0) {
-        const activeId = result.auth_active_account_id || result.auth_accounts[0]?.id || null;
-        const activeAccount =
-          result.auth_accounts.find((account) => account.id === activeId) ||
+      const hasStoredAccounts =
+        Array.isArray(result.auth_accounts) && result.auth_accounts.length > 0;
+      const activeId = hasStoredAccounts
+        ? result.auth_active_account_id || result.auth_accounts[0]?.id || null
+        : null;
+      const activeAccount = hasStoredAccounts
+        ? result.auth_accounts.find((account) => account.id === activeId) ||
           result.auth_accounts[0] ||
-          null;
+          null
+        : null;
+      const activeAccountTimestamp =
+        typeof activeAccount?.timestamp === "number" ? activeAccount.timestamp : null;
+      const activeAccountCacheAge =
+        activeAccountTimestamp !== null ? now - activeAccountTimestamp : maxAge + 1;
 
-        if (activeAccount?.user && activeAccount?.token) {
-          this.authStatus = {
-            isAuthenticated: true,
-            user: activeAccount.user,
-            token: activeAccount.token,
-            accounts: result.auth_accounts,
-            activeAccountId: activeAccount.id || activeId,
-          };
-          this.updateAuthSection();
-        }
+      if (
+        activeAccount?.user &&
+        activeAccount?.token &&
+        activeAccountCacheAge < maxAge
+      ) {
+        this.authStatus = {
+          isAuthenticated: true,
+          user: activeAccount.user,
+          token: activeAccount.token,
+          accounts: result.auth_accounts,
+          activeAccountId: activeAccount.id || activeId,
+        };
+        this.updateAuthSection();
       } else if (result.auth_user && result.auth_timestamp) {
         const cacheAge = now - result.auth_timestamp;
         if (cacheAge < maxAge) {
