@@ -752,20 +752,7 @@ class PopupController {
         </div>
         <div class="account-controls">
           <label for="active-account-select">Active Account</label>
-          <select id="active-account-select" class="account-select">
-            ${accountOptions
-              .map((account) => {
-                const accountName =
-                  account?.user?.username ||
-                  account?.user?.displayName ||
-                  account?.user?.name ||
-                  account?.user?.email ||
-                  "User";
-                const selected = account.id === currentAccountId ? "selected" : "";
-                return `<option value="${account.id}" ${selected}>${accountName}</option>`;
-              })
-              .join("")}
-          </select>
+          <select id="active-account-select" class="account-select"></select>
         </div>
         <div class="add-account-panel" id="add-account-panel">
           <h4 class="account-form-title">Add Another Account</h4>
@@ -790,6 +777,19 @@ class PopupController {
       }
       const accountSelect = document.getElementById("active-account-select");
       if (accountSelect) {
+        accountOptions.forEach((account) => {
+          const accountName =
+            account?.user?.username ||
+            account?.user?.displayName ||
+            account?.user?.name ||
+            account?.user?.email ||
+            "User";
+          const option = document.createElement("option");
+          option.value = account.id;
+          option.textContent = accountName;
+          option.selected = account.id === currentAccountId;
+          accountSelect.appendChild(option);
+        });
         accountSelect.addEventListener("change", (event) =>
           this.handleAccountSwitch(event),
         );
