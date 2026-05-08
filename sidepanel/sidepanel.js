@@ -26,11 +26,21 @@ function spError(...args) {
   }
 }
 
+const LEGACY_ACCOUNT_ID = "internal://legacy-account";
+const ALFA_LEETCODE_API_BASE = "https://alfa-leetcode-api.onrender.com";
+
 class PopupController {
   constructor() {
     this.config = {};
     this.connectionStatus = false;
-    this.authStatus = { isAuthenticated: false, user: null, token: null };
+    this.authStatus = {
+      isAuthenticated: false,
+      user: null,
+      token: null,
+      accounts: [],
+      activeAccountId: null,
+    };
+    this.pendingLeetcodeImport = null;
     this.initialize();
   }
 
@@ -159,6 +169,31 @@ class PopupController {
     }
 
     // All event listeners set up
+    const importPreviewBtn = document.getElementById("leetcode-import-preview");
+    if (importPreviewBtn) {
+      importPreviewBtn.addEventListener("click", () => this.previewLeetcodeImport());
+    }
+
+    const importUsernameInput = document.getElementById("leetcode-username");
+    if (importUsernameInput) {
+      importUsernameInput.addEventListener("input", (event) => {
+        chrome.storage.sync.set({
+          leetcode_import_username: event.target.value.trim(),
+        });
+      });
+    }
+
+    ["leetcode-import-cancel", "leetcode-import-back"].forEach((id) => {
+      const button = document.getElementById(id);
+      if (button) {
+        button.addEventListener("click", () => this.closeLeetcodeImportModal());
+      }
+    });
+
+    const importConfirmBtn = document.getElementById("leetcode-import-confirm");
+    if (importConfirmBtn) {
+      importConfirmBtn.addEventListener("click", () => this.confirmLeetcodeImport());
+    }
   }
 
   toggleGeminiKeyField(show) {
@@ -275,6 +310,41 @@ class PopupController {
     }
   }
 
+  async handleAccountSwitch(event) {
+    const accountId = event?.target?.value;
+    if (!accountId) return;
+    if (typeof extensionAuth === "undefined") {
+      this.showMessage("Account switching is not available - authentication service not loaded.", "error");
+      return;
+    }
+
+    try {
+      await extensionAuth.switchAccount(accountId);
+      const switchedAccount = extensionAuth
+        .getAccounts()
+        .find((account) => account.id === accountId);
+      const switchedName =
+        switchedAccount?.user?.username ||
+        switchedAccount?.user?.displayName ||
+        switchedAccount?.user?.name ||
+        switchedAccount?.user?.email ||
+        "User";
+      this.showMessage(`Switched to ${switchedName}`, "success");
+    } catch (error) {
+      this.showMessage(error?.message || "Failed to switch account.", "error");
+    }
+  }
+
+  toggleAddAccountForm() {
+    const panel = document.getElementById("add-account-panel");
+    if (!panel) return;
+    panel.classList.toggle("active");
+
+    if (!panel.classList.contains("active")) return;
+    const usernameInput = panel.querySelector('input[name="username"]');
+    if (usernameInput) usernameInput.focus();
+  }
+
   toggleAuthLoading(button, isLoading, loadingText = "Working...") {
     if (!button) return;
 
@@ -358,6 +428,7 @@ class PopupController {
           "mistake_tags",
           "github_push_enabled",
           "timer_overlay_enabled",
+          "leetcode_import_username",
         ],
         (data) => {
           this.config = {
@@ -370,6 +441,7 @@ class PopupController {
             debugMode: data.debug_mode || false,
             githubPushEnabled: data.github_push_enabled !== false, // Default true
             timerOverlayEnabled: data.timer_overlay_enabled !== false, // Default true
+            leetcodeImportUsername: data.leetcode_import_username || "",
           };
           this.mistakeTags = data.mistake_tags || {};
           resolve();
@@ -393,6 +465,10 @@ class PopupController {
     document.getElementById("branch").value = this.config.branch;
     document.getElementById("gemini-key").value = this.config.geminiKey;
     document.getElementById("debug-mode").checked = this.config.debugMode;
+    const leetcodeUsernameEl = document.getElementById("leetcode-username");
+    if (leetcodeUsernameEl) {
+      leetcodeUsernameEl.value = this.config.leetcodeImportUsername || "";
+    }
 
     const aiProviderSelect = document.getElementById("ai-provider");
     if (aiProviderSelect) {
@@ -520,6 +596,8 @@ class PopupController {
 
       // Check local storage for cached auth data first
       const result = await chrome.storage.local.get([
+        "auth_accounts",
+        "auth_active_account_id",
         "auth_user",
         "auth_token",
         "auth_timestamp",
@@ -529,7 +607,35 @@ class PopupController {
       const now = Date.now();
       const maxAge = 24 * 60 * 60 * 1000; // 24 hours
 
-      if (result.auth_user && result.auth_timestamp) {
+      const hasStoredAccounts =
+        Array.isArray(result.auth_accounts) && result.auth_accounts.length > 0;
+      const activeId = hasStoredAccounts
+        ? result.auth_active_account_id || result.auth_accounts[0]?.id || null
+        : null;
+      const activeAccount = hasStoredAccounts
+        ? result.auth_accounts.find((account) => account.id === activeId) ||
+          result.auth_accounts[0] ||
+          null
+        : null;
+      const activeAccountTimestamp =
+        typeof activeAccount?.timestamp === "number" ? activeAccount.timestamp : null;
+      const activeAccountCacheAge =
+        activeAccountTimestamp !== null ? now - activeAccountTimestamp : maxAge + 1;
+
+      if (
+        activeAccount?.user &&
+        activeAccount?.token &&
+        activeAccountCacheAge < maxAge
+      ) {
+        this.authStatus = {
+          isAuthenticated: true,
+          user: activeAccount.user,
+          token: activeAccount.token,
+          accounts: result.auth_accounts,
+          activeAccountId: activeAccount.id || activeId,
+        };
+        this.updateAuthSection();
+      } else if (result.auth_user && result.auth_timestamp) {
         const cacheAge = now - result.auth_timestamp;
         if (cacheAge < maxAge) {
           spLog("[Popup] Found cached backend auth data");
@@ -537,6 +643,13 @@ class PopupController {
             isAuthenticated: true,
             user: result.auth_user,
             token: result.auth_token || null,
+            accounts: [
+              {
+                id: LEGACY_ACCOUNT_ID,
+                user: result.auth_user,
+              },
+            ],
+            activeAccountId: LEGACY_ACCOUNT_ID,
           };
           this.updateAuthSection();
         }
@@ -548,6 +661,13 @@ class PopupController {
             isAuthenticated: true,
             user: result.firebase_user,
             token: result.auth_token || null,
+            accounts: [
+              {
+                id: LEGACY_ACCOUNT_ID,
+                user: result.firebase_user,
+              },
+            ],
+            activeAccountId: LEGACY_ACCOUNT_ID,
           };
           this.updateAuthSection();
         }
@@ -562,6 +682,10 @@ class PopupController {
             isAuthenticated: authStatus.isAuthenticated,
             user: authStatus.user || null,
             token: authStatus.token || null,
+            accounts: Array.isArray(authStatus.accounts)
+              ? authStatus.accounts
+              : [],
+            activeAccountId: authStatus.activeAccountId || null,
           };
           this.updateAuthSection();
           this.updateConnectionStatus();
@@ -590,6 +714,11 @@ class PopupController {
 
     if (isAuthenticated) {
       const user = this.authStatus.user || {};
+      const accountOptions = (this.authStatus.accounts || []).length > 0
+        ? this.authStatus.accounts
+        : [{ id: this.authStatus.activeAccountId || "active-account", user }];
+      const currentAccountId =
+        this.authStatus.activeAccountId || accountOptions[0]?.id;
       const displayName =
         user.username ||
         user.displayName ||
@@ -617,14 +746,63 @@ class PopupController {
             </div>
           </div>
           <div class="profile-right">
+            <button class="btn" id="add-account-btn">Add Account</button>
             <button class="btn" id="sign-out-btn">Sign Out</button>
           </div>
+        </div>
+        <div class="account-controls">
+          <label for="active-account-select">Active Account</label>
+          <select id="active-account-select" class="account-select"></select>
+        </div>
+        <div class="add-account-panel" id="add-account-panel">
+          <h4 class="account-form-title">Add Another Account</h4>
+          <form class="auth-form active" id="auth-add-account-form" data-form="add-account" aria-label="Add another account">
+            <div class="field">
+              <label for="auth-add-username">Username</label>
+              <input type="text" id="auth-add-username" name="username" placeholder="johndoe" autocomplete="username" required />
+            </div>
+            <div class="field">
+              <label for="auth-add-password">Password</label>
+              <input type="password" id="auth-add-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Add Account & Switch</button>
+          </form>
+          <div class="auth-form-message" id="auth-form-message"></div>
         </div>
       `;
 
       const signOutBtn = document.getElementById("sign-out-btn");
       if (signOutBtn) {
         signOutBtn.addEventListener("click", () => this.signOut());
+      }
+      const accountSelect = document.getElementById("active-account-select");
+      if (accountSelect) {
+        accountOptions.forEach((account) => {
+          const accountName =
+            account?.user?.username ||
+            account?.user?.displayName ||
+            account?.user?.name ||
+            account?.user?.email ||
+            "User";
+          const option = document.createElement("option");
+          option.value = account.id;
+          option.textContent = accountName;
+          option.selected = account.id === currentAccountId;
+          accountSelect.appendChild(option);
+        });
+        accountSelect.addEventListener("change", (event) =>
+          this.handleAccountSwitch(event),
+        );
+      }
+      const addAccountBtn = document.getElementById("add-account-btn");
+      if (addAccountBtn) {
+        addAccountBtn.addEventListener("click", () => this.toggleAddAccountForm());
+      }
+      const addAccountForm = document.getElementById("auth-add-account-form");
+      if (addAccountForm) {
+        addAccountForm.addEventListener("submit", (event) =>
+          this.handleLoginSubmit(event),
+        );
       }
     } else {
       authSection.innerHTML = `
@@ -769,20 +947,26 @@ class PopupController {
     try {
       if (typeof extensionAuth !== "undefined") {
         await extensionAuth.signOut();
-        // Update local auth status
-        this.authStatus = { isAuthenticated: false, user: null, token: null };
-        this.updateAuthSection();
-        this.showMessage("Signed out successfully", "success");
-        this.showAuthFeedback("success", "Signed out successfully.");
+        await extensionAuth.requestAuthStatus();
+        this.showMessage("Signed out active account", "success");
+        this.showAuthFeedback("success", "Signed out active account.");
       } else {
         // Fallback: clear local storage
         await chrome.storage.local.remove([
+          "auth_accounts",
+          "auth_active_account_id",
           "auth_user",
           "auth_token",
           "auth_timestamp",
           "firebase_user",
         ]);
-        this.authStatus = { isAuthenticated: false, user: null, token: null };
+        this.authStatus = {
+          isAuthenticated: false,
+          user: null,
+          token: null,
+          accounts: [],
+          activeAccountId: null,
+        };
         this.updateAuthSection();
         this.showMessage("Signed out locally", "success");
         this.showAuthFeedback("success", "Signed out locally.");
@@ -791,12 +975,20 @@ class PopupController {
       spError("Error signing out:", error);
       // Even if sign out fails, clear local state
       await chrome.storage.local.remove([
+        "auth_accounts",
+        "auth_active_account_id",
         "auth_user",
         "auth_token",
         "auth_timestamp",
         "firebase_user",
       ]);
-      this.authStatus = { isAuthenticated: false, user: null, token: null };
+      this.authStatus = {
+        isAuthenticated: false,
+        user: null,
+        token: null,
+        accounts: [],
+        activeAccountId: null,
+      };
       this.updateAuthSection();
       this.showMessage(
         "Failed to sign out from website, but cleared local session.",
@@ -807,6 +999,516 @@ class PopupController {
         "Failed to sign out remotely. Local session cleared.",
       );
     }
+  }
+
+  setLeetcodeImportStatus(type = "", message = "") {
+    const status = document.getElementById("leetcode-import-status");
+    if (!status) return;
+
+    status.textContent = message || "";
+    status.className = "leetcode-import-status";
+    if (type && message) {
+      status.classList.add("active", type);
+    }
+  }
+
+  setButtonLoading(button, isLoading, loadingText = "Working...") {
+    this.toggleAuthLoading(button, isLoading, loadingText);
+  }
+
+  async previewLeetcodeImport() {
+    const usernameInput = document.getElementById("leetcode-username");
+    const previewButton = document.getElementById("leetcode-import-preview");
+    const username = usernameInput?.value.trim();
+
+    if (!this.authStatus?.isAuthenticated || !this.authStatus?.token) {
+      this.setLeetcodeImportStatus("error", "Login to Traverse before importing LeetCode data.");
+      return;
+    }
+
+    if (!username) {
+      this.setLeetcodeImportStatus("error", "Enter your LeetCode username.");
+      usernameInput?.focus();
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_-]{1,40}$/.test(username)) {
+      this.setLeetcodeImportStatus("error", "Use a valid LeetCode username.");
+      usernameInput?.focus();
+      return;
+    }
+
+    try {
+      await chrome.storage.sync.set({ leetcode_import_username: username });
+      this.pendingLeetcodeImport = null;
+      this.setButtonLoading(previewButton, true, "Reading LeetCode...");
+      this.setLeetcodeImportStatus("info", "Fetching accepted submissions from LeetCode.");
+
+      const bundle = await this.fetchLeetcodeImportBundle(username, (message) => {
+        this.setLeetcodeImportStatus("info", message);
+      });
+
+      if (bundle.submissions.length === 0) {
+        this.setLeetcodeImportStatus("warning", "No solved LeetCode questions were found for this username.");
+        return;
+      }
+
+      const payload = this.buildLeetcodeImportPayload(username, bundle);
+      const existingSolveSlugs = await this.fetchExistingLeetcodeSolveSlugs();
+      const originalImportCount = payload.submissions.length;
+      payload.submissions = payload.submissions.filter(
+        (submission) => !existingSolveSlugs.has(submission.problemSlug)
+      );
+      const existingInTraverse = originalImportCount - payload.submissions.length;
+
+      if (payload.submissions.length === 0) {
+        this.setLeetcodeImportStatus(
+          "warning",
+          `All ${originalImportCount} solved LeetCode questions are already in Traverse for this account.`
+        );
+        return;
+      }
+
+      this.pendingLeetcodeImport = {
+        username,
+        payload,
+        stats: {
+          ...bundle.stats,
+          existingInTraverse,
+          originalImportCount,
+        },
+      };
+      this.openLeetcodeImportModal(this.pendingLeetcodeImport);
+      this.setLeetcodeImportStatus(
+        "success",
+        `Ready to import ${payload.submissions.length} new solved questions. ${existingInTraverse} already exist in Traverse.`
+      );
+    } catch (error) {
+      spError("[LeetCode Import] Preview failed:", error);
+      this.setLeetcodeImportStatus(
+        "error",
+        error?.message || "Unable to prepare the LeetCode import."
+      );
+    } finally {
+      this.setButtonLoading(previewButton, false);
+    }
+  }
+
+  async confirmLeetcodeImport() {
+    const pendingImport = this.pendingLeetcodeImport;
+    const confirmButton = document.getElementById("leetcode-import-confirm");
+
+    if (!pendingImport) {
+      this.closeLeetcodeImportModal();
+      this.setLeetcodeImportStatus("error", "Import preview expired. Run preview again.");
+      return;
+    }
+
+    try {
+      this.setButtonLoading(confirmButton, true, "Importing...");
+      const response = await this.fetchViaBackground(
+        `${this.getBackendBaseUrl()}/api/submissions/bulk-import`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.authStatus.token}`,
+          },
+          body: JSON.stringify(pendingImport.payload),
+        },
+        60000
+      );
+
+      if (!response.success) {
+        const errorText = response.data?.error || response.error || `Backend returned ${response.status}`;
+        throw new Error(errorText);
+      }
+
+      const imported = response.data?.import || {};
+      this.closeLeetcodeImportModal();
+      this.pendingLeetcodeImport = null;
+      this.setLeetcodeImportStatus(
+        "success",
+        `Imported ${imported.importedSolves || 0} new solves. ${pendingImport.stats.existingInTraverse || 0} were already in Traverse before posting; backend skipped ${imported.skippedExistingSolves || 0} more.`
+      );
+    } catch (error) {
+      spError("[LeetCode Import] Confirm failed:", error);
+      this.setLeetcodeImportStatus("error", error?.message || "Import failed.");
+    } finally {
+      this.setButtonLoading(confirmButton, false);
+    }
+  }
+
+  getBackendBaseUrl() {
+    if (typeof extensionAuth !== "undefined" && typeof extensionAuth.getApiBaseUrl === "function") {
+      return extensionAuth.getApiBaseUrl();
+    }
+    return "https://traverse-backend-api.azurewebsites.net";
+  }
+
+  openLeetcodeImportModal(pendingImport) {
+    const modal = document.getElementById("leetcode-import-modal");
+    const summary = document.getElementById("leetcode-import-summary");
+    const grid = document.getElementById("leetcode-import-summary-grid");
+    if (!modal || !summary || !grid) return;
+
+    const stats = pendingImport.stats;
+    summary.textContent = `Import solved LeetCode data for ${pendingImport.username}?`;
+    grid.innerHTML = [
+      ["New to import", pendingImport.payload.submissions.length],
+      ["Already in Traverse", stats.existingInTraverse || 0],
+      ["Duplicates removed", stats.duplicatesRemoved],
+      ["Details fetched", stats.detailsFetched],
+    ]
+      .map(([label, value]) => `
+        <div class="import-summary-item">
+          <span class="import-summary-value">${value}</span>
+          <span class="import-summary-label">${label}</span>
+        </div>
+      `)
+      .join("");
+
+    modal.classList.add("active");
+    modal.setAttribute("aria-hidden", "false");
+    document.getElementById("leetcode-import-confirm")?.focus();
+  }
+
+  closeLeetcodeImportModal() {
+    const modal = document.getElementById("leetcode-import-modal");
+    if (!modal) return;
+    modal.classList.remove("active");
+    modal.setAttribute("aria-hidden", "true");
+  }
+
+  async fetchLeetcodeImportBundle(username, onProgress) {
+    const encodedUsername = encodeURIComponent(username);
+    const [profile, solved, languageStats, skillStats, calendar, acceptedRaw] = await Promise.all([
+      this.fetchAlfaLeetcode(`${encodedUsername}/profile`, 30000).catch((error) => ({ error: error.message })),
+      this.fetchAlfaLeetcode(`${encodedUsername}/solved`, 30000).catch((error) => ({ error: error.message })),
+      this.fetchAlfaLeetcode(`${encodedUsername}/language`, 30000).catch((error) => ({ error: error.message })),
+      this.fetchAlfaLeetcode(`${encodedUsername}/skill`, 30000).catch((error) => ({ error: error.message })),
+      this.fetchAlfaLeetcode(`${encodedUsername}/calendar`, 30000).catch((error) => ({ error: error.message })),
+      this.fetchAlfaLeetcode(`${encodedUsername}/acSubmission?limit=5000`, 45000),
+    ]);
+
+    const accepted = this.extractSolvedSubmissionCandidates(acceptedRaw);
+    const progressCandidates = accepted.length > 0
+      ? []
+      : this.extractSolvedSubmissionCandidates(
+        await this.fetchAlfaLeetcode(`${encodedUsername}/progress`, 30000).catch(() => ({}))
+      );
+    const baseCandidates = accepted.length > 0 ? accepted : progressCandidates;
+    const deduped = this.dedupeLeetcodeSolvedItems(baseCandidates);
+
+    onProgress?.(`Found ${deduped.items.length} unique solved questions. Fetching problem metadata.`);
+
+    const detailResult = await this.fetchLeetcodeQuestionDetails(deduped.items, onProgress);
+
+    return {
+      submissions: detailResult.items,
+      metadata: {
+        profile,
+        solved,
+        languageStats,
+        skillStats,
+        calendar,
+      },
+      stats: {
+        duplicatesRemoved: deduped.duplicates,
+        detailsFetched: detailResult.detailsFetched,
+        detailsFailed: detailResult.detailsFailed,
+      },
+    };
+  }
+
+  async fetchExistingLeetcodeSolveSlugs() {
+    const slugs = new Set();
+    const limit = 100;
+    let offset = 0;
+
+    while (true) {
+      const response = await this.fetchViaBackground(
+        `${this.getBackendBaseUrl()}/api/solves?platform=leetcode&limit=${limit}&offset=${offset}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${this.authStatus.token}`,
+          },
+        },
+        30000
+      );
+
+      if (!response.success) {
+        const errorText = response.data?.error || response.error || `Backend returned ${response.status}`;
+        throw new Error(`Could not check existing Traverse solves: ${errorText}`);
+      }
+
+      const solves = Array.isArray(response.data?.solves) ? response.data.solves : [];
+      solves.forEach((solve) => {
+        const slug = solve?.problem?.slug;
+        if (slug) slugs.add(this.slugify(slug));
+      });
+
+      const total = response.data?.pagination?.total;
+      offset += solves.length;
+
+      if (solves.length < limit || (typeof total === "number" && offset >= total)) {
+        break;
+      }
+    }
+
+    return slugs;
+  }
+
+  async fetchAlfaLeetcode(path, timeoutMs = 30000) {
+    const cleanPath = path.replace(/^\/+/, "");
+    const response = await this.fetchViaBackground(
+      `${ALFA_LEETCODE_API_BASE}/${cleanPath}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      },
+      timeoutMs
+    );
+
+    if (!response.success) {
+      const errorText = response.data?.error || response.error || `alfa LeetCode API returned ${response.status}`;
+      throw new Error(errorText);
+    }
+
+    return response.data || {};
+  }
+
+  async fetchViaBackground(url, options, timeoutMs = 30000) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        {
+          type: "BACKEND_API_FETCH",
+          url,
+          options,
+          timeoutMs,
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+
+          if (!response) {
+            reject(new Error("No response from background worker."));
+            return;
+          }
+
+          resolve(response);
+        }
+      );
+    });
+  }
+
+  extractSolvedSubmissionCandidates(payload) {
+    const candidates = [];
+    const seenArrays = new Set();
+
+    const visit = (value) => {
+      if (!value || typeof value !== "object") return;
+
+      if (Array.isArray(value)) {
+        if (seenArrays.has(value)) return;
+        seenArrays.add(value);
+
+        const arrayLooksRelevant = value.some((item) =>
+          item &&
+          typeof item === "object" &&
+          (item.titleSlug || item.slug || item.title || item.problemTitle)
+        );
+
+        if (arrayLooksRelevant) {
+          value.forEach((item) => {
+            const normalized = this.normalizeLeetcodeCandidate(item);
+            if (normalized) candidates.push(normalized);
+          });
+        }
+        return;
+      }
+
+      Object.values(value).forEach(visit);
+    };
+
+    visit(payload);
+    return candidates;
+  }
+
+  normalizeLeetcodeCandidate(item) {
+    if (!item || typeof item !== "object") return null;
+
+    const rawSlug = item.titleSlug || item.problemSlug || item.slug || item.questionSlug;
+    const title = item.title || item.problemTitle || item.questionTitle || rawSlug;
+    const slug = rawSlug || this.slugify(title);
+    if (!slug) return null;
+
+    const status = (item.statusDisplay || item.status || item.result || "").toString().toLowerCase();
+    if (status && !["accepted", "ac", "solved"].some((accepted) => status.includes(accepted))) {
+      return null;
+    }
+
+    return {
+      problemSlug: this.slugify(slug),
+      problemTitle: title?.toString() || slug,
+      difficulty: this.normalizeLeetcodeDifficulty(item.difficulty),
+      language: item.lang || item.language || "unknown",
+      timestamp: item.timestamp || item.submittedAt || item.date || null,
+      topicTags: Array.isArray(item.topicTags) ? item.topicTags : [],
+      questionId: item.questionId || item.id || null,
+      frontendQuestionId: item.frontendQuestionId || item.questionFrontendId || null,
+    };
+  }
+
+  dedupeLeetcodeSolvedItems(items) {
+    const bySlug = new Map();
+    let duplicates = 0;
+
+    items.forEach((item) => {
+      if (!item.problemSlug) return;
+      const existing = bySlug.get(item.problemSlug);
+      if (!existing) {
+        bySlug.set(item.problemSlug, item);
+        return;
+      }
+
+      duplicates += 1;
+      const existingTime = this.timestampToMillis(existing.timestamp);
+      const itemTime = this.timestampToMillis(item.timestamp);
+      if (itemTime && (!existingTime || itemTime < existingTime)) {
+        bySlug.set(item.problemSlug, item);
+      }
+    });
+
+    return {
+      items: Array.from(bySlug.values()),
+      duplicates,
+    };
+  }
+
+  async fetchLeetcodeQuestionDetails(items, onProgress) {
+    const enriched = new Array(items.length);
+    let cursor = 0;
+    let detailsFetched = 0;
+    let detailsFailed = 0;
+    const concurrency = 3;
+
+    const worker = async () => {
+      while (cursor < items.length) {
+        const index = cursor;
+        cursor += 1;
+        const item = items[index];
+
+        try {
+          const detailPayload = await this.fetchAlfaLeetcode(`select?titleSlug=${encodeURIComponent(item.problemSlug)}`, 15000);
+          const detail = this.extractQuestionDetail(detailPayload);
+          enriched[index] = this.mergeLeetcodeDetail(item, detail);
+          detailsFetched += detail ? 1 : 0;
+          detailsFailed += detail ? 0 : 1;
+        } catch (error) {
+          enriched[index] = item;
+          detailsFailed += 1;
+        }
+
+        if ((index + 1) % 10 === 0 || index === items.length - 1) {
+          onProgress?.(`Fetched metadata for ${index + 1}/${items.length} solved questions.`);
+        }
+      }
+    };
+
+    await Promise.all(
+      Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+    );
+
+    return {
+      items: enriched.filter(Boolean),
+      detailsFetched,
+      detailsFailed,
+    };
+  }
+
+  extractQuestionDetail(payload) {
+    if (!payload || typeof payload !== "object") return null;
+    return payload.question || payload.data?.question || payload.data || payload;
+  }
+
+  mergeLeetcodeDetail(item, detail) {
+    if (!detail || typeof detail !== "object") return item;
+
+    return {
+      ...item,
+      problemSlug: this.slugify(detail.titleSlug || detail.slug || item.problemSlug),
+      problemTitle: detail.title || detail.problemTitle || item.problemTitle,
+      difficulty: this.normalizeLeetcodeDifficulty(detail.difficulty || item.difficulty),
+      topicTags: Array.isArray(detail.topicTags) ? detail.topicTags : item.topicTags,
+      questionId: detail.questionId || item.questionId,
+      frontendQuestionId: detail.questionFrontendId || detail.frontendQuestionId || item.frontendQuestionId,
+    };
+  }
+
+  buildLeetcodeImportPayload(username, bundle) {
+    return {
+      source: "leetcode",
+      username,
+      submissions: bundle.submissions.map((item) => {
+        const happenedAt = this.timestampToIso(item.timestamp);
+        return {
+          problemSlug: item.problemSlug,
+          problemTitle: item.problemTitle,
+          difficulty: this.normalizeLeetcodeDifficulty(item.difficulty),
+          language: item.language || "unknown",
+          happenedAt,
+          timestamp: item.timestamp || null,
+          idempotencyKey: `leetcode-import:${item.problemSlug}`,
+          topicTags: item.topicTags || [],
+          questionId: item.questionId || null,
+          frontendQuestionId: item.frontendQuestionId || null,
+        };
+      }),
+      metadata: bundle.metadata,
+    };
+  }
+
+  normalizeLeetcodeDifficulty(value) {
+    const normalized = value?.toString().trim().toLowerCase();
+    if (normalized === "easy" || normalized === "medium" || normalized === "hard") {
+      return normalized;
+    }
+    return "medium";
+  }
+
+  slugify(value) {
+    if (!value) return "";
+    return value
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  timestampToMillis(value) {
+    if (value === null || value === undefined || value === "") return null;
+    if (typeof value === "string" && Number.isNaN(Number(value))) {
+      const parsed = Date.parse(value);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return null;
+    return numeric < 10000000000 ? numeric * 1000 : numeric;
+  }
+
+  timestampToIso(value) {
+    const millis = this.timestampToMillis(value);
+    const date = millis ? new Date(millis) : new Date();
+    return date.toISOString();
   }
 
   // Check for extension updates from GitHub releases

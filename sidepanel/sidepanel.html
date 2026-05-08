@@ -61,6 +61,23 @@
 
                 <div class="separator"></div>
 
+                <!-- LeetCode Import -->
+                <div class="settings-section" id="leetcode-import-section">
+                    <h3>LeetCode Import</h3>
+                    <div class="leetcode-import">
+                        <div class="field">
+                            <label for="leetcode-username">LeetCode Username</label>
+                            <input type="text" id="leetcode-username" placeholder="leetcode_user" autocomplete="off" />
+                        </div>
+                        <button type="button" class="btn btn-primary" id="leetcode-import-preview">
+                            Preview Import
+                        </button>
+                        <div class="leetcode-import-status" id="leetcode-import-status"></div>
+                    </div>
+                </div>
+
+                <div class="separator"></div>
+
                 <!-- GitHub Section with Progressive Disclosure -->
                 <div class="settings-section" id="github-section">
                     <h3>GitHub</h3>
@@ -222,6 +239,26 @@
                 </div>
             </div>
         </footer>
+    </div>
+
+    <div class="modal-overlay" id="leetcode-import-modal" aria-hidden="true">
+        <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="leetcode-import-modal-title">
+            <div class="confirm-modal-header">
+                <h2 id="leetcode-import-modal-title">Confirm LeetCode Import</h2>
+                <button type="button" class="modal-close" id="leetcode-import-cancel" aria-label="Close">×</button>
+            </div>
+            <div class="confirm-modal-body">
+                <p id="leetcode-import-summary"></p>
+                <div class="import-summary-grid" id="leetcode-import-summary-grid"></div>
+                <p class="confirm-warning">
+                    This posts your solved LeetCode problem list and available problem metadata to Traverse.
+                </p>
+            </div>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn" id="leetcode-import-back">Cancel</button>
+                <button type="button" class="btn btn-primary" id="leetcode-import-confirm">Import to Traverse</button>
+            </div>
+        </div>
     </div>
 
     <script src="../utils/auth.js"></script>

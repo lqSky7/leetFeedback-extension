@@ -24,6 +24,7 @@
         "https://api.github.com/*",
         "https://generativelanguage.googleapis.com/*",
         "https://traverse-backend-api.azurewebsites.net/*",
+        "https://alfa-leetcode-api.onrender.com/*",
         "https://leet-feedback.vercel.app/*",
         "https://*.vercel.app/*",
         "https://*.netlify.app/*",
