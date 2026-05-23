@@ -368,22 +368,22 @@
         const previousSolved = existingData.solved || { value: false, date: 0, tries: 0 };
 
         let solvedData;
-        if (previousSolved.value) {
-          // Already solved, keep previous data
-          solvedData = previousSolved;
-        } else if (solved) {
-          // Just solved
+        if (solved) {
+          // Just solved or revised (update to current timestamp so backend gets a new idempotency key)
           solvedData = {
             value: true,
             date: Date.now(),
-            tries: TRIES || 1
+            tries: TRIES || previousSolved.tries || 1
           };
+        } else if (previousSolved.value) {
+          // Keep existing solved data on page load
+          solvedData = previousSolved;
         } else {
           // Not solved
           solvedData = {
             value: false,
             date: 0,
-            tries: TRIES || 0
+            tries: TRIES || previousSolved.tries || 0
           };
         }
 

@@ -230,15 +230,18 @@
         const triesValue = typeof tries === 'number' ? tries : (previousSolved.tries ?? 0);
 
         let solvedData;
-        if (previousSolved.value) {
-          solvedData = previousSolved;
-        } else if (solved) {
+        if (solved) {
+          // Just solved or revised (update to current timestamp so backend gets a new idempotency key)
           solvedData = {
             value: true,
-            date: previousSolved.date && previousSolved.date > 0 ? previousSolved.date : Date.now(),
+            date: Date.now(),
             tries: triesValue
           };
+        } else if (previousSolved.value) {
+          // Keep existing solved data on page load
+          solvedData = previousSolved;
         } else {
+          // Not solved
           solvedData = {
             value: false,
             date: 0,
