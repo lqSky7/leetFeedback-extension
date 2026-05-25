@@ -35,6 +35,7 @@ class ProblemTimer {
     this.tabHiddenAt = null;
     this.isPaused = false;
     this.pausedAt = null;
+    this.lastSaveTime = 0;
 
     // Overlay state
     this.overlay = null;
@@ -155,6 +156,7 @@ class ProblemTimer {
 
   // Reset timer (called when navigating to a new problem)
   reset() {
+    this.problemUrl = null; // Clear so subsequent startTimer will reload storage
     this.startTime = Date.now();
     this.pausedTime = 0;
     this.isTabHidden = document.hidden;
@@ -217,6 +219,15 @@ class ProblemTimer {
       this.pausedTime = 0;
       this.tabHiddenAt = null;
       return 0;
+    }
+
+    // Hard cap at 2 hours for TakeUforward
+    const isTakeUforward = window.location.href.includes('takeuforward.org');
+    if (isTakeUforward) {
+      const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 7,200,000 milliseconds
+      if (elapsed > TWO_HOURS_MS) {
+        return TWO_HOURS_MS;
+      }
     }
 
     return elapsed;
@@ -326,6 +337,39 @@ class ProblemTimer {
       const result = await chrome.storage.local.get([storageKey]);
       const problemData = result[storageKey] || {};
 
+      const isTakeUforward = window.location.href.includes('takeuforward.org');
+      if (isTakeUforward) {
+        const isSolved = problemData.solved && problemData.solved.value;
+        const now = Date.now();
+        const lastActiveTime = problemData.lastActiveTime || 0;
+        const lastTimestamp = problemData.timestamp ? new Date(problemData.timestamp).getTime() : 0;
+        const referenceTime = lastActiveTime || lastTimestamp;
+
+        const INACTIVITY_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
+
+        if (isSolved || (referenceTime && (now - referenceTime > INACTIVITY_TIMEOUT))) {
+          console.log("[ProblemTimer] Solved or inactive for too long. Starting fresh timer.");
+          this.startTime = null;
+          this.pausedTime = 0;
+          this.isPaused = false;
+          this.pausedAt = null;
+          return;
+        }
+
+        // If resuming within timeout, adjust pausedTime for offline/closed tab duration
+        if (referenceTime && !problemData.isPaused) {
+          const offlineDuration = now - referenceTime;
+          if (offlineDuration > 0) {
+            this.startTime = problemData.problemStartTime;
+            this.pausedTime = (problemData.pausedTime || 0) + offlineDuration;
+            this.isPaused = !!problemData.isPaused;
+            this.pausedAt = problemData.pausedAt || null;
+            console.log(`[ProblemTimer] Adjusted pausedTime by ${Math.floor(offlineDuration / 1000)}s for offline duration`);
+            return;
+          }
+        }
+      }
+
       this.startTime = problemData.problemStartTime;
       this.pausedTime = problemData.pausedTime || 0;
       this.isPaused = !!problemData.isPaused;
@@ -365,6 +409,7 @@ class ProblemTimer {
       pausedTime: this.pausedTime,
       isPaused: this.isPaused,
       pausedAt: this.isPaused ? this.pausedAt : null,
+      lastActiveTime: Date.now()
     };
 
     // Queue the save operation to prevent race conditions (uses snapshot)
@@ -378,6 +423,7 @@ class ProblemTimer {
         problemData.pausedTime = snapshot.pausedTime;
         problemData.isPaused = snapshot.isPaused;
         problemData.pausedAt = snapshot.isPaused ? snapshot.pausedAt : null;
+        problemData.lastActiveTime = snapshot.lastActiveTime;
 
         await chrome.storage.local.set({ [storageKey]: problemData });
       } catch (error) {
@@ -729,6 +775,16 @@ class ProblemTimer {
     }
 
     timeDisplay.textContent = timeStr;
+
+    // Periodically update lastActiveTime in storage (once per minute) to prevent session timeouts
+    const isTakeUforward = window.location.href.includes('takeuforward.org');
+    if (isTakeUforward) {
+      const now = Date.now();
+      if (!this.lastSaveTime || now - this.lastSaveTime > 60000) { // 1 minute
+        this.lastSaveTime = now;
+        this.saveToStorage().catch(err => this._error("[ProblemTimer] Periodical save failed:", err));
+      }
+    }
   }
 }
 

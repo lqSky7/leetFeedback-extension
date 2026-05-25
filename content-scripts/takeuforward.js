@@ -49,12 +49,18 @@
         this.setupEventListeners();
         this.injectInterceptor();
         this.checkPageType();
-        this.pollForQuestionDetails();
 
-        // Start the unified problem timer
-        const problemSlug = this.getProblemSlugFromUrl();
-        if (window.ProblemTimer && problemSlug) {
-          window.ProblemTimer.getInstance().startTimer(problemSlug);
+        // Start the unified problem timer and details polling only if on a problem page
+        if (this.isProblemPage()) {
+          this.pollForQuestionDetails();
+          const problemSlug = this.getProblemSlugFromUrl();
+          if (window.ProblemTimer && problemSlug) {
+            window.ProblemTimer.getInstance().startTimer(problemSlug);
+          }
+        } else {
+          if (window.ProblemTimer) {
+            window.ProblemTimer.getInstance().hideOverlay();
+          }
         }
 
         DSAUtils.logDebug(PLATFORM, 'TakeUforward extractor initialized');
@@ -93,15 +99,21 @@
           this.aiAnalysis = null;
           this.aiTags = [];
 
-          // Reset the unified problem timer
+          // Reset the unified problem timer based on page type
           if (window.ProblemTimer) {
-            window.ProblemTimer.getInstance().reset();
-            window.ProblemTimer.getInstance().startTimer(this.getProblemSlugFromUrl());
+            if (this.isProblemPage()) {
+              window.ProblemTimer.getInstance().reset();
+              window.ProblemTimer.getInstance().startTimer(this.getProblemSlugFromUrl());
+            } else {
+              window.ProblemTimer.getInstance().hideOverlay();
+            }
           }
 
-          setTimeout(() => {
-            this.fetchQuestionDetails();
-          }, 4000);
+          if (this.isProblemPage()) {
+            setTimeout(() => {
+              this.fetchQuestionDetails();
+            }, 4000);
+          }
         }
       }, 4000);
 
@@ -242,8 +254,7 @@
     }
 
     checkPageType() {
-      const url = window.location.href;
-      if (url.includes('takeuforward.org') && url.includes('/plus/')) {
+      if (this.isProblemPage()) {
         setTimeout(() => {
           this.fetchQuestionDetails();
         }, 2000);
@@ -332,6 +343,19 @@
       if (normalized.includes('medium')) return 1;
       if (normalized.includes('hard')) return 2;
       return 1; // default to medium
+    }
+
+    isProblemPage() {
+      const url = window.location.href;
+      const pathname = window.location.pathname;
+      const problemSlug = this.getProblemSlugFromUrl();
+      
+      // Must contain takeuforward.org, /plus/, /problems/ and a valid slug
+      return url.includes('takeuforward.org') && 
+             pathname.includes('/plus/') && 
+             pathname.includes('/problems/') && 
+             problemSlug !== '' && 
+             problemSlug !== 'problems';
     }
 
     getProblemSlugFromUrl() {

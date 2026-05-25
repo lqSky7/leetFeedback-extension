@@ -263,12 +263,13 @@ class BackendAPI {
           this._warn('[Backend API] Negative active time detected, resetting to 0. Active time:', activeTime, 'ms');
           timeTaken = 0;
         } else {
-          // Cap at 24 hours (86400 seconds) to prevent overflow issues
-          const MAX_TIME_SECONDS = 24 * 60 * 60;
+          // Cap at 2 hours for takeuforward, and 24 hours for others to prevent overflow issues
+          const isTakeUforward = platform && platform.toLowerCase() === 'takeuforward';
+          const MAX_TIME_SECONDS = isTakeUforward ? 2 * 60 * 60 : 24 * 60 * 60;
           const rawTimeTaken = Math.floor(activeTime / 1000); // Convert ms to seconds
 
           if (rawTimeTaken > MAX_TIME_SECONDS) {
-            this._warn('[Backend API] Time taken exceeds 24 hours, capping. Raw value:', rawTimeTaken);
+            this._warn(`[Backend API] Time taken exceeds cap (${MAX_TIME_SECONDS}s), capping. Raw value:`, rawTimeTaken);
             timeTaken = MAX_TIME_SECONDS;
           } else {
             timeTaken = rawTimeTaken;
