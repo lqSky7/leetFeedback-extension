@@ -42,7 +42,7 @@ class ExtensionAuth {
   }
 
   getApiBaseUrl() {
-    return 'https://traverse-backend-api.azurewebsites.net';
+    return 'https://155-248-241-153.sslip.io';
   }
 
   async init() {

@@ -57,7 +57,7 @@ function mapTopicToCategory(topics) {
 
 class BackendAPI {
   constructor() {
-    this.baseURL = 'https://traverse-backend-api.azurewebsites.net';
+    this.baseURL = 'https://155-248-241-153.sslip.io';
     this.authToken = null;
     this.initialized = false;
     this._log(`[Backend API] BackendAPI constructor called`);

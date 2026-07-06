@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Traverse",
-    "version": "1.6.1",
+    "version": "1.6.2",
     "description": "Chrome extension for Traverse Ecosystem",
     "icons": {
         "16": "icons/16.png",
@@ -23,7 +23,7 @@
         "https://*.codechef.com/*",
         "https://api.github.com/*",
         "https://generativelanguage.googleapis.com/*",
-        "https://traverse-backend-api.azurewebsites.net/*",
+        "https://155-248-241-153.sslip.io/*",
         "https://alfa-leetcode-api.onrender.com/*",
         "https://leet-feedback.vercel.app/*",
         "https://*.vercel.app/*",
