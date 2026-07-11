@@ -44,13 +44,14 @@
         <div class="separator"></div>
 
         <nav class="tabs">
-            <button class="tab active" data-tab="config">Config</button>
+            <div class="tab-indicator"></div>
+            <button class="tab active" data-tab="home">Home</button>
             <button class="tab" data-tab="settings">Settings</button>
         </nav>
 
         <main class="content">
-            <!-- Config Tab -->
-            <section class="tab-panel active" id="config">
+            <!-- Home Tab -->
+            <section class="tab-panel active" id="home">
                 <!-- Account Section -->
                 <div class="settings-section" id="account-section">
                     <h3>Account</h3>
@@ -60,6 +61,32 @@
                 </div>
 
                 <div class="separator"></div>
+
+                <!-- Timer Options Section -->
+                <div class="settings-section" id="timer-section">
+                    <h3>Timer Options</h3>
+                    <div class="settings-option">
+                        <div class="settings-option-title">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="timer-overlay-enabled" checked />
+                                <span class="checkbox-custom"></span>
+                                Show Timer Overlay
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Tab -->
+            <section class="tab-panel" id="settings">
+                <!-- Account Management Section -->
+                <div class="settings-section" id="account-settings-section" style="display: none;">
+                    <h3>Account Management</h3>
+                    <div id="auth-settings-details">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    <div class="separator"></div>
+                </div>
 
                 <!-- LeetCode Import -->
                 <div class="settings-section" id="leetcode-import-section">
@@ -74,9 +101,8 @@
                         </button>
                         <div class="leetcode-import-status" id="leetcode-import-status"></div>
                     </div>
+                    <div class="separator"></div>
                 </div>
-
-                <div class="separator"></div>
 
                 <!-- GitHub Section with Progressive Disclosure -->
                 <div class="settings-section" id="github-section">
@@ -87,10 +113,8 @@
                                 <input type="checkbox" id="github-push-enabled" checked />
                                 <span class="checkbox-custom"></span>
                                 Push to GitHub
+                                <span class="info-icon" data-tooltip="Automatically push solutions to your GitHub repository">ⓘ</span>
                             </label>
-                        </div>
-                        <div class="settings-option-description">
-                            Automatically push solutions to your GitHub repository
                         </div>
                     </div>
 
@@ -109,11 +133,11 @@
                         </div>
 
                         <div class="field">
-                            <label for="repo-url">Repository URL</label>
+                            <label for="repo-url">
+                                Repository URL
+                                <span class="info-icon" data-tooltip="Paste your repo link; username and repository below are filled automatically.">ⓘ</span>
+                            </label>
                             <input type="text" id="repo-url" placeholder="https://github.com/username/repo or https://github.com/username/repo.git" />
-                            <div class="settings-option-description" style="margin-top: 4px;">
-                                Paste your repo link; username and repository below are filled automatically.
-                            </div>
                         </div>
 
                         <div class="field-group">
@@ -132,22 +156,21 @@
                             <input type="text" id="branch" placeholder="main" required />
                         </div>
                     </div>
+                    <div class="separator"></div>
                 </div>
-
-                <div class="separator"></div>
 
                 <!-- AI for Mistake Analysis: default G4F, optional Gemini -->
                 <div class="settings-section" id="gemini-section">
                     <h3>Mistake Analysis (AI)</h3>
                     <div class="field">
-                        <label for="ai-provider">Provider</label>
+                        <label for="ai-provider">
+                            Provider
+                            <span class="info-icon" data-tooltip="Default: G4F. Use Gemini if you have an API key.">ⓘ</span>
+                        </label>
                         <select id="ai-provider" class="input-group">
                             <option value="g4f">G4F (free, no key)</option>
                             <option value="gemini">Gemini (API key)</option>
                         </select>
-                        <div class="settings-option-description" style="margin-top: 6px;">
-                            Default: G4F. Use Gemini if you have an API key.
-                        </div>
                     </div>
                     <div class="field" id="gemini-key-field">
                         <label for="gemini-key">Gemini API Key (only if Provider = Gemini)</label>
@@ -160,25 +183,12 @@
                         <a href="https://aistudio.google.com/app/apikey" target="_blank" class="token-link">Get Gemini
                             API Key</a>
                     </div>
+                    <div class="separator"></div>
                 </div>
-            </section>
 
-            <!-- Settings Tab -->
-            <section class="tab-panel" id="settings">
+                <!-- Options/Debug Section -->
                 <div class="settings-section">
                     <h3>Options</h3>
-                    <div class="settings-option">
-                        <div class="settings-option-title">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="timer-overlay-enabled" checked />
-                                <span class="checkbox-custom"></span>
-                                Show Timer Overlay
-                            </label>
-                        </div>
-                        <div class="settings-option-description">
-                            Display a floating timer on DSA problem pages
-                        </div>
-                    </div>
                     <div class="settings-option">
                         <div class="settings-option-title">
                             <label class="checkbox-label">
@@ -187,13 +197,9 @@
                                 Enable Debug Logs
                             </label>
                         </div>
-                        <div class="settings-option-description">
-                            Shows detailed console logs for debugging
-                        </div>
                     </div>
+                    <div class="separator"></div>
                 </div>
-
-                <div class="separator"></div>
 
                 <div class="settings-section">
                     <h3>Updates</h3>

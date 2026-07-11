@@ -501,6 +501,12 @@ class PopupController {
     });
     document.querySelector(`[data-tab="${tabName}"]`).classList.add("active");
 
+    // Toggle sliding indicator position class on the container
+    const tabsContainer = document.querySelector(".tabs");
+    if (tabsContainer) {
+      tabsContainer.classList.toggle("settings-active", tabName === "settings");
+    }
+
     // Update tab panels
     document.querySelectorAll(".tab-panel").forEach((panel) => {
       panel.classList.remove("active");
@@ -709,6 +715,9 @@ class PopupController {
     const authSection = document.getElementById("auth-section");
     if (!authSection) return;
 
+    const accountSettingsSec = document.getElementById("account-settings-section");
+    const authSettingsDetails = document.getElementById("auth-settings-details");
+
     const isAuthenticated =
       this.authStatus?.isAuthenticated && this.authStatus.user;
 
@@ -726,85 +735,102 @@ class PopupController {
         user.email ||
         "User";
       const email = user.email || "";
-      const avatarMarkup = user.photoURL
-        ? `<img src="${user.photoURL}" alt="${displayName}" />`
-        : `<div class="default-avatar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>`;
+
+      // Cat profile picture using Robohash set4
+      const catPhotoUrl = `https://robohash.org/${encodeURIComponent(displayName)}?set=set4`;
+      const avatarMarkup = `<img src="${catPhotoUrl}" alt="${displayName}" />`;
 
       // Get session status for badge
       const sessionBadge = this.getSessionStatusBadge();
 
+      // Render Config tab (ONLY pfp and name)
       authSection.innerHTML = `
-        <div class="profile-card">
+        <div class="profile-card profile-card-minimal">
           <div class="profile-left">
             <div class="profile-avatar">
               ${avatarMarkup}
             </div>
             <div class="profile-info">
-              <div class="profile-name">${displayName}</div>
-              ${email ? `<div class="profile-email">${email}</div>` : ""}
-              ${sessionBadge}
+              <div class="profile-name" style="font-size: 16px; font-weight: 600;">${displayName}</div>
             </div>
           </div>
-          <div class="profile-right">
-            <button class="btn" id="add-account-btn">Add Account</button>
-            <button class="btn" id="sign-out-btn">Sign Out</button>
-          </div>
-        </div>
-        <div class="account-controls">
-          <label for="active-account-select">Active Account</label>
-          <select id="active-account-select" class="account-select"></select>
-        </div>
-        <div class="add-account-panel" id="add-account-panel">
-          <h4 class="account-form-title">Add Another Account</h4>
-          <form class="auth-form active" id="auth-add-account-form" data-form="add-account" aria-label="Add another account">
-            <div class="field">
-              <label for="auth-add-username">Username</label>
-              <input type="text" id="auth-add-username" name="username" placeholder="johndoe" autocomplete="username" required />
-            </div>
-            <div class="field">
-              <label for="auth-add-password">Password</label>
-              <input type="password" id="auth-add-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
-            </div>
-            <button type="submit" class="btn btn-primary">Add Account & Switch</button>
-          </form>
-          <div class="auth-form-message" id="auth-form-message"></div>
         </div>
       `;
 
-      const signOutBtn = document.getElementById("sign-out-btn");
-      if (signOutBtn) {
-        signOutBtn.addEventListener("click", () => this.signOut());
-      }
-      const accountSelect = document.getElementById("active-account-select");
-      if (accountSelect) {
-        accountOptions.forEach((account) => {
-          const accountName =
-            account?.user?.username ||
-            account?.user?.displayName ||
-            account?.user?.name ||
-            account?.user?.email ||
-            "User";
-          const option = document.createElement("option");
-          option.value = account.id;
-          option.textContent = accountName;
-          option.selected = account.id === currentAccountId;
-          accountSelect.appendChild(option);
-        });
-        accountSelect.addEventListener("change", (event) =>
-          this.handleAccountSwitch(event),
-        );
-      }
-      const addAccountBtn = document.getElementById("add-account-btn");
-      if (addAccountBtn) {
-        addAccountBtn.addEventListener("click", () => this.toggleAddAccountForm());
-      }
-      const addAccountForm = document.getElementById("auth-add-account-form");
-      if (addAccountForm) {
-        addAccountForm.addEventListener("submit", (event) =>
-          this.handleLoginSubmit(event),
-        );
+      // Render Settings tab details (email, badge, actions, active account select, and add panel)
+      if (accountSettingsSec && authSettingsDetails) {
+        accountSettingsSec.style.display = "block";
+        authSettingsDetails.innerHTML = `
+          <div class="profile-settings-details" style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0;">
+            ${email ? `<div class="profile-email" style="font-size: 13px; color: var(--text-secondary);">${email}</div>` : ""}
+            <div class="status-badge-container">
+              ${sessionBadge}
+            </div>
+            <div class="profile-actions" style="display: flex; gap: 10px; margin-top: 4px;">
+              <button class="btn" id="add-account-btn" style="flex: 1;">Add Account</button>
+              <button class="btn" id="sign-out-btn" style="flex: 1;">Sign Out</button>
+            </div>
+            <div class="account-controls" style="margin-top: 4px;">
+              <label for="active-account-select" style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Active Account</label>
+              <select id="active-account-select" class="account-select" style="width: 100%; padding: 8px 12px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--input-radius); color: var(--text);"></select>
+            </div>
+            <div class="add-account-panel" id="add-account-panel" style="display: none;">
+              <h4 class="account-form-title">Add Another Account</h4>
+              <form class="auth-form active" id="auth-add-account-form" data-form="add-account" aria-label="Add another account">
+                <div class="field" style="margin-bottom: 10px;">
+                  <label for="auth-add-username">Username</label>
+                  <input type="text" id="auth-add-username" name="username" placeholder="johndoe" autocomplete="username" required />
+                </div>
+                <div class="field" style="margin-bottom: 10px;">
+                  <label for="auth-add-password">Password</label>
+                  <input type="password" id="auth-add-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Add Account & Switch</button>
+              </form>
+              <div class="auth-form-message" id="auth-form-message"></div>
+            </div>
+          </div>
+        `;
+
+        const signOutBtn = document.getElementById("sign-out-btn");
+        if (signOutBtn) {
+          signOutBtn.addEventListener("click", () => this.signOut());
+        }
+        const accountSelect = document.getElementById("active-account-select");
+        if (accountSelect) {
+          accountOptions.forEach((account) => {
+            const accountName =
+              account?.user?.username ||
+              account?.user?.displayName ||
+              account?.user?.name ||
+              account?.user?.email ||
+              "User";
+            const option = document.createElement("option");
+            option.value = account.id;
+            option.textContent = accountName;
+            option.selected = account.id === currentAccountId;
+            accountSelect.appendChild(option);
+          });
+          accountSelect.addEventListener("change", (event) =>
+            this.handleAccountSwitch(event),
+          );
+        }
+        const addAccountBtn = document.getElementById("add-account-btn");
+        if (addAccountBtn) {
+          addAccountBtn.addEventListener("click", () => this.toggleAddAccountForm());
+        }
+        const addAccountForm = document.getElementById("auth-add-account-form");
+        if (addAccountForm) {
+          addAccountForm.addEventListener("submit", (event) =>
+            this.handleLoginSubmit(event),
+          );
+        }
       }
     } else {
+      if (accountSettingsSec) {
+        accountSettingsSec.style.display = "none";
+      }
+
       authSection.innerHTML = `
         <div class="auth-login-compact">
           <div class="auth-toggle">
@@ -1511,7 +1537,7 @@ class PopupController {
     return date.toISOString();
   }
 
-  // Check for extension updates from GitHub releases
+  // Check for extension updates from Chrome Web Store
   async checkForUpdates() {
     const updateNotification = document.getElementById("update-notification");
     if (!updateNotification) return;
@@ -1523,26 +1549,47 @@ class PopupController {
       const now = Date.now();
       const oneDay = 24 * 60 * 60 * 1000;
 
+      const storeUrl = "https://chromewebstore.google.com/detail/traverse/nnapafjmoelkehjedfgjchoeelgbiama";
+
       if (cache && cache.timestamp && (now - cache.timestamp) < oneDay) {
         // Use cached latest version but compare against CURRENT manifest version
         const currentVersion = chrome.runtime.getManifest().version;
         const hasUpdate = this.compareVersions(cache.latestVersion, currentVersion) > 0;
-        this.renderUpdateNotification(hasUpdate, cache.latestVersion, currentVersion);
+        this.renderUpdateNotification(hasUpdate, cache.latestVersion, currentVersion, storeUrl);
         return;
       }
 
-      // Fetch latest release from GitHub
-      const response = await fetch(
-        "https://api.github.com/repos/lqSky7/leetFeedback-extension/releases/latest",
-        { headers: { Accept: "application/vnd.github.v3+json" } }
-      );
+      // Fetch web store page content
+      const response = await fetch(storeUrl);
 
       if (!response.ok) {
-        throw new Error(`GitHub API returned ${response.status}`);
+        throw new Error(`Chrome Web Store page returned status ${response.status}`);
       }
 
-      const release = await response.json();
-      const latestVersion = release.tag_name.replace(/^v/, "");
+      const htmlText = await response.text();
+      let latestVersion = null;
+
+      // Extract version using regex matching
+      const regexMatch = htmlText.match(/\\?"version\\?":\s*\\?"([0-9.]+)\\?"/);
+      if (regexMatch) {
+        latestVersion = regexMatch[1];
+      } else {
+        // Fallback to DOM parsing
+        const doc = new DOMParser().parseFromString(htmlText, "text/html");
+        const divs = Array.from(doc.querySelectorAll("div"));
+        const versionDiv = divs.find(el => el.textContent.trim() === "Version");
+        if (versionDiv && versionDiv.nextElementSibling) {
+          const versionStr = versionDiv.nextElementSibling.textContent.trim();
+          if (/^\d+(\.\d+)+$/.test(versionStr)) {
+            latestVersion = versionStr;
+          }
+        }
+      }
+
+      if (!latestVersion) {
+        throw new Error("Could not parse version from Chrome Web Store");
+      }
+
       const currentVersion = chrome.runtime.getManifest().version;
 
       // Compare versions
@@ -1554,12 +1601,12 @@ class PopupController {
           hasUpdate,
           latestVersion,
           currentVersion,
-          releaseUrl: release.html_url,
+          releaseUrl: storeUrl,
           timestamp: now
         }
       });
 
-      this.renderUpdateNotification(hasUpdate, latestVersion, currentVersion, release.html_url);
+      this.renderUpdateNotification(hasUpdate, latestVersion, currentVersion, storeUrl);
 
     } catch (error) {
       spError("[Update Check] Error:", error);
@@ -1572,7 +1619,7 @@ class PopupController {
     }
   }
 
-  renderUpdateNotification(hasUpdate, latestVersion, currentVersion, releaseUrl = "https://github.com/lqSky7/leetFeedback-extension/releases") {
+  renderUpdateNotification(hasUpdate, latestVersion, currentVersion, releaseUrl = "https://chromewebstore.google.com/detail/traverse/nnapafjmoelkehjedfgjchoeelgbiama") {
     const updateNotification = document.getElementById("update-notification");
     if (!updateNotification) return;
 
@@ -1585,7 +1632,7 @@ class PopupController {
             <span class="update-latest">v${latestVersion} available</span>
           </div>
           <a href="${releaseUrl}" target="_blank" class="update-link">
-            Download Update
+            Update from Chrome Web Store
           </a>
         </div>
       `;
