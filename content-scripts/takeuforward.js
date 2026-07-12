@@ -365,20 +365,63 @@
     }
 
     extractTopicsFromUrl() {
-      // Extract topic from URL query parameters
-      // URL format: /plus/dsa/problems/3-sum?category=arrays&subcategory=faqs-medium
+      const topics = [];
       const urlParams = new URLSearchParams(window.location.search);
       const categoryParam = urlParams.get('category');
+      const subcategoryParam = urlParams.get('subcategory');
+
+      let category = null;
+      let subcategory = null;
 
       if (categoryParam) {
-        // Clean up the category: "arrays" -> "Arrays"
-        const topic = categoryParam
+        category = categoryParam
           .replace(/-/g, ' ')
           .replace(/\b\w/g, (l) => l.toUpperCase());
-        return [topic];
+      }
+      if (subcategoryParam) {
+        subcategory = subcategoryParam
+          .replace(/-/g, ' ')
+          .replace(/\b\w/g, (l) => l.toUpperCase());
       }
 
-      return ['General'];
+      // Fallback to DOM parsing if URL parameters are missing
+      try {
+        if (!category) {
+          const activeCategoryElem = document.querySelector('.category-root-trigger--active-path');
+          if (activeCategoryElem) {
+            const breakWords = activeCategoryElem.querySelector('.break-words');
+            category = breakWords ? breakWords.textContent.trim() : activeCategoryElem.textContent.trim();
+          }
+        }
+
+        if (!subcategory) {
+          const currentSlug = this.getProblemSlugFromUrl();
+          const activeLink = document.querySelector(`a[href*="/problems/${currentSlug}"]`);
+          if (activeLink) {
+            const collapsible = activeLink.closest('[data-slot="collapsible-content"]') || activeLink.closest('[class*="collapsible-content"]');
+            if (collapsible) {
+              const trigger = collapsible.previousElementSibling || document.getElementById(collapsible.getAttribute('aria-labelledby'));
+              if (trigger) {
+                subcategory = trigger.textContent.replace(/[▶▼▲rightdownup]/gi, '').trim();
+              }
+            }
+          }
+        }
+      } catch (domError) {
+        debugLog('[TakeUforward] Error parsing DOM for topics:', domError);
+      }
+
+      if (category) {
+        topics.push(category);
+      } else {
+        topics.push('General');
+      }
+
+      if (subcategory) {
+        topics.push(subcategory);
+      }
+
+      return topics;
     }
 
     async storeProblemData(problemInfo, solved = false) {

@@ -294,11 +294,13 @@ class BackendAPI {
         mistakeTags: aiTags || [], // Gemini-generated mistake tags
         numberOfTries: Number(runCounter) || 1, // Use runCounter (run button presses)
         timeTaken: timeTaken,
-        category: mapTopicToCategory(parent_topic) // Map topic to category ID for ML model
+        category: mapTopicToCategory(parent_topic), // Map topic to category ID for ML model
+        topic: parent_topic[0] || null,
+        subtopic: parent_topic[1] || null,
       };
 
       this._log('[Backend API] Formatted submission data:', formattedData);
-      this._log('[Backend API] Topics:', parent_topic, '-> Category:', formattedData.category);
+      this._log('[Backend API] Topics:', parent_topic, '-> Category:', formattedData.category, 'Topic:', formattedData.topic, 'Subtopic:', formattedData.subtopic);
 
       return formattedData;
 
