@@ -30,8 +30,7 @@ const CATEGORY_MAP = {
   'heap': 12, 'priority queue': 12,
   // HashMap
   'hash map': 13, 'hashmap': 13, 'hash table': 13, 'hashtable': 13, 'hashing': 13,
-  // Math
-  'math': 14, 'bit manipulation': 14, 'number theory': 14
+  'math': 14, 'maths': 14, 'bit manipulation': 14, 'number theory': 14
 };
 
 /**
