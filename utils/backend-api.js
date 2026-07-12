@@ -3,19 +3,19 @@
 // Category mapping for ML model (0-14)
 const CATEGORY_MAP = {
   // Arrays
-  'array': 0, 'arrays': 0,
+  'array': 0, 'arrays': 0, 'sliding window': 0, 'two pointers': 0, 'two pointer': 0, '2 pointer': 0, 'sliding window / 2 pointer': 0,
   // Strings
-  'string': 1, 'strings': 1,
+  'string': 1, 'strings': 1, 'strings (advanced algo)': 1, 'strings(advanced algo)': 1,
   // Linked List
   'linked list': 2, 'linkedlist': 2, 'linked-list': 2,
   // Trees
-  'tree': 3, 'trees': 3, 'binary tree': 3, 'binary search tree': 3, 'bst': 3,
+  'tree': 3, 'trees': 3, 'binary tree': 3, 'binary trees': 3, 'binary search tree': 3, 'binary search trees': 3, 'bst': 3, 'trie': 3, 'tries': 3,
   // Graphs
   'graph': 4, 'graphs': 4,
   // Dynamic Programming
   'dp': 5, 'dynamic programming': 5,
   // Greedy
-  'greedy': 6,
+  'greedy': 6, 'greedy algorithms': 6, 'greedy algorithm': 6,
   // Backtracking
   'backtracking': 7, 'recursion': 7,
   // Sorting
@@ -23,11 +23,11 @@ const CATEGORY_MAP = {
   // Searching
   'searching': 9, 'search': 9, 'binary search': 9,
   // Stack
-  'stack': 10, 'monotonic stack': 10,
+  'stack': 10, 'monotonic stack': 10, 'stack / queues': 10, 'stacks / queues': 10, 'stack and queues': 10, 'stacks and queues': 10, 'stack & queues': 10, 'stacks & queues': 10,
   // Queue
   'queue': 11,
   // Heap
-  'heap': 12, 'priority queue': 12,
+  'heap': 12, 'heaps': 12, 'priority queue': 12,
   // HashMap
   'hash map': 13, 'hashmap': 13, 'hash table': 13, 'hashtable': 13, 'hashing': 13,
   'math': 14, 'maths': 14, 'bit manipulation': 14, 'number theory': 14
