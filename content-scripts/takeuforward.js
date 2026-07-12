@@ -384,7 +384,40 @@
           .replace(/\b\w/g, (l) => l.toUpperCase());
       }
 
-      // Fallback to DOM parsing if URL parameters are missing
+      // Fallback to Script Tag JSON Parsing (Highly robust Next.js RSC chunk parsing)
+      if (!category || !subcategory) {
+        try {
+          const currentSlug = this.getProblemSlugFromUrl();
+          let accumulatedText = "";
+          const scripts = document.querySelectorAll('script');
+          for (const script of scripts) {
+            if (script.textContent) {
+              accumulatedText += script.textContent.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+            }
+          }
+
+          const targetPattern = `"problem_slug":"${currentSlug}"`;
+          const slugIdx = accumulatedText.indexOf(targetPattern);
+
+          if (slugIdx !== -1) {
+            const precedingText = accumulatedText.substring(0, slugIdx);
+            
+            const categoryMatches = [...precedingText.matchAll(/"category_name"\s*:\s*"([^"]+)"/g)];
+            const subcategoryMatches = [...precedingText.matchAll(/"subcategory_name"\s*:\s*"([^"]+)"/g)];
+            
+            if (!category && categoryMatches.length > 0) {
+              category = categoryMatches[categoryMatches.length - 1][1];
+            }
+            if (!subcategory && subcategoryMatches.length > 0) {
+              subcategory = subcategoryMatches[subcategoryMatches.length - 1][1];
+            }
+          }
+        } catch (scriptErr) {
+          debugLog('[TakeUforward] Error parsing script tags for topics:', scriptErr);
+        }
+      }
+
+      // Fallback to DOM parsing if everything else fails
       try {
         if (!category) {
           const activeCategoryElem = document.querySelector('.category-root-trigger--active-path');
