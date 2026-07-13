@@ -478,6 +478,10 @@
       this.submitCounter = (this.submitCounter || 0) + 1;
       DSAUtils.logDebug(PLATFORM, 'Submission attempt started');
 
+      if (window.LeetFeedbackToast) {
+        this.submissionTracker = window.LeetFeedbackToast.createSubmission();
+      }
+
       try {
         // Extract problem info before submission
         await this.extractProblemInfo();
@@ -504,6 +508,10 @@
         this.monitorSubmissionResult(attempt);
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error in handleSubmissionAttempt:', error);
+        if (this.submissionTracker) {
+          this.submissionTracker.fail(error.message || 'Failed to process submission');
+          this.submissionTracker = null;
+        }
         submissionInProgress = false;
       }
     }
@@ -556,6 +564,11 @@
             this.savePersistedState();
             DSAUtils.logDebug(PLATFORM, `Failed submission #${this.attempts.length}, total failures: ${this.incorrectRunCounter}/3`);
 
+            if (this.submissionTracker) {
+              this.submissionTracker.fail(resultText);
+              this.submissionTracker = null;
+            }
+
             if (this.incorrectRunCounter >= 3 && !this.hasAnalyzedMistakes) {
               this.handleThreeIncorrectRuns();
             }
@@ -576,6 +589,10 @@
       // Stop monitoring after 60 seconds
       setTimeout(() => {
         DSAUtils.logDebug(PLATFORM, 'Stopping result monitoring after 60 seconds');
+        if (this.submissionTracker) {
+          this.submissionTracker.fail('Timeout');
+          this.submissionTracker = null;
+        }
         clearInterval(checkInterval);
         submissionInProgress = false;
       }, 60000);
@@ -1047,6 +1064,7 @@
         const totalTries = totalRunCounter + 1; // +1 for the successful submission
 
         // Step 0: Run Gemini analysis if flagged (before backend push)
+        // Step 0: Run Gemini analysis if flagged (before backend push)
         if (this.shouldAnalyzeWithGemini) {
           DSAUtils.logDebug(PLATFORM, `Step 0: Running Gemini analysis before backend push...`);
           try {
@@ -1058,21 +1076,41 @@
               const allAttempts = this.attempts.filter(a => a.code && a.code.length > 10);
               DSAUtils.logDebug(PLATFORM, `Sending ${allAttempts.length} code iterations to Gemini`);
 
+              if (this.submissionTracker) {
+                this.submissionTracker.setAIStarted();
+              }
+
               const geminiResult = await geminiAPI.analyzeMistakes(allAttempts, this.currentProblem);
 
               if (geminiResult.success) {
                 this.aiAnalysis = geminiResult.analysis;
                 this.aiTags = geminiResult.tags || [];
                 DSAUtils.logDebug(PLATFORM, `Gemini analysis complete. Tags: ${this.aiTags.join(', ')}`);
+                if (this.submissionTracker) {
+                  this.submissionTracker.setAIComplete();
+                }
               } else {
                 DSAUtils.logDebug(PLATFORM, `Gemini analysis failed: ${geminiResult.error}`);
+                if (this.submissionTracker) {
+                  this.submissionTracker.setAISkipped();
+                }
               }
             } else {
               DSAUtils.logDebug(PLATFORM, `Gemini API key not configured - skipping analysis`);
+              if (this.submissionTracker) {
+                this.submissionTracker.setAISkipped();
+              }
             }
           } catch (error) {
             DSAUtils.logError(PLATFORM, `Gemini analysis error:`, error);
+            if (this.submissionTracker) {
+              this.submissionTracker.setAISkipped();
+            }
             // Continue with submission even if Gemini fails
+          }
+        } else {
+          if (this.submissionTracker) {
+            this.submissionTracker.setAISkipped();
           }
         }
 
@@ -1083,10 +1121,8 @@
         // Step 1: Push to Backend API
         DSAUtils.logDebug(PLATFORM, `Step 1: Pushing to backend...`);
         try {
-          // Show immediate feedback that push is starting
-          let syncToast = null;
-          if (window.LeetFeedbackToast) {
-            syncToast = window.LeetFeedbackToast.info('Analyzing solution...', 0); // 0 = no auto-dismiss
+          if (this.submissionTracker) {
+            this.submissionTracker.setBackendStarted();
           }
 
           if (!backendAPI) {
@@ -1102,24 +1138,24 @@
 
           if (backendResult.success) {
             DSAUtils.logDebug(PLATFORM, `Backend push successful!`, backendResult.data);
-            // Update toast to success
-            if (syncToast && window.LeetFeedbackToast) {
+            if (this.submissionTracker) {
               const message = backendResult.data?.message || 'Solution synced to Traverse!';
-              window.LeetFeedbackToast.update(syncToast, message, 'success', 5000);
+              this.submissionTracker.succeed(message);
+              this.submissionTracker = null;
             }
           } else {
             DSAUtils.logDebug(PLATFORM, `Backend push failed: ${backendResult.error}`);
-            // Update toast to error
-            if (syncToast && window.LeetFeedbackToast) {
-              window.LeetFeedbackToast.update(syncToast, `Sync failed: ${backendResult.error}`, 'error', 6000);
+            if (this.submissionTracker) {
+              this.submissionTracker.fail(`Sync failed: ${backendResult.error}`);
+              this.submissionTracker = null;
             }
             // Continue with GitHub push even if backend fails
           }
         } catch (error) {
           DSAUtils.logError(PLATFORM, `Backend push error:`, error);
-          // Update toast to error
-          if (syncToast && window.LeetFeedbackToast) {
-            window.LeetFeedbackToast.update(syncToast, `Sync error: ${error.message}`, 'error', 6000);
+          if (this.submissionTracker) {
+            this.submissionTracker.fail(`Sync error: ${error.message}`);
+            this.submissionTracker = null;
           }
           // Continue with GitHub push even if backend fails
         }

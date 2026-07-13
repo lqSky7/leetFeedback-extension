@@ -431,6 +431,10 @@
       this.submissionInProgress = true;
       this.submitCounter = (this.submitCounter || 0) + 1;
 
+      if (window.LeetFeedbackToast) {
+        this.submissionTracker = window.LeetFeedbackToast.createSubmission();
+      }
+
       try {
         const code = await this.getCurrentCode();
         const language = await this.getCurrentLanguage();
@@ -454,6 +458,10 @@
         this.monitorSubmissionResult(attempt);
       } catch (error) {
         this.submissionInProgress = false;
+        if (this.submissionTracker) {
+          this.submissionTracker.fail(error.message || 'Failed to process submission');
+          this.submissionTracker = null;
+        }
         DSAUtils.logError(PLATFORM, 'Error handling submission attempt', error);
       }
     }
@@ -494,6 +502,10 @@
               resultText.includes('failed')) {
               attempt.successful = false;
               DSAUtils.logDebug(PLATFORM, `Submission result detected: ${resultText}`);
+              if (this.submissionTracker) {
+                this.submissionTracker.fail(resultText);
+                this.submissionTracker = null;
+              }
               await this.savePersistedState();
               this.submissionInProgress = false;
               this.currentSubmissionAttempt = null;
@@ -509,12 +521,20 @@
           } else {
             attempt.successful = false;
             DSAUtils.logDebug(PLATFORM, 'Submission result not detected within timeout - marking as failed');
+            if (this.submissionTracker) {
+              this.submissionTracker.fail('Timeout');
+              this.submissionTracker = null;
+            }
             await this.savePersistedState();
             this.submissionInProgress = false;
             this.currentSubmissionAttempt = null;
           }
         } catch (error) {
           DSAUtils.logError(PLATFORM, 'Unexpected error while checking submission result', error);
+          if (this.submissionTracker) {
+            this.submissionTracker.fail(error.message || 'Polling Error');
+            this.submissionTracker = null;
+          }
           this.submissionInProgress = false;
           this.currentSubmissionAttempt = null;
         }
@@ -522,6 +542,10 @@
 
       setTimeout(() => checkResult().catch((error) => {
         DSAUtils.logError(PLATFORM, 'Error while initiating submission result polling', error);
+        if (this.submissionTracker) {
+          this.submissionTracker.fail(error.message || 'Error polling result');
+          this.submissionTracker = null;
+        }
         this.submissionInProgress = false;
         this.currentSubmissionAttempt = null;
       }), intervalMs);
@@ -989,21 +1013,41 @@
               const allAttempts = this.attempts.filter(a => a.code && a.code.length > 10);
               debugLog(`[LeetCode] Sending ${allAttempts.length} code iterations to Gemini`);
 
+              if (this.submissionTracker) {
+                this.submissionTracker.setAIStarted();
+              }
+
               const geminiResult = await geminiAPI.analyzeMistakes(allAttempts, problemInfo);
 
               if (geminiResult.success) {
                 this.aiAnalysis = geminiResult.analysis;
                 this.aiTags = geminiResult.tags || [];
                 debugLog(`[LeetCode] Gemini analysis complete. Tags: ${this.aiTags.join(', ')}`);
+                if (this.submissionTracker) {
+                  this.submissionTracker.setAIComplete();
+                }
               } else {
                 debugLog(`[LeetCode] Gemini analysis failed: ${geminiResult.error}`);
+                if (this.submissionTracker) {
+                  this.submissionTracker.setAISkipped();
+                }
               }
             } else {
               debugLog(`[LeetCode] Gemini API key not configured - skipping analysis`);
+              if (this.submissionTracker) {
+                this.submissionTracker.setAISkipped();
+              }
             }
           } catch (error) {
             debugError(`[LeetCode] Gemini analysis error:`, error);
+            if (this.submissionTracker) {
+              this.submissionTracker.setAISkipped();
+            }
             // Continue with submission even if Gemini fails
+          }
+        } else {
+          if (this.submissionTracker) {
+            this.submissionTracker.setAISkipped();
           }
         }
 
@@ -1016,10 +1060,8 @@
         debugLog(`[LeetCode Debug] BackendAPI available:`, typeof BackendAPI !== 'undefined');
         debugLog(`[LeetCode Debug] backendAPI instance:`, backendAPI);
 
-        // Show immediate feedback that push is starting
-        let syncToast = null;
-        if (window.LeetFeedbackToast) {
-          syncToast = window.LeetFeedbackToast.info('Analyzing solution...', 0); // 0 = no auto-dismiss
+        if (this.submissionTracker) {
+          this.submissionTracker.setBackendStarted();
         }
 
         try {
@@ -1037,24 +1079,24 @@
 
           if (backendResult.success) {
             debugLog(`[LeetCode Submission] Backend push successful!`, backendResult.data);
-            // Update toast to success
-            if (syncToast && window.LeetFeedbackToast) {
+            if (this.submissionTracker) {
               const message = backendResult.data?.message || 'Solution synced to Traverse!';
-              window.LeetFeedbackToast.update(syncToast, message, 'success', 5000);
+              this.submissionTracker.succeed(message);
+              this.submissionTracker = null;
             }
           } else {
             debugLog(`[LeetCode Submission] Backend push failed: ${backendResult.error}`);
-            // Update toast to error
-            if (syncToast && window.LeetFeedbackToast) {
-              window.LeetFeedbackToast.update(syncToast, `Sync failed: ${backendResult.error}`, 'error', 6000);
+            if (this.submissionTracker) {
+              this.submissionTracker.fail(`Sync failed: ${backendResult.error}`);
+              this.submissionTracker = null;
             }
             // Continue with GitHub push even if backend fails
           }
         } catch (error) {
           debugError(`[LeetCode Submission] Backend push error:`, error);
-          // Update toast to error
-          if (syncToast && window.LeetFeedbackToast) {
-            window.LeetFeedbackToast.update(syncToast, `Sync error: ${error.message}`, 'error', 6000);
+          if (this.submissionTracker) {
+            this.submissionTracker.fail(`Sync error: ${error.message}`);
+            this.submissionTracker = null;
           }
           // Continue with GitHub push even if backend fails
         }

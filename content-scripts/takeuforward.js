@@ -130,6 +130,10 @@
           const submitData = event.data.payload;
           debugLog('[TakeUforward] Captured code submission:', submitData);
 
+          if (window.LeetFeedbackToast) {
+            this.submissionTracker = window.LeetFeedbackToast.createSubmission();
+          }
+
           SELECTED_LANGUAGE = submitData.language || '';
           PUBLIC_CODE = submitData.usercode || '';
           PROBLEM_SLUG = submitData.problem_id || '';
@@ -174,7 +178,7 @@
               successful: null // Will be determined by RUN_RESPONSE
             };
             this.attempts.push(attempt);
-            debugLog(`[TakeUforward] Stored run attempt #${this.runCounter}`);
+            await this.savePersistedState();
           }
         }
 
@@ -208,11 +212,18 @@
           const submissionData = event.data.payload;
           debugLog('[TakeUforward] Received submission response:', submissionData);
 
+          const statusLower = (submissionData.status || '').toLowerCase();
+          const pendingStatuses = ['judging', 'running', 'compiling', 'pending', 'processing', 'queued'];
+
           if (submissionData.success === true) {
             debugLog('[TakeUforward] Submission successful! Processing...');
             await this.handleSuccessfulSubmission(submissionData);
-          } else {
+          } else if (statusLower && !pendingStatuses.includes(statusLower)) {
             debugLog('[TakeUforward] Submission was not successful. Status:', submissionData.status);
+            if (this.submissionTracker) {
+              this.submissionTracker.fail(submissionData.status || 'Submission failed');
+              this.submissionTracker = null;
+            }
             // Count failed submissions as failed runs too
             this.incorrectRunCounter++;
             debugLog(`[TakeUforward] Total failed attempts: ${this.incorrectRunCounter}/3`);
@@ -585,6 +596,10 @@
               const allAttempts = this.attempts.filter(a => a.code && a.code.length > 10);
               debugLog(`[TakeUforward] Sending ${allAttempts.length} code iterations to Gemini`);
 
+              if (this.submissionTracker) {
+                this.submissionTracker.setAIStarted();
+              }
+
               const geminiResult = await geminiAPI.analyzeMistakes(allAttempts, problemInfo);
 
               if (geminiResult.success) {
@@ -594,28 +609,45 @@
 
                 // Update stored problem data with AI analysis
                 await this.storeProblemData(problemInfo, true);
+                if (this.submissionTracker) {
+                  this.submissionTracker.setAIComplete();
+                }
               } else {
                 debugLog(`[TakeUforward] Gemini analysis failed: ${geminiResult.error}`);
+                if (this.submissionTracker) {
+                  this.submissionTracker.setAISkipped();
+                }
               }
             } else {
               debugLog(`[TakeUforward] Gemini API key not configured - skipping analysis`);
+              if (this.submissionTracker) {
+                this.submissionTracker.setAISkipped();
+              }
             }
           } catch (error) {
             debugError(`[TakeUforward] Gemini analysis error:`, error);
+            if (this.submissionTracker) {
+              this.submissionTracker.setAISkipped();
+            }
             // Continue with submission even if Gemini fails
           }
+        } else {
+          if (this.submissionTracker) {
+            this.submissionTracker.setAISkipped();
+          }
         }
+
+        // Store problem data (normal solution)
+        await this.storeProblemData(problemInfo, true);
 
         // Step 1: Push to Backend API
         debugLog('[TakeUforward] Step 1: Pushing to backend...');
         
-        // Show immediate feedback that push is starting
-        let syncToast = null;
-        if (window.LeetFeedbackToast) {
-          syncToast = window.LeetFeedbackToast.info('Analyzing solution...', 0); // 0 = no auto-dismiss
-        }
-        
         try {
+          if (this.submissionTracker) {
+            this.submissionTracker.setBackendStarted();
+          }
+
           if (!backendAPI) {
             debugLog('[TakeUforward] Initializing BackendAPI...');
             backendAPI = new BackendAPI();
@@ -626,23 +658,23 @@
 
           if (backendResult.success) {
             debugLog('[TakeUforward] Backend push successful!', backendResult.data);
-            // Update toast to success
-            if (syncToast && window.LeetFeedbackToast) {
+            if (this.submissionTracker) {
               const message = backendResult.data?.message || 'Solution synced to Traverse!';
-              window.LeetFeedbackToast.update(syncToast, message, 'success', 5000);
+              this.submissionTracker.succeed(message);
+              this.submissionTracker = null;
             }
           } else {
             debugLog('[TakeUforward] Backend push failed:', backendResult.error);
-            // Update toast to error
-            if (syncToast && window.LeetFeedbackToast) {
-              window.LeetFeedbackToast.update(syncToast, `Sync failed: ${backendResult.error}`, 'error', 6000);
+            if (this.submissionTracker) {
+              this.submissionTracker.fail(`Sync failed: ${backendResult.error}`);
+              this.submissionTracker = null;
             }
           }
         } catch (error) {
           debugError('[TakeUforward] Backend push error:', error);
-          // Update toast to error
-          if (syncToast && window.LeetFeedbackToast) {
-            window.LeetFeedbackToast.update(syncToast, `Sync error: ${error.message}`, 'error', 6000);
+          if (this.submissionTracker) {
+            this.submissionTracker.fail(`Sync error: ${error.message}`);
+            this.submissionTracker = null;
           }
         }
 
