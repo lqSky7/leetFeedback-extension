@@ -14,9 +14,10 @@ class GeminiAPI {
 
     async initialize() {
         return new Promise((resolve) => {
-            chrome.storage.sync.get(["gemini_api_key", "ai_provider"], (data) => {
+            chrome.storage.sync.get(["gemini_api_key", "ai_provider", "gemini_model"], (data) => {
                 this.apiKey = (data.gemini_api_key || "").trim() || null;
                 this.aiProvider = (data.ai_provider || "g4f").toLowerCase();
+                this.geminiModel = data.gemini_model || "gemini-3-flash-preview";
                 if (this.aiProvider !== "gemini" && this.aiProvider !== "g4f") {
                     this.aiProvider = "g4f";
                 }
@@ -91,7 +92,9 @@ class GeminiAPI {
             return { success: false, error: "Gemini API key not configured" };
         }
         try {
-            const response = await fetch(`${this.geminiBaseURL}?key=${this.apiKey}`, {
+            const model = this.geminiModel || "gemini-3-flash-preview";
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+            const response = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

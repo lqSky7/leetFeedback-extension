@@ -84,7 +84,7 @@ class PopupController {
     // Debounced save for config form
     const debouncedSave = this.debounce(() => this.saveConfiguration(), 500);
 
-    ["token", "repo-url", "owner", "repo", "gemini-key", "branch"].forEach((id) => {
+    ["token", "repo-url", "owner", "repo", "gemini-key", "branch", "gemini-model"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.addEventListener("input", () => {
@@ -95,6 +95,14 @@ class PopupController {
               const repoEl = document.getElementById("repo");
               if (ownerEl) ownerEl.value = parsed.owner;
               if (repoEl) repoEl.value = parsed.repo;
+            }
+          }
+          if (id === "gemini-key") {
+            const key = element.value.trim();
+            if (key) {
+              this.fetchGeminiModels(key);
+            } else {
+              this.toggleGeminiModelField(false);
             }
           }
           debouncedSave();
@@ -115,7 +123,14 @@ class PopupController {
       aiProviderSelect.addEventListener("change", (e) => {
         this.config.aiProvider = e.target.value;
         chrome.storage.sync.set({ ai_provider: e.target.value });
-        this.toggleGeminiKeyField(e.target.value === "gemini");
+        const isGemini = e.target.value === "gemini";
+        this.toggleGeminiKeyField(isGemini);
+        if (isGemini) {
+          const key = document.getElementById("gemini-key")?.value.trim();
+          if (key) {
+            this.fetchGeminiModels(key);
+          }
+        }
         this.debounce(() => this.saveConfiguration(), 500)();
       });
     }
@@ -200,6 +215,63 @@ class PopupController {
     const field = document.getElementById("gemini-key-field");
     if (field) {
       field.style.display = show ? "" : "none";
+    }
+    const hasKey = !!document.getElementById("gemini-key")?.value.trim();
+    this.toggleGeminiModelField(show && hasKey);
+  }
+
+  toggleGeminiModelField(show) {
+    const field = document.getElementById("gemini-model-field");
+    if (field) {
+      field.style.display = show ? "" : "none";
+    }
+  }
+
+  async fetchGeminiModels(apiKey) {
+    if (!apiKey) return;
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch models: ${response.status}`);
+      }
+      const data = await response.json();
+      const models = (data.models || [])
+        .filter(m => m.supportedGenerationMethods.includes("generateContent"))
+        .map(m => ({
+          name: m.name.replace("models/", ""),
+          displayName: m.displayName || m.name
+        }));
+      this.populateGeminiModels(models);
+      this.toggleGeminiModelField(this.config.aiProvider === "gemini");
+    } catch (error) {
+      console.error("Error fetching Gemini models:", error);
+      this.populateGeminiModels([
+        { name: "gemini-3-flash-preview", displayName: "Gemini 3 Flash Preview" },
+        { name: "gemini-1.5-flash", displayName: "Gemini 1.5 Flash" },
+        { name: "gemini-1.5-pro", displayName: "Gemini 1.5 Pro" }
+      ]);
+      this.toggleGeminiModelField(this.config.aiProvider === "gemini");
+    }
+  }
+
+  populateGeminiModels(models) {
+    const select = document.getElementById("gemini-model");
+    if (!select) return;
+    
+    const currentVal = select.value || this.config.geminiModel || "gemini-3-flash-preview";
+    select.innerHTML = "";
+    
+    models.forEach(m => {
+      const option = document.createElement("option");
+      option.value = m.name;
+      option.textContent = m.displayName;
+      select.appendChild(option);
+    });
+    
+    if (models.some(m => m.name === currentVal)) {
+      select.value = currentVal;
+    } else if (select.options.length > 0) {
+      select.selectedIndex = 0;
     }
   }
 
@@ -429,6 +501,7 @@ class PopupController {
           "github_push_enabled",
           "timer_overlay_enabled",
           "leetcode_import_username",
+          "gemini_model",
         ],
         (data) => {
           this.config = {
@@ -442,6 +515,7 @@ class PopupController {
             githubPushEnabled: data.github_push_enabled !== false, // Default true
             timerOverlayEnabled: data.timer_overlay_enabled !== false, // Default true
             leetcodeImportUsername: data.leetcode_import_username || "",
+            geminiModel: data.gemini_model || "gemini-3-flash-preview",
           };
           this.mistakeTags = data.mistake_tags || {};
           resolve();
@@ -474,6 +548,9 @@ class PopupController {
     if (aiProviderSelect) {
       aiProviderSelect.value = this.config.aiProvider || "g4f";
       this.toggleGeminiKeyField(aiProviderSelect.value === "gemini");
+      if (this.config.geminiKey && aiProviderSelect.value === "gemini") {
+        this.fetchGeminiModels(this.config.geminiKey);
+      }
     }
 
     // New settings
@@ -527,6 +604,7 @@ class PopupController {
           gemini_api_key: formData.geminiKey,
           ai_provider: formData.aiProvider || "g4f",
           debug_mode: formData.debugMode,
+          gemini_model: formData.geminiModel,
         },
         () => { },
       );
@@ -557,6 +635,7 @@ class PopupController {
       geminiKey: document.getElementById("gemini-key").value.trim(),
       aiProvider: aiProviderEl ? aiProviderEl.value : "g4f",
       debugMode: document.getElementById("debug-mode").checked,
+      geminiModel: document.getElementById("gemini-model")?.value || "gemini-3-flash-preview",
     };
   }
 
