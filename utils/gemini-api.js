@@ -137,6 +137,104 @@ class GeminiAPI {
         return { tags, summary };
     }
 
+    computeDiff(oldCode, newCode) {
+        if (typeof oldCode !== "string") oldCode = "";
+        if (typeof newCode !== "string") newCode = "";
+        if (oldCode === newCode) return "(No changes)";
+
+        const oldLines = oldCode ? oldCode.split(/\r?\n/) : [];
+        const newLines = newCode ? newCode.split(/\r?\n/) : [];
+        const m = oldLines.length;
+        const n = newLines.length;
+
+        // Fallback for extremely large files to prevent DP overhead
+        if (m > 2000 || n > 2000) {
+            return newCode;
+        }
+
+        // DP array to find LCS length
+        const dp = Array.from({ length: m + 1 }, () => new Int32Array(n + 1));
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                if (oldLines[i - 1] === newLines[j - 1]) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                } else {
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                }
+            }
+        }
+
+        // Backtrack to build the diff
+        let i = m, j = n;
+        const diffLines = [];
+        while (i > 0 || j > 0) {
+            if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+                diffLines.push({ type: " ", line: oldLines[i - 1] });
+                i--;
+                j--;
+            } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+                diffLines.push({ type: "+", line: newLines[j - 1] });
+                j--;
+            } else {
+                diffLines.push({ type: "-", line: oldLines[i - 1] });
+                i--;
+            }
+        }
+        diffLines.reverse();
+
+        // Group changes into hunks with context
+        const contextSize = 3;
+        const hunks = [];
+        let currentHunk = null;
+
+        for (let idx = 0; idx < diffLines.length; idx++) {
+            const item = diffLines[idx];
+            if (item.type !== " ") {
+                if (!currentHunk) {
+                    currentHunk = {
+                        startIdx: Math.max(0, idx - contextSize),
+                        endIdx: idx
+                    };
+                    hunks.push(currentHunk);
+                }
+                currentHunk.endIdx = Math.min(diffLines.length - 1, idx + contextSize);
+            } else {
+                if (currentHunk && idx > currentHunk.endIdx) {
+                    currentHunk = null;
+                }
+            }
+        }
+
+        // Merge overlapping hunks
+        const mergedHunks = [];
+        for (const hunk of hunks) {
+            if (mergedHunks.length === 0) {
+                mergedHunks.push(hunk);
+            } else {
+                const lastHunk = mergedHunks[mergedHunks.length - 1];
+                if (hunk.startIdx <= lastHunk.endIdx) {
+                    lastHunk.endIdx = Math.max(lastHunk.endIdx, hunk.endIdx);
+                } else {
+                    mergedHunks.push(hunk);
+                }
+            }
+        }
+
+        if (mergedHunks.length === 0) {
+            return "(No changes)";
+        }
+
+        let result = "";
+        for (const hunk of mergedHunks) {
+            result += "@@ -... +... @@\n";
+            for (let idx = hunk.startIdx; idx <= hunk.endIdx; idx++) {
+                const item = diffLines[idx];
+                result += `${item.type}${item.line}\n`;
+            }
+        }
+        return result.trim();
+    }
+
     buildAnalysisPrompt(attempts, problemInfo) {
         const { title, description } = problemInfo;
 
@@ -146,15 +244,27 @@ Problem: ${title}
 ${description ? `Description: ${description.substring(0, 500)}...` : ""}
 
 Coding Attempts (chronological order):
+Note: Attempt 1 contains the full initial code. Subsequent attempts are presented as diffs relative to their immediate previous attempt.
+In the diffs, lines starting with '-' are deleted, lines starting with '+' are added, and lines starting with ' ' (space) are unchanged context lines.
 `;
 
         attempts.forEach((attempt, index) => {
-            prompt += `
-### Attempt ${index + 1}
+            if (index === 0) {
+                prompt += `
+### Attempt 1 (Initial Code)
 \`\`\`${attempt.language}
 ${attempt.code}
 \`\`\`
 `;
+            } else {
+                const diff = this.computeDiff(attempts[index - 1].code, attempt.code);
+                prompt += `
+### Attempt ${index + 1} (Diff from Attempt ${index})
+\`\`\`diff
+${diff}
+\`\`\`
+`;
+            }
         });
 
         prompt += `

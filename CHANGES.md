@@ -1,6 +1,13 @@
-# Changes — CodeChef Integration Fix
+# Changes in 1.7.3 (since 1.7)
 
-## Bug Fixes
+## What it means for users
+- **Massive Token & Network Savings**: When you make multiple attempts to solve a problem, only the differences/changes (diffs) from your previous attempt are sent to the AI for analysis. The first attempt is sent in full to establish the baseline code, but subsequent submissions only transmit what you actually changed. This dramatically reduces token consumption and API cost.
+- **Precision AI Analysis**: The AI is instructed to interpret the additions and deletions in the code, ensuring that the final mistake analysis remains highly contextual and accurate while using a fraction of the data.
+- **Version Bump**: Extension version updated to 1.7.3.
+
+---
+
+# Changes — CodeChef Integration Fix (1.7.0)
 
 ### Critical: CodeChef Script Syntax Error
 - Fixed a `SyntaxError` in `getProblemTitle()` where the `selectors` array was empty and missing its closing bracket, preventing the entire `codechef.js` script from loading.

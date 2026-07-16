@@ -84,7 +84,7 @@ class PopupController {
     // Debounced save for config form
     const debouncedSave = this.debounce(() => this.saveConfiguration(), 500);
 
-    ["token", "repo-url", "owner", "repo", "gemini-key", "branch", "gemini-model"].forEach((id) => {
+    ["token", "repo-url", "owner", "repo", "gemini-key", "branch"].forEach((id) => {
       const element = document.getElementById(id);
       if (element) {
         element.addEventListener("input", () => {
@@ -109,6 +109,13 @@ class PopupController {
         });
       }
     });
+
+    const geminiModelSelect = document.getElementById("gemini-model");
+    if (geminiModelSelect) {
+      geminiModelSelect.addEventListener("change", () => {
+        debouncedSave();
+      });
+    }
 
     // Toggle password visibility
     const toggleTokenBtn = document.getElementById("toggle-token");
@@ -241,15 +248,18 @@ class PopupController {
           name: m.name.replace("models/", ""),
           displayName: m.displayName || m.name
         }));
-      this.populateGeminiModels(models);
+      
+      // Sort models descending to place the latest models at the top
+      const sortedModels = models.sort((a, b) => b.name.localeCompare(a.name));
+      
+      this.populateGeminiModels(sortedModels);
       this.toggleGeminiModelField(this.config.aiProvider === "gemini");
     } catch (error) {
       console.error("Error fetching Gemini models:", error);
-      this.populateGeminiModels([
-        { name: "gemini-3-flash-preview", displayName: "Gemini 3 Flash Preview" },
-        { name: "gemini-1.5-flash", displayName: "Gemini 1.5 Flash" },
-        { name: "gemini-1.5-pro", displayName: "Gemini 1.5 Pro" }
-      ]);
+      const select = document.getElementById("gemini-model");
+      if (select) {
+        select.innerHTML = '<option value="">(Error fetching models)</option>';
+      }
       this.toggleGeminiModelField(this.config.aiProvider === "gemini");
     }
   }
@@ -258,7 +268,8 @@ class PopupController {
     const select = document.getElementById("gemini-model");
     if (!select) return;
     
-    const currentVal = select.value || this.config.geminiModel || "gemini-3-flash-preview";
+    // Prioritize the saved configuration first, then fall back to the first available model
+    const currentVal = this.config.geminiModel || (models.length > 0 ? models[0].name : "");
     select.innerHTML = "";
     
     models.forEach(m => {
