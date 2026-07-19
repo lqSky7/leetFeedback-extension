@@ -669,6 +669,9 @@
               this.submissionTracker.fail(`Sync failed: ${backendResult.error}`);
               this.submissionTracker = null;
             }
+            // Preserve state for retry
+            debugLog('[TakeUforward] Backend push did not succeed - preserving state for retry');
+            return;
           }
         } catch (error) {
           debugError('[TakeUforward] Backend push error:', error);
@@ -676,6 +679,9 @@
             this.submissionTracker.fail(`Sync error: ${error.message}`);
             this.submissionTracker = null;
           }
+          // Preserve state for retry
+          debugLog('[TakeUforward] Backend push did not succeed - preserving state for retry');
+          return;
         }
 
         // Step 2: Check if GitHub push is enabled
@@ -692,37 +698,25 @@
 
             // Clear stored code data after successful push
             await chrome.storage.local.remove(['tuf_code_data']);
-
-            // Reset state
-            TRIES = 0;
-            PUBLIC_CODE = '';
-            SELECTED_LANGUAGE = '';
-            PROBLEM_SLUG = '';
-            this.attempts = [];
-            this.runCounter = 0;
-            this.incorrectRunCounter = 0;
-            this.hasAnalyzedMistakes = false;
-            this.shouldAnalyzeWithGemini = false;
-            this.aiAnalysis = null;
-            this.aiTags = [];
           } else {
             debugError('[TakeUforward] GitHub push failed:', githubResult.error);
           }
         } else {
           debugLog('[TakeUforward] GitHub push disabled by user - skipping');
-          // Still reset state
-          TRIES = 0;
-          PUBLIC_CODE = '';
-          SELECTED_LANGUAGE = '';
-          PROBLEM_SLUG = '';
-          this.attempts = [];
-          this.runCounter = 0;
-          this.incorrectRunCounter = 0;
-          this.hasAnalyzedMistakes = false;
-          this.shouldAnalyzeWithGemini = false;
-          this.aiAnalysis = null;
-          this.aiTags = [];
         }
+
+        // Reset state after successful backend submission
+        TRIES = 0;
+        PUBLIC_CODE = '';
+        SELECTED_LANGUAGE = '';
+        PROBLEM_SLUG = '';
+        this.attempts = [];
+        this.runCounter = 0;
+        this.incorrectRunCounter = 0;
+        this.hasAnalyzedMistakes = false;
+        this.shouldAnalyzeWithGemini = false;
+        this.aiAnalysis = null;
+        this.aiTags = [];
 
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error handling submission', error);

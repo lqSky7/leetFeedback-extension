@@ -1053,7 +1053,9 @@
               this.submissionTracker.fail(`Sync failed: ${backendResult.error}`);
               this.submissionTracker = null;
             }
-            // Continue with GitHub push even if backend fails
+            // Preserve state for retry
+            debugLog(`[GeeksforGeeks Submission] Backend push did not succeed - preserving state for retry`);
+            return;
           }
         } catch (error) {
           debugError(`[GeeksforGeeks Submission] Backend push error:`, error);
@@ -1061,7 +1063,9 @@
             this.submissionTracker.fail(`Sync error: ${error.message}`);
             this.submissionTracker = null;
           }
-          // Continue with GitHub push even if backend fails
+          // Preserve state for retry
+          debugLog(`[GeeksforGeeks Submission] Backend push did not succeed - preserving state for retry`);
+          return;
         }
 
         // Step 2: Check if GitHub push is enabled
@@ -1077,51 +1081,33 @@
           if (result.success) {
             DSAUtils.logDebug(PLATFORM, 'Push successful!');
             debugLog(`[GeeksforGeeks Submission] Solution pushed to GitHub successfully!`);
-
-            // Reset counters after successful submission
-            this.runCounter = 0;
-            this.incorrectRunCounter = 0;
-            this.attempts = [];
-            this.hasAnalyzedMistakes = false;
-            this.shouldAnalyzeWithGemini = false;
-            this.aiAnalysis = null;
-            this.aiTags = [];
-
-            // Persist final state
-            await this.savePersistedState({
-              attempts: finalAttempts,
-              runCounter: 0,
-              incorrectRunCounter: 0,
-              hasAnalyzedMistakes: false,
-              shouldAnalyzeWithGemini: false,
-              aiAnalysis: null,
-              aiTags: []
-            });
           } else {
             DSAUtils.logError(PLATFORM, 'Push failed:', result.error);
             debugLog(`[GeeksforGeeks Submission] Failed to push solution:`, result.error);
           }
         } else {
           debugLog(`[GeeksforGeeks Submission] GitHub push disabled by user - skipping`);
-          // Still reset counters
-          this.runCounter = 0;
-          this.incorrectRunCounter = 0;
-          this.attempts = [];
-          this.hasAnalyzedMistakes = false;
-          this.shouldAnalyzeWithGemini = false;
-          this.aiAnalysis = null;
-          this.aiTags = [];
-
-          await this.savePersistedState({
-            attempts: finalAttempts,
-            runCounter: 0,
-            incorrectRunCounter: 0,
-            hasAnalyzedMistakes: false,
-            shouldAnalyzeWithGemini: false,
-            aiAnalysis: null,
-            aiTags: []
-          });
         }
+
+        // Reset counters after successful backend submission
+        this.runCounter = 0;
+        this.incorrectRunCounter = 0;
+        this.attempts = [];
+        this.hasAnalyzedMistakes = false;
+        this.shouldAnalyzeWithGemini = false;
+        this.aiAnalysis = null;
+        this.aiTags = [];
+
+        // Persist final state
+        await this.savePersistedState({
+          attempts: finalAttempts,
+          runCounter: 0,
+          incorrectRunCounter: 0,
+          hasAnalyzedMistakes: false,
+          shouldAnalyzeWithGemini: false,
+          aiAnalysis: null,
+          aiTags: []
+        });
 
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error handling submission', error);

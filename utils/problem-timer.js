@@ -309,7 +309,12 @@ class ProblemTimer {
   }
 
   getPausedTime() {
-    return this.pausedTime;
+    let total = this.pausedTime;
+    // Include the ongoing pause duration if currently paused
+    if (this.isPaused && this.pausedAt) {
+      total += Date.now() - this.pausedAt;
+    }
+    return total;
   }
 
   // Load time data from storage
@@ -566,8 +571,8 @@ class ProblemTimer {
       background: rgba(255, 255, 255, 0.1);
       border: none;
       color: rgba(255, 255, 255, 0.6);
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
       cursor: pointer;
       font-size: 12px;
@@ -602,8 +607,8 @@ class ProblemTimer {
       background: rgba(255, 255, 255, 0.1);
       border: none;
       color: rgba(255, 255, 255, 0.6);
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
       cursor: pointer;
       font-size: 12px;

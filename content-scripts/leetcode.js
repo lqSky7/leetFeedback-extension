@@ -881,6 +881,7 @@
           this.submissionTracker.setBackendStarted();
         }
 
+        let backendPushSucceeded = false;
         try {
           if (!backendAPI) {
             debugLog(`[LeetCode Submission] Initializing BackendAPI...`);
@@ -895,6 +896,7 @@
           const backendResult = await backendAPI.pushCurrentProblemData(currentUrl);
 
           if (backendResult.success) {
+            backendPushSucceeded = true;
             debugLog(`[LeetCode Submission] Backend push successful!`, backendResult.data);
             if (this.submissionTracker) {
               const message = backendResult.data?.message || 'Solution synced to Traverse!';
@@ -916,6 +918,13 @@
           }
         }
 
+        // If backend push failed, preserve all state (attempts, AI analysis, etc.)
+        // so the next submission retry can use them
+        if (!backendPushSucceeded) {
+          debugLog(`[LeetCode Submission] Backend push did not succeed - preserving state for retry`);
+          return;
+        }
+
         // Step 2: Check if GitHub push is enabled
         const githubSettings = await chrome.storage.sync.get(['github_push_enabled']);
         const githubPushEnabled = githubSettings.github_push_enabled !== false; // Default to true
@@ -927,61 +936,37 @@
 
           if (result.success) {
             debugLog(`[LeetCode Submission] Solution pushed to GitHub successfully!`);
-
-            // Reset counters after successful submission
-            this.runCounter = 0;
-            this.incorrectRunCounter = 0;
-            this.attempts = [];
-            this.hasAnalyzedMistakes = false;
-            this.shouldAnalyzeWithGemini = false;
-            this.submitCounter = 0;
-            this.currentSubmissionAttempt = null;
-            this.currentRunAttempt = null;
-            this.currentSubmissionId = null;
-            this.currentRunId = null;
-            this.aiAnalysis = null;
-            this.aiTags = [];
-
-            await this.savePersistedState({
-              attempts: attemptsToPersist,
-              runCounter: 0,
-              incorrectRunCounter: 0,
-              hasAnalyzedMistakes: false,
-              shouldAnalyzeWithGemini: false,
-              submitCounter: 0,
-              aiAnalysis: null,
-              aiTags: []
-            });
           } else {
             debugLog(`[LeetCode Submission] Failed to push solution:`, result.error);
           }
         } else {
           debugLog(`[LeetCode Submission] GitHub push disabled by user - skipping`);
-          // Still reset counters
-          this.runCounter = 0;
-          this.incorrectRunCounter = 0;
-          this.attempts = [];
-          this.hasAnalyzedMistakes = false;
-          this.shouldAnalyzeWithGemini = false;
-          this.submitCounter = 0;
-          this.currentSubmissionAttempt = null;
-          this.currentRunAttempt = null;
-          this.currentSubmissionId = null;
-          this.currentRunId = null;
-          this.aiAnalysis = null;
-          this.aiTags = [];
-
-          await this.savePersistedState({
-            attempts: attemptsToPersist,
-            runCounter: 0,
-            incorrectRunCounter: 0,
-            hasAnalyzedMistakes: false,
-            shouldAnalyzeWithGemini: false,
-            submitCounter: 0,
-            aiAnalysis: null,
-            aiTags: []
-          });
         }
+
+        // Reset counters after successful backend submission
+        this.runCounter = 0;
+        this.incorrectRunCounter = 0;
+        this.attempts = [];
+        this.hasAnalyzedMistakes = false;
+        this.shouldAnalyzeWithGemini = false;
+        this.submitCounter = 0;
+        this.currentSubmissionAttempt = null;
+        this.currentRunAttempt = null;
+        this.currentSubmissionId = null;
+        this.currentRunId = null;
+        this.aiAnalysis = null;
+        this.aiTags = [];
+
+        await this.savePersistedState({
+          attempts: attemptsToPersist,
+          runCounter: 0,
+          incorrectRunCounter: 0,
+          hasAnalyzedMistakes: false,
+          shouldAnalyzeWithGemini: false,
+          submitCounter: 0,
+          aiAnalysis: null,
+          aiTags: []
+        });
 
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error handling submission', error);
