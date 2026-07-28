@@ -9,15 +9,11 @@
   let isInitialized = false;
   let extractorInstance = null; // Global singleton instance
 
-  // LeetCode specific selectors
+  // LeetCode specific selectors (kept for metadata extraction fallbacks)
   const SELECTORS = {
     problemTitle: '.text-title-large, [data-cy="question-title"], h1',
-    problemDescription: '[data-track-load="description_content"], [class*="description"]',
-    statusSuccess: '[data-e2e-locator="submission-result"]',
-    performanceMetrics: '[data-e2e-locator="submission-detail"]'
+    problemDescription: '[data-track-load="description_content"], [class*="description"]'
   };
-
-
 
   class LeetCodeExtractor {
     constructor() {
@@ -34,10 +30,12 @@
       this.submissionInProgress = false;
       this.submitCounter = 0;
       this.currentSubmissionAttempt = null;
+      this.currentRunAttempt = null;
+      this.currentSubmissionId = null;
+      this.currentRunId = null;
       this.aiAnalysis = null; // Store Gemini AI analysis
       this.aiTags = []; // Store Gemini mistake tags
       this.shouldAnalyzeWithGemini = false; // Flag to run Gemini on submit
-      // Note: problemStartTime and pausedTime are now managed by ProblemTimer utility
     }
 
     async initialize() {
@@ -52,7 +50,8 @@
         await backendAPI.initialize();
 
         this.injectMonacoBridge();
-        this.setupBridgeListener();
+        this.injectInterceptor();
+        this.setupMessageListener();
         this.setupEventListeners();
         this.checkPageType();
 
@@ -90,24 +89,86 @@
       }
     }
 
-    setupBridgeListener() {
-      window.addEventListener('message', (event) => {
+    injectInterceptor() {
+      try {
+        const id = 'leetfeedback-interceptor';
+        if (document.getElementById(id)) return;
+
+        // Pass debug mode to storage
+        chrome.storage.local.set({ 'leetcode_debug_mode': isDebugMode() });
+
+        const script = document.createElement('script');
+        script.id = id;
+        script.src = chrome.runtime.getURL('utils/interceptor.js');
+        (document.head || document.documentElement).appendChild(script);
+        script.addEventListener('load', () => {
+          DSAUtils.logDebug(PLATFORM, 'Interceptor script injected');
+          script.remove();
+        });
+      } catch (e) {
+        debugWarn('[LeetCode] Failed to inject interceptor', e);
+      }
+    }
+
+    setupMessageListener() {
+      window.addEventListener('message', async (event) => {
         try {
           if (event.source !== window) return;
           const data = event.data || {};
-          if (data.source !== 'LeetFeedback') return;
-          if (data.type === 'LEETFEEDBACK_BRIDGE_READY') {
-            this.bridgeReady = true;
-            return;
-          }
-          if (data.type === 'LEETFEEDBACK_CODE' && data.requestId) {
-            const resolver = this.pendingCodeRequests.get(data.requestId);
-            if (resolver) {
-              this.pendingCodeRequests.delete(data.requestId);
-              resolver({ code: this._sanitizeText(data.code), language: data.language });
+
+          // Monaco bridge messages
+          if (data.source === 'LeetFeedback') {
+            if (data.type === 'LEETFEEDBACK_BRIDGE_READY') {
+              this.bridgeReady = true;
+              return;
+            }
+            if (data.type === 'LEETFEEDBACK_CODE' && data.requestId) {
+              const resolver = this.pendingCodeRequests.get(data.requestId);
+              if (resolver) {
+                this.pendingCodeRequests.delete(data.requestId);
+                resolver({ code: this._sanitizeText(data.code), language: data.language });
+              }
+              return;
             }
           }
-        } catch (_) { /* no-op */ }
+
+          // Network interceptor messages
+          if (data.type === 'LEETCODE_CODE_SUBMIT') {
+            const payload = data.payload || {};
+            DSAUtils.logDebug(PLATFORM, 'Network: Captured submission attempt', payload);
+            await this.handleSubmissionAttemptFromNetwork(payload);
+          }
+
+          else if (data.type === 'LEETCODE_CODE_RUN') {
+            const payload = data.payload || {};
+            DSAUtils.logDebug(PLATFORM, 'Network: Captured run attempt', payload);
+            await this.handleRunAttemptFromNetwork(payload);
+          }
+
+          else if (data.type === 'LEETCODE_SUBMIT_ID') {
+            const submissionId = data.payload?.submission_id;
+            if (submissionId) {
+              DSAUtils.logDebug(PLATFORM, `Network: Captured submission ID: ${submissionId}`);
+              this.currentSubmissionId = submissionId;
+            }
+          }
+
+          else if (data.type === 'LEETCODE_RUN_ID') {
+            const interpretId = data.payload?.interpret_id;
+            if (interpretId) {
+              DSAUtils.logDebug(PLATFORM, `Network: Captured run ID: ${interpretId}`);
+              this.currentRunId = interpretId;
+            }
+          }
+
+          else if (data.type === 'LEETCODE_CHECK_RESPONSE') {
+            const { id, data: checkData } = data.payload || {};
+            DSAUtils.logDebug(PLATFORM, `Network: Captured check response for ID ${id}`, checkData);
+            await this.handleCheckResponseFromNetwork(id, checkData);
+          }
+        } catch (error) {
+          DSAUtils.logError(PLATFORM, 'Error in message listener', error);
+        }
       });
     }
 
@@ -148,6 +209,7 @@
         return [];
       }
     }
+
     // Persistence methods to maintain state across page reloads
     async loadPersistedState() {
       try {
@@ -169,7 +231,6 @@
           this.aiAnalysis = problemData.aiAnalysis || null;
           this.aiTags = problemData.aiTags || [];
           this.shouldAnalyzeWithGemini = problemData.shouldAnalyzeWithGemini || false;
-          // Note: problemStartTime and pausedTime are now managed by ProblemTimer utility
 
           debugLog(`[LeetCode] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}`);
         } else {
@@ -261,6 +322,7 @@
           ignored: existingData.ignored ?? false,
           parent_topic: problemInfo.topics || existingData.parent_topic || [],
           problem_link: problemInfo.url || existingData.problem_link || window.location.href.split('?')[0],
+          code: problemInfo.code || existingData.code || '',
 
           // Include tracking state
           attempts: this.attempts || [],
@@ -294,12 +356,12 @@
       if (diff.includes('hard')) return 2; // Hard
       return 0; // Default to Easy
     }
+
     getCurrentProblemUrl() {
       const url = window.location.href;
       const match = url.match(/\/problems\/([^\/]+)/);
       return match ? match[1] : 'unknown';
     }
-
 
     resetCounters() {
       this.attempts = [];
@@ -310,6 +372,9 @@
       this.submitCounter = 0;
       this.submissionInProgress = false;
       this.currentSubmissionAttempt = null;
+      this.currentRunAttempt = null;
+      this.currentSubmissionId = null;
+      this.currentRunId = null;
       this.aiAnalysis = null;
       this.aiTags = [];
       this.shouldAnalyzeWithGemini = false;
@@ -324,17 +389,10 @@
         window.ProblemTimer.getInstance().reset();
       }
     }
+
     setupEventListeners() {
       // Listen for URL changes (LeetCode is SPA)
       this.observeUrlChanges();
-
-      // Listen for submission events
-      this.observeSubmissions();
-
-      // Listen for run button clicks
-      this.observeRunButton();
-
-      // Note: visibility tracking is now handled by ProblemTimer utility
     }
 
     observeUrlChanges() {
@@ -351,89 +409,22 @@
       }).observe(document, { subtree: true, childList: true });
     }
 
-    observeSubmissions() {
-      const attachSubmitListener = (root) => {
-        const submitButton = root.querySelector ?
-          root.querySelector('button[data-e2e-locator="console-submit-button"]') : null;
-
-        if (submitButton && !submitButton.hasAttribute('data-leetcode-submit-listener')) {
-          submitButton.setAttribute('data-leetcode-submit-listener', 'true');
-          submitButton.addEventListener('click', () => {
-            DSAUtils.logDebug(PLATFORM, 'Submit button clicked!');
-            this.handleSubmissionAttempt();
-          });
-        }
-      };
-
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          mutation.addedNodes.forEach((node) => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              attachSubmitListener(node);
-            }
-          });
-        });
-      });
-
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true
-      });
-
-      attachSubmitListener(document);
-    }
-
-    observeRunButton() {
-      let runButtonFound = false;
-
-      // Monitor for run button clicks
-      const checkForRunButton = () => {
-
-        // Use the exact working selector for LeetCode run button
-        const runButton = document.querySelector('button[data-e2e-locator="console-run-button"]');
-
-        if (runButton && !runButton.hasAttribute('data-dsa-listener')) {
-          if (!runButtonFound) {
-            DSAUtils.logDebug(PLATFORM, `Run button found and listener attached`);
-            runButtonFound = true;
-          }
-          runButton.setAttribute('data-dsa-listener', 'true');
-          runButton.addEventListener('click', () => {
-            setTimeout(() => this.handleRunAttempt(), 1000);
-          });
-        }
-      };
-
-      // Check initially and on DOM changes
-      checkForRunButton();
-
-      // Periodic check every 10 seconds for run button
-      setInterval(() => {
-        checkForRunButton();
-      }, 10000);
-
-      const observer = new MutationObserver(() => {
-        checkForRunButton();
-      });
-
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true
-      });
-    }
-
-    async handleSubmissionAttempt() {
+    async handleSubmissionAttemptFromNetwork(payload) {
       if (this.submissionInProgress) {
-        DSAUtils.logDebug(PLATFORM, 'Submission already in progress - ignoring duplicate click');
+        DSAUtils.logDebug(PLATFORM, 'Submission already in progress - ignoring duplicate network trigger');
         return;
       }
 
       this.submissionInProgress = true;
       this.submitCounter = (this.submitCounter || 0) + 1;
 
+      if (window.LeetFeedbackToast) {
+        this.submissionTracker = window.LeetFeedbackToast.createSubmission();
+      }
+
       try {
-        const code = await this.getCurrentCode();
-        const language = await this.getCurrentLanguage();
+        const code = this._sanitizeText(payload.usercode);
+        const language = payload.language || 'cpp';
 
         const attempt = {
           code,
@@ -447,95 +438,26 @@
         this.attempts.push(attempt);
         this.currentSubmissionAttempt = attempt;
 
-        DSAUtils.logDebug(PLATFORM, `Recorded submission attempt #${this.submitCounter}`);
+        DSAUtils.logDebug(PLATFORM, `Recorded submission attempt #${this.submitCounter} via network`);
 
         await this.savePersistedState();
-
-        this.monitorSubmissionResult(attempt);
       } catch (error) {
         this.submissionInProgress = false;
-        DSAUtils.logError(PLATFORM, 'Error handling submission attempt', error);
+        if (this.submissionTracker) {
+          this.submissionTracker.fail(error.message || 'Failed to process submission');
+          this.submissionTracker = null;
+        }
+        DSAUtils.logError(PLATFORM, 'Error handling submission attempt from network', error);
       }
     }
 
-    monitorSubmissionResult(attempt) {
-      let checks = 0;
-      const maxChecks = 30;
-      const intervalMs = 1000;
-
-      const checkResult = async () => {
-        if (!this.submissionInProgress) {
-          return;
-        }
-
-        try {
-          const resultElement = document.querySelector('[data-e2e-locator="submission-result"]');
-
-          if (resultElement && resultElement.textContent) {
-            const resultText = resultElement.textContent.toLowerCase();
-
-            if (resultText.includes('accepted')) {
-              attempt.successful = true;
-              DSAUtils.logDebug(PLATFORM, 'Submission result detected: ACCEPTED');
-              await this.savePersistedState();
-              this.submissionInProgress = false;
-              this.currentSubmissionAttempt = null;
-              await this.handleSuccessfulSubmission(attempt);
-              return;
-            }
-
-            if (resultText.includes('wrong answer') ||
-              resultText.includes('runtime error') ||
-              resultText.includes('time limit exceeded') ||
-              resultText.includes('memory limit exceeded') ||
-              resultText.includes('compile error') ||
-              resultText.includes('compilation error') ||
-              resultText.includes('output limit exceeded') ||
-              resultText.includes('failed')) {
-              attempt.successful = false;
-              DSAUtils.logDebug(PLATFORM, `Submission result detected: ${resultText}`);
-              await this.savePersistedState();
-              this.submissionInProgress = false;
-              this.currentSubmissionAttempt = null;
-              return;
-            }
-          }
-
-          checks++;
-          if (checks < maxChecks) {
-            setTimeout(() => checkResult().catch((error) => {
-              DSAUtils.logError(PLATFORM, 'Error while polling submission result', error);
-            }), intervalMs);
-          } else {
-            attempt.successful = false;
-            DSAUtils.logDebug(PLATFORM, 'Submission result not detected within timeout - marking as failed');
-            await this.savePersistedState();
-            this.submissionInProgress = false;
-            this.currentSubmissionAttempt = null;
-          }
-        } catch (error) {
-          DSAUtils.logError(PLATFORM, 'Unexpected error while checking submission result', error);
-          this.submissionInProgress = false;
-          this.currentSubmissionAttempt = null;
-        }
-      };
-
-      setTimeout(() => checkResult().catch((error) => {
-        DSAUtils.logError(PLATFORM, 'Error while initiating submission result polling', error);
-        this.submissionInProgress = false;
-        this.currentSubmissionAttempt = null;
-      }), intervalMs);
-    }
-
-    async handleRunAttempt() {
+    async handleRunAttemptFromNetwork(payload) {
       try {
         this.runCounter++;
-        debugLog(`[LeetCode Run Counter] Run attempt #${this.runCounter}`);
+        DSAUtils.logDebug(PLATFORM, `Run attempt #${this.runCounter} via network`);
 
-        const code = await this.getCurrentCode();
-        const language = await this.getCurrentLanguage();
-
-        DSAUtils.logDebug(PLATFORM, `Extracted code length: ${code ? code.length : 0}, language: ${language}`);
+        const code = this._sanitizeText(payload.usercode);
+        const language = payload.language || 'cpp';
 
         if (code && code.length > 10) {
           const attempt = {
@@ -544,152 +466,82 @@
             timestamp: new Date().toISOString(),
             type: 'run',
             runNumber: this.runCounter,
-            successful: null // Will be determined by result observation
+            successful: null
           };
 
           this.attempts.push(attempt);
-          debugLog(`[LeetCode Run Counter] Stored run attempt #${this.runCounter}`);
+          this.currentRunAttempt = attempt;
+          DSAUtils.logDebug(PLATFORM, `Stored run attempt #${this.runCounter}`);
 
-          // Save state after adding attempt
           await this.savePersistedState();
-
-          // Start observing for run results
-          await this.observeRunResult(attempt);
-
-        } else {
-          debugLog(`[LeetCode Run Counter] Run #${this.runCounter} - Code too short or empty`);
         }
       } catch (error) {
-        DSAUtils.logError(PLATFORM, 'Error storing run attempt', error);
+        DSAUtils.logError(PLATFORM, 'Error storing run attempt from network', error);
       }
     }
 
-    async observeRunResult(attempt) {
-      // Look for run results to determine if the run was successful
-      const checkRunResult = async () => {
-        // Updated LeetCode selectors for run results
-        const resultSelectors = [
-          '[data-e2e-locator="console-result"]',
-          '[data-e2e-locator="console-panel"]',
-          '.result-container',
-          '.console-wrapper',
-          '.result__3-aA',
-          '[class*="result"]',
-          '[class*="console"]',
-          '.code-output',
-          '.execution-result'
-        ];
+    async handleCheckResponseFromNetwork(id, checkData) {
+      if (!id || !checkData) return;
 
-        for (const selector of resultSelectors) {
-          const resultElement = document.querySelector(selector);
-          if (resultElement && resultElement.textContent) {
-            const resultText = resultElement.textContent.toLowerCase();
-            DSAUtils.logDebug(PLATFORM, `Checking result text: "${resultText.substring(0, 100)}..."`);
+      const runSuccess = checkData.run_success; // boolean
 
-            // Check for successful run indicators
-            if (resultText.includes('accepted') ||
-              resultText.includes('success') ||
-              resultText.includes('correct') ||
-              resultText.includes('case passed') ||
-              (resultText.includes('runtime:') && resultText.includes('memory:')) ||
-              (resultText.includes('output') && !resultText.includes('expected') && !resultText.includes('wrong'))) {
-
-              // Guard against multiple increments for the same attempt
-              if (attempt.successful !== true) {
-                attempt.successful = true;
-                debugLog(`[LeetCode Run Counter] Run #${attempt.runNumber} - SUCCESS (Expected output matched)`);
-
-                // Save state after successful attempt
-                await this.savePersistedState();
-              } else {
-                DSAUtils.logDebug(PLATFORM, `Run #${attempt.runNumber} already marked as successful - skipping`);
-              }
-
-              return true;
-            }
-
-            // Check for failure indicators
-            if (resultText.includes('wrong answer') ||
-              resultText.includes('time limit exceeded') ||
-              resultText.includes('runtime error') ||
-              resultText.includes('compilation error') ||
-              resultText.includes('expected:') ||
-              resultText.includes('output:') && resultText.includes('expected:') ||
-              resultText.includes('failed') ||
-              resultText.includes('error') ||
-              resultText.includes('incorrect')) {
-
-              // Guard against multiple increments for the same attempt
-              if (attempt.successful !== false) {
-                attempt.successful = false;
-                this.incorrectRunCounter++;
-                debugLog(`[LeetCode Run Counter] Run #${attempt.runNumber} - FAILED (Incorrect output)`);
-                debugLog(`[LeetCode Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
-
-                // Save state after failed attempt
-                await this.savePersistedState();
-
-                // Check if we've reached 3 failed runs
-                if (this.incorrectRunCounter >= 2 && !this.hasAnalyzedMistakes) {
-                  this.handleThreeIncorrectRuns();
-                }
-              } else {
-                DSAUtils.logDebug(PLATFORM, `Run #${attempt.runNumber} already marked as failed - skipping increment`);
-              }
-              return true;
-            }
-          }
+      // 1. Is it the current submission?
+      if (this.currentSubmissionId && String(id) === String(this.currentSubmissionId)) {
+        if (!this.submissionInProgress || !this.currentSubmissionAttempt) {
+          return;
         }
-        return false;
-      };
 
-      // Check immediately and then set up observer
-      const initialResult = await checkRunResult();
-      if (!initialResult) {
-        let checkCount = 0;
-        const observer = new MutationObserver(async () => {
-          checkCount++;
-          if (await checkRunResult()) {
-            DSAUtils.logDebug(PLATFORM, `Result detected after ${checkCount} mutations`);
-            clearInterval(periodicCheck);
-            observer.disconnect();
+        const attempt = this.currentSubmissionAttempt;
+
+        if (runSuccess) {
+          attempt.successful = true;
+          DSAUtils.logDebug(PLATFORM, 'Submission result detected: ACCEPTED');
+          await this.savePersistedState();
+          this.submissionInProgress = false;
+          this.currentSubmissionAttempt = null;
+          this.currentSubmissionId = null;
+          await this.handleSuccessfulSubmission(attempt, checkData);
+        } else {
+          attempt.successful = false;
+          const statusText = checkData.status_msg || 'Submission failed';
+          DSAUtils.logDebug(PLATFORM, `Submission result detected: ${statusText}`);
+          if (this.submissionTracker) {
+            this.submissionTracker.fail(statusText);
+            this.submissionTracker = null;
           }
-        });
+          await this.savePersistedState();
+          this.submissionInProgress = false;
+          this.currentSubmissionAttempt = null;
+          this.currentSubmissionId = null;
+        }
+      }
 
-        observer.observe(document.body, {
-          childList: true,
-          subtree: true
-        });
+      // 2. Is it the current run?
+      else if (this.currentRunId && String(id) === String(this.currentRunId)) {
+        if (!this.currentRunAttempt) return;
 
-        // Also check periodically in case mutation observer misses changes
-        const periodicCheck = setInterval(async () => {
-          if (await checkRunResult()) {
-            DSAUtils.logDebug(PLATFORM, `Result detected via periodic check`);
-            clearInterval(periodicCheck);
-            observer.disconnect();
+        const attempt = this.currentRunAttempt;
+
+        if (runSuccess) {
+          if (attempt.successful !== true) {
+            attempt.successful = true;
+            DSAUtils.logDebug(PLATFORM, `Run #${attempt.runNumber} - SUCCESS`);
+            await this.savePersistedState();
           }
-        }, 1000);
-
-        // Stop observing after 15 seconds to prevent memory leaks
-        setTimeout(async () => {
-          observer.disconnect();
-          clearInterval(periodicCheck);
-          if (attempt.successful === null) {
-            // If we can't determine the result, assume it's a failed run for safety
+        } else {
+          if (attempt.successful !== false) {
             attempt.successful = false;
             this.incorrectRunCounter++;
-            debugLog(`[LeetCode Run Counter] Run #${attempt.runNumber} - TIMEOUT → Counted as FAILED (safety measure)`);
-            debugLog(`[LeetCode Run Counter] Total failed runs: ${this.incorrectRunCounter}/3`);
-
-            // Save state after failed attempt
+            DSAUtils.logDebug(PLATFORM, `Run #${attempt.runNumber} - FAILED. Total failed runs: ${this.incorrectRunCounter}/3`);
             await this.savePersistedState();
 
-            // Check if we've reached 3 failed runs
-            if (this.incorrectRunCounter >= 3 && !this.hasAnalyzedMistakes) {
+            if (this.incorrectRunCounter >= 2 && !this.hasAnalyzedMistakes) {
               this.handleThreeIncorrectRuns();
             }
           }
-        }, 15000);
+        }
+        this.currentRunAttempt = null;
+        this.currentRunId = null;
       }
     }
 
@@ -703,8 +555,6 @@
         shouldAnalyzeWithGemini: true
       });
     }
-
-
 
     checkPageType() {
       const url = window.location.href;
@@ -837,7 +687,6 @@
     }
 
     getDifficulty() {
-      // Look for the difficulty tag with specific class structure
       const difficultySelectors = [
         '.text-difficulty-easy, .text-difficulty-medium, .text-difficulty-hard',
         '[class*="text-difficulty"]',
@@ -852,7 +701,6 @@
         if (element && element.textContent.trim()) {
           const difficultyText = element.textContent.trim();
 
-          // Normalize difficulty levels
           if (difficultyText.toLowerCase().includes('easy')) return 'Easy';
           if (difficultyText.toLowerCase().includes('medium')) return 'Medium';
           if (difficultyText.toLowerCase().includes('hard')) return 'Hard';
@@ -863,10 +711,6 @@
 
       return null;
     }
-
-
-
-
 
     async getCurrentLanguage() {
       const viaBridge = await this.getCodeViaBridge(800);
@@ -915,13 +759,12 @@
     }
 
     getStoredCode() {
-      // Check localStorage for saved code
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.includes('code')) {
           try {
             const value = localStorage.getItem(key);
-            if (value && value.length > 50) { // Assume valid code is > 50 chars
+            if (value && value.length > 50) {
               return value;
             }
           } catch (e) {
@@ -932,7 +775,7 @@
       return null;
     }
 
-    async handleSuccessfulSubmission(submissionAttempt = null) {
+    async handleSuccessfulSubmission(submissionAttempt = null, checkData = null) {
       try {
         debugLog(`[LeetCode Submission] SUCCESSFUL SUBMISSION DETECTED`);
         debugLog(`[LeetCode Stats] Total runs: ${this.runCounter}, Failed runs: ${this.incorrectRunCounter}`);
@@ -941,7 +784,7 @@
         await DSAUtils.sleep(2000);
 
         // Extract performance metrics
-        const stats = this.extractPerformanceStats();
+        const stats = this.extractPerformanceStats(checkData);
 
         // Get updated problem info
         const problemInfo = await this.extractProblemInfo();
@@ -989,21 +832,40 @@
               const allAttempts = this.attempts.filter(a => a.code && a.code.length > 10);
               debugLog(`[LeetCode] Sending ${allAttempts.length} code iterations to Gemini`);
 
+              if (this.submissionTracker) {
+                this.submissionTracker.setAIStarted();
+              }
+
               const geminiResult = await geminiAPI.analyzeMistakes(allAttempts, problemInfo);
 
               if (geminiResult.success) {
                 this.aiAnalysis = geminiResult.analysis;
                 this.aiTags = geminiResult.tags || [];
                 debugLog(`[LeetCode] Gemini analysis complete. Tags: ${this.aiTags.join(', ')}`);
+                if (this.submissionTracker) {
+                  this.submissionTracker.setAIComplete();
+                }
               } else {
                 debugLog(`[LeetCode] Gemini analysis failed: ${geminiResult.error}`);
+                if (this.submissionTracker) {
+                  this.submissionTracker.setAISkipped();
+                }
               }
             } else {
               debugLog(`[LeetCode] Gemini API key not configured - skipping analysis`);
+              if (this.submissionTracker) {
+                this.submissionTracker.setAISkipped();
+              }
             }
           } catch (error) {
             debugError(`[LeetCode] Gemini analysis error:`, error);
-            // Continue with submission even if Gemini fails
+            if (this.submissionTracker) {
+              this.submissionTracker.setAISkipped();
+            }
+          }
+        } else {
+          if (this.submissionTracker) {
+            this.submissionTracker.setAISkipped();
           }
         }
 
@@ -1016,12 +878,11 @@
         debugLog(`[LeetCode Debug] BackendAPI available:`, typeof BackendAPI !== 'undefined');
         debugLog(`[LeetCode Debug] backendAPI instance:`, backendAPI);
 
-        // Show immediate feedback that push is starting
-        let syncToast = null;
-        if (window.LeetFeedbackToast) {
-          syncToast = window.LeetFeedbackToast.info('Analyzing solution...', 0); // 0 = no auto-dismiss
+        if (this.submissionTracker) {
+          this.submissionTracker.setBackendStarted();
         }
 
+        let backendPushSucceeded = false;
         try {
           if (!backendAPI) {
             debugLog(`[LeetCode Submission] Initializing BackendAPI...`);
@@ -1036,27 +897,33 @@
           const backendResult = await backendAPI.pushCurrentProblemData(currentUrl);
 
           if (backendResult.success) {
+            backendPushSucceeded = true;
             debugLog(`[LeetCode Submission] Backend push successful!`, backendResult.data);
-            // Update toast to success
-            if (syncToast && window.LeetFeedbackToast) {
+            if (this.submissionTracker) {
               const message = backendResult.data?.message || 'Solution synced to Traverse!';
-              window.LeetFeedbackToast.update(syncToast, message, 'success', 5000);
+              this.submissionTracker.succeed(message);
+              this.submissionTracker = null;
             }
           } else {
             debugLog(`[LeetCode Submission] Backend push failed: ${backendResult.error}`);
-            // Update toast to error
-            if (syncToast && window.LeetFeedbackToast) {
-              window.LeetFeedbackToast.update(syncToast, `Sync failed: ${backendResult.error}`, 'error', 6000);
+            if (this.submissionTracker) {
+              this.submissionTracker.fail(`Sync failed: ${backendResult.error}`);
+              this.submissionTracker = null;
             }
-            // Continue with GitHub push even if backend fails
           }
         } catch (error) {
           debugError(`[LeetCode Submission] Backend push error:`, error);
-          // Update toast to error
-          if (syncToast && window.LeetFeedbackToast) {
-            window.LeetFeedbackToast.update(syncToast, `Sync error: ${error.message}`, 'error', 6000);
+          if (this.submissionTracker) {
+            this.submissionTracker.fail(`Sync error: ${error.message}`);
+            this.submissionTracker = null;
           }
-          // Continue with GitHub push even if backend fails
+        }
+
+        // If backend push failed, preserve all state (attempts, AI analysis, etc.)
+        // so the next submission retry can use them
+        if (!backendPushSucceeded) {
+          debugLog(`[LeetCode Submission] Backend push did not succeed - preserving state for retry`);
+          return;
         }
 
         // Step 2: Check if GitHub push is enabled
@@ -1070,64 +937,62 @@
 
           if (result.success) {
             debugLog(`[LeetCode Submission] Solution pushed to GitHub successfully!`);
-
-            // Reset counters after successful submission
-            this.runCounter = 0;
-            this.incorrectRunCounter = 0;
-            this.attempts = [];
-            this.hasAnalyzedMistakes = false;
-            this.shouldAnalyzeWithGemini = false;
-            this.submitCounter = 0;
-            this.currentSubmissionAttempt = null;
-            this.aiAnalysis = null;
-            this.aiTags = [];
-
-            await this.savePersistedState({
-              attempts: attemptsToPersist,
-              runCounter: 0,
-              incorrectRunCounter: 0,
-              hasAnalyzedMistakes: false,
-              shouldAnalyzeWithGemini: false,
-              submitCounter: 0,
-              aiAnalysis: null,
-              aiTags: []
-            });
           } else {
             debugLog(`[LeetCode Submission] Failed to push solution:`, result.error);
           }
         } else {
           debugLog(`[LeetCode Submission] GitHub push disabled by user - skipping`);
-          // Still reset counters
-          this.runCounter = 0;
-          this.incorrectRunCounter = 0;
-          this.attempts = [];
-          this.hasAnalyzedMistakes = false;
-          this.shouldAnalyzeWithGemini = false;
-          this.submitCounter = 0;
-          this.currentSubmissionAttempt = null;
-          this.aiAnalysis = null;
-          this.aiTags = [];
-
-          await this.savePersistedState({
-            attempts: attemptsToPersist,
-            runCounter: 0,
-            incorrectRunCounter: 0,
-            hasAnalyzedMistakes: false,
-            shouldAnalyzeWithGemini: false,
-            submitCounter: 0,
-            aiAnalysis: null,
-            aiTags: []
-          });
         }
+
+        // Reset counters after successful backend submission
+        this.runCounter = 0;
+        this.incorrectRunCounter = 0;
+        this.attempts = [];
+        this.hasAnalyzedMistakes = false;
+        this.shouldAnalyzeWithGemini = false;
+        this.submitCounter = 0;
+        this.currentSubmissionAttempt = null;
+        this.currentRunAttempt = null;
+        this.currentSubmissionId = null;
+        this.currentRunId = null;
+        this.aiAnalysis = null;
+        this.aiTags = [];
+
+        await this.savePersistedState({
+          attempts: attemptsToPersist,
+          runCounter: 0,
+          incorrectRunCounter: 0,
+          hasAnalyzedMistakes: false,
+          shouldAnalyzeWithGemini: false,
+          submitCounter: 0,
+          aiAnalysis: null,
+          aiTags: []
+        });
 
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error handling submission', error);
       }
     }
 
-    extractPerformanceStats() {
+    extractPerformanceStats(checkData = null) {
       const stats = {};
 
+      if (checkData) {
+        stats.runtime = checkData.status_runtime || '';
+        stats.memory = checkData.status_memory || '';
+        if (checkData.runtime_percentile !== undefined || checkData.memory_percentile !== undefined) {
+          const runtimePercent = checkData.runtime_percentile ? `${checkData.runtime_percentile.toFixed(1)}%` : '';
+          const memoryPercent = checkData.memory_percentile ? `${checkData.memory_percentile.toFixed(1)}%` : '';
+          if (runtimePercent && memoryPercent) {
+            stats.beats = `Beats ${runtimePercent} for runtime, ${memoryPercent} for memory`;
+          } else if (runtimePercent) {
+            stats.beats = `Beats ${runtimePercent} for runtime`;
+          }
+        }
+        return stats;
+      }
+
+      // Fallback to DOM
       const runtimeElement = document.querySelector('[class*="runtime"]');
       if (runtimeElement) {
         stats.runtime = runtimeElement.textContent.trim();
@@ -1147,8 +1012,6 @@
 
       return stats;
     }
-
-
   }
 
   // Initialize when DOM is ready

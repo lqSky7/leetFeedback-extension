@@ -3,19 +3,19 @@
 // Category mapping for ML model (0-14)
 const CATEGORY_MAP = {
   // Arrays
-  'array': 0, 'arrays': 0,
+  'array': 0, 'arrays': 0, 'sliding window': 0, 'two pointers': 0, 'two pointer': 0, '2 pointer': 0, 'sliding window / 2 pointer': 0,
   // Strings
-  'string': 1, 'strings': 1,
+  'string': 1, 'strings': 1, 'strings (advanced algo)': 1, 'strings(advanced algo)': 1,
   // Linked List
   'linked list': 2, 'linkedlist': 2, 'linked-list': 2,
   // Trees
-  'tree': 3, 'trees': 3, 'binary tree': 3, 'binary search tree': 3, 'bst': 3,
+  'tree': 3, 'trees': 3, 'binary tree': 3, 'binary trees': 3, 'binary search tree': 3, 'binary search trees': 3, 'bst': 3, 'trie': 3, 'tries': 3,
   // Graphs
   'graph': 4, 'graphs': 4,
   // Dynamic Programming
   'dp': 5, 'dynamic programming': 5,
   // Greedy
-  'greedy': 6,
+  'greedy': 6, 'greedy algorithms': 6, 'greedy algorithm': 6,
   // Backtracking
   'backtracking': 7, 'recursion': 7,
   // Sorting
@@ -23,15 +23,14 @@ const CATEGORY_MAP = {
   // Searching
   'searching': 9, 'search': 9, 'binary search': 9,
   // Stack
-  'stack': 10, 'monotonic stack': 10,
+  'stack': 10, 'monotonic stack': 10, 'stack / queues': 10, 'stacks / queues': 10, 'stack and queues': 10, 'stacks and queues': 10, 'stack & queues': 10, 'stacks & queues': 10,
   // Queue
   'queue': 11,
   // Heap
-  'heap': 12, 'priority queue': 12,
+  'heap': 12, 'heaps': 12, 'priority queue': 12,
   // HashMap
   'hash map': 13, 'hashmap': 13, 'hash table': 13, 'hashtable': 13, 'hashing': 13,
-  // Math
-  'math': 14, 'bit manipulation': 14, 'number theory': 14
+  'math': 14, 'maths': 14, 'bit manipulation': 14, 'number theory': 14
 };
 
 /**
@@ -57,7 +56,7 @@ function mapTopicToCategory(topics) {
 
 class BackendAPI {
   constructor() {
-    this.baseURL = 'https://traverse-backend-api.azurewebsites.net';
+    this.baseURL = 'https://155-248-241-153.sslip.io';
     this.authToken = null;
     this.initialized = false;
     this._log(`[Backend API] BackendAPI constructor called`);
@@ -263,12 +262,13 @@ class BackendAPI {
           this._warn('[Backend API] Negative active time detected, resetting to 0. Active time:', activeTime, 'ms');
           timeTaken = 0;
         } else {
-          // Cap at 24 hours (86400 seconds) to prevent overflow issues
-          const MAX_TIME_SECONDS = 24 * 60 * 60;
+          // Cap at 2 hours for takeuforward, and 24 hours for others to prevent overflow issues
+          const isTakeUforward = platform && platform.toLowerCase() === 'takeuforward';
+          const MAX_TIME_SECONDS = isTakeUforward ? 2 * 60 * 60 : 24 * 60 * 60;
           const rawTimeTaken = Math.floor(activeTime / 1000); // Convert ms to seconds
 
           if (rawTimeTaken > MAX_TIME_SECONDS) {
-            this._warn('[Backend API] Time taken exceeds 24 hours, capping. Raw value:', rawTimeTaken);
+            this._warn(`[Backend API] Time taken exceeds cap (${MAX_TIME_SECONDS}s), capping. Raw value:`, rawTimeTaken);
             timeTaken = MAX_TIME_SECONDS;
           } else {
             timeTaken = rawTimeTaken;
@@ -278,6 +278,20 @@ class BackendAPI {
 
       // Generate idempotency key from problem slug and timestamp
       const idempotencyKey = `${problemSlug}-${solved.date || Date.now()}`;
+
+      // Ensure attempts array is populated and token-optimized via attempt diffing
+      let rawAttemptsList = Array.isArray(attempts) ? [...attempts] : [];
+      if (rawAttemptsList.length === 0 && storedProblemData.code && storedProblemData.code.length > 10) {
+        rawAttemptsList.push({
+          code: storedProblemData.code,
+          language: languageValue,
+          timestamp: solved.date ? new Date(solved.date).toISOString() : new Date().toISOString(),
+          type: 'submit',
+          successful: solved.value
+        });
+      }
+
+      const attemptsList = this.formatAttemptsWithDiffs(rawAttemptsList);
 
       const formattedData = {
         problemSlug: problemSlug,
@@ -293,11 +307,14 @@ class BackendAPI {
         mistakeTags: aiTags || [], // Gemini-generated mistake tags
         numberOfTries: Number(runCounter) || 1, // Use runCounter (run button presses)
         timeTaken: timeTaken,
-        category: mapTopicToCategory(parent_topic) // Map topic to category ID for ML model
+        category: mapTopicToCategory(parent_topic), // Map topic to category ID for ML model
+        topic: parent_topic[0] || null,
+        subtopic: parent_topic[1] || null,
+        attempts: attemptsList,
       };
 
       this._log('[Backend API] Formatted submission data:', formattedData);
-      this._log('[Backend API] Topics:', parent_topic, '-> Category:', formattedData.category);
+      this._log('[Backend API] Topics:', parent_topic, '-> Category:', formattedData.category, 'Topic:', formattedData.topic, 'Subtopic:', formattedData.subtopic);
 
       return formattedData;
 
@@ -340,6 +357,73 @@ class BackendAPI {
       this._error('[Backend API] Error pushing submission:', error);
       return { success: false, error: error.message };
     }
+  }
+
+  formatAttemptsWithDiffs(attempts) {
+    if (!Array.isArray(attempts) || attempts.length === 0) {
+      return [];
+    }
+
+    const diffedAttempts = [];
+    let previousCode = "";
+
+    for (let i = 0; i < attempts.length; i++) {
+      const att = attempts[i];
+      const currentCode = att.code || "";
+
+      if (i === 0) {
+        diffedAttempts.push({
+          ...att,
+          code: currentCode
+        });
+        previousCode = currentCode;
+      } else {
+        let codeContent = currentCode;
+        if (currentCode.length > 0 && previousCode.length > 0 && currentCode !== previousCode) {
+          codeContent = this.computeAttemptDiffSummary(previousCode, currentCode, i + 1);
+        } else if (currentCode === previousCode) {
+          codeContent = `// Attempt #${i + 1}: Same code as Attempt #${i}`;
+        }
+
+        diffedAttempts.push({
+          ...att,
+          code: codeContent
+        });
+        previousCode = currentCode;
+      }
+    }
+
+    return diffedAttempts;
+  }
+
+  computeAttemptDiffSummary(oldCode, newCode, attemptNumber) {
+    const oldLines = oldCode.split(/\r?\n/);
+    const newLines = newCode.split(/\r?\n/);
+
+    const changes = [];
+    const maxLines = Math.max(oldLines.length, newLines.length);
+
+    for (let lineIdx = 0; lineIdx < maxLines; lineIdx++) {
+      const oldLine = oldLines[lineIdx];
+      const newLine = newLines[lineIdx];
+
+      if (oldLine !== newLine) {
+        const lineNum = lineIdx + 1;
+        if (oldLine !== undefined && newLine !== undefined) {
+          changes.push(`// Line ${lineNum}:\n// - ${oldLine.trim()}\n// + ${newLine.trim()}`);
+        } else if (oldLine === undefined) {
+          changes.push(`// Line ${lineNum} added: + ${newLine.trim()}`);
+        } else if (newLine === undefined) {
+          changes.push(`// Line ${lineNum} removed: - ${oldLine.trim()}`);
+        }
+      }
+    }
+
+    if (changes.length === 0) {
+      return `// Attempt #${attemptNumber}: No code changes`;
+    }
+
+    return `// Attempt #${attemptNumber} changes:\n` + changes.join('\n');
   }
 }
 

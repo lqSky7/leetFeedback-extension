@@ -49,12 +49,18 @@
         this.setupEventListeners();
         this.injectInterceptor();
         this.checkPageType();
-        this.pollForQuestionDetails();
 
-        // Start the unified problem timer
-        const problemSlug = this.getProblemSlugFromUrl();
-        if (window.ProblemTimer && problemSlug) {
-          window.ProblemTimer.getInstance().startTimer(problemSlug);
+        // Start the unified problem timer and details polling only if on a problem page
+        if (this.isProblemPage()) {
+          this.pollForQuestionDetails();
+          const problemSlug = this.getProblemSlugFromUrl();
+          if (window.ProblemTimer && problemSlug) {
+            window.ProblemTimer.getInstance().startTimer(problemSlug);
+          }
+        } else {
+          if (window.ProblemTimer) {
+            window.ProblemTimer.getInstance().hideOverlay();
+          }
         }
 
         DSAUtils.logDebug(PLATFORM, 'TakeUforward extractor initialized');
@@ -93,15 +99,21 @@
           this.aiAnalysis = null;
           this.aiTags = [];
 
-          // Reset the unified problem timer
+          // Reset the unified problem timer based on page type
           if (window.ProblemTimer) {
-            window.ProblemTimer.getInstance().reset();
-            window.ProblemTimer.getInstance().startTimer(this.getProblemSlugFromUrl());
+            if (this.isProblemPage()) {
+              window.ProblemTimer.getInstance().reset();
+              window.ProblemTimer.getInstance().startTimer(this.getProblemSlugFromUrl());
+            } else {
+              window.ProblemTimer.getInstance().hideOverlay();
+            }
           }
 
-          setTimeout(() => {
-            this.fetchQuestionDetails();
-          }, 4000);
+          if (this.isProblemPage()) {
+            setTimeout(() => {
+              this.fetchQuestionDetails();
+            }, 4000);
+          }
         }
       }, 4000);
 
@@ -117,6 +129,10 @@
         if (event.data.type === 'CODE_SUBMIT') {
           const submitData = event.data.payload;
           debugLog('[TakeUforward] Captured code submission:', submitData);
+
+          if (window.LeetFeedbackToast) {
+            this.submissionTracker = window.LeetFeedbackToast.createSubmission();
+          }
 
           SELECTED_LANGUAGE = submitData.language || '';
           PUBLIC_CODE = submitData.usercode || '';
@@ -162,7 +178,7 @@
               successful: null // Will be determined by RUN_RESPONSE
             };
             this.attempts.push(attempt);
-            debugLog(`[TakeUforward] Stored run attempt #${this.runCounter}`);
+            await this.savePersistedState();
           }
         }
 
@@ -196,11 +212,18 @@
           const submissionData = event.data.payload;
           debugLog('[TakeUforward] Received submission response:', submissionData);
 
+          const statusLower = (submissionData.status || '').toLowerCase();
+          const pendingStatuses = ['judging', 'running', 'compiling', 'pending', 'processing', 'queued'];
+
           if (submissionData.success === true) {
             debugLog('[TakeUforward] Submission successful! Processing...');
             await this.handleSuccessfulSubmission(submissionData);
-          } else {
+          } else if (statusLower && !pendingStatuses.includes(statusLower)) {
             debugLog('[TakeUforward] Submission was not successful. Status:', submissionData.status);
+            if (this.submissionTracker) {
+              this.submissionTracker.fail(submissionData.status || 'Submission failed');
+              this.submissionTracker = null;
+            }
             // Count failed submissions as failed runs too
             this.incorrectRunCounter++;
             debugLog(`[TakeUforward] Total failed attempts: ${this.incorrectRunCounter}/3`);
@@ -242,8 +265,7 @@
     }
 
     checkPageType() {
-      const url = window.location.href;
-      if (url.includes('takeuforward.org') && url.includes('/plus/')) {
+      if (this.isProblemPage()) {
         setTimeout(() => {
           this.fetchQuestionDetails();
         }, 2000);
@@ -334,6 +356,19 @@
       return 1; // default to medium
     }
 
+    isProblemPage() {
+      const url = window.location.href;
+      const pathname = window.location.pathname;
+      const problemSlug = this.getProblemSlugFromUrl();
+      
+      // Must contain takeuforward.org, /plus/, /problems/ and a valid slug
+      return url.includes('takeuforward.org') && 
+             pathname.includes('/plus/') && 
+             pathname.includes('/problems/') && 
+             problemSlug !== '' && 
+             problemSlug !== 'problems';
+    }
+
     getProblemSlugFromUrl() {
       const urlPath = window.location.pathname;
       const parts = urlPath.split('/').filter(p => p.length > 0);
@@ -341,20 +376,96 @@
     }
 
     extractTopicsFromUrl() {
-      // Extract topic from URL query parameters
-      // URL format: /plus/dsa/problems/3-sum?category=arrays&subcategory=faqs-medium
+      const topics = [];
       const urlParams = new URLSearchParams(window.location.search);
       const categoryParam = urlParams.get('category');
+      const subcategoryParam = urlParams.get('subcategory');
+
+      let category = null;
+      let subcategory = null;
 
       if (categoryParam) {
-        // Clean up the category: "arrays" -> "Arrays"
-        const topic = categoryParam
+        category = categoryParam
           .replace(/-/g, ' ')
           .replace(/\b\w/g, (l) => l.toUpperCase());
-        return [topic];
+      }
+      if (subcategoryParam) {
+        subcategory = subcategoryParam
+          .replace(/-/g, ' ')
+          .replace(/\b\w/g, (l) => l.toUpperCase());
       }
 
-      return ['General'];
+      // Fallback to Script Tag JSON Parsing (Highly robust Next.js RSC chunk parsing)
+      if (!category || !subcategory) {
+        try {
+          const currentSlug = this.getProblemSlugFromUrl();
+          let accumulatedText = "";
+          const scripts = document.querySelectorAll('script');
+          for (const script of scripts) {
+            if (script.textContent) {
+              accumulatedText += script.textContent.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+            }
+          }
+
+          const targetPattern = `"problem_slug":"${currentSlug}"`;
+          const slugIdx = accumulatedText.indexOf(targetPattern);
+
+          if (slugIdx !== -1) {
+            const precedingText = accumulatedText.substring(0, slugIdx);
+            
+            const categoryMatches = [...precedingText.matchAll(/"category_name"\s*:\s*"([^"]+)"/g)];
+            const subcategoryMatches = [...precedingText.matchAll(/"subcategory_name"\s*:\s*"([^"]+)"/g)];
+            
+            if (!category && categoryMatches.length > 0) {
+              category = categoryMatches[categoryMatches.length - 1][1];
+            }
+            if (!subcategory && subcategoryMatches.length > 0) {
+              subcategory = subcategoryMatches[subcategoryMatches.length - 1][1];
+            }
+          }
+        } catch (scriptErr) {
+          debugLog('[TakeUforward] Error parsing script tags for topics:', scriptErr);
+        }
+      }
+
+      // Fallback to DOM parsing if everything else fails
+      try {
+        if (!category) {
+          const activeCategoryElem = document.querySelector('.category-root-trigger--active-path');
+          if (activeCategoryElem) {
+            const breakWords = activeCategoryElem.querySelector('.break-words');
+            category = breakWords ? breakWords.textContent.trim() : activeCategoryElem.textContent.trim();
+          }
+        }
+
+        if (!subcategory) {
+          const currentSlug = this.getProblemSlugFromUrl();
+          const activeLink = document.querySelector(`a[href*="/problems/${currentSlug}"]`);
+          if (activeLink) {
+            const collapsible = activeLink.closest('[data-slot="collapsible-content"]') || activeLink.closest('[class*="collapsible-content"]');
+            if (collapsible) {
+              const trigger = collapsible.previousElementSibling || document.getElementById(collapsible.getAttribute('aria-labelledby'));
+              if (trigger) {
+                subcategory = trigger.textContent.replace(/[▶▼▲rightdownup]/gi, '').trim();
+              }
+            }
+          }
+        }
+      } catch (domError) {
+        debugLog('[TakeUforward] Error parsing DOM for topics:', domError);
+      }
+
+      if (category) {
+        topics.push(category);
+      } else {
+        topics.push('General');
+      }
+
+      if (subcategory) {
+        topics.push(subcategory);
+      }
+
+      return topics;
     }
 
     async storeProblemData(problemInfo, solved = false) {
@@ -400,6 +511,8 @@
           parent_topic: problemInfo.topics || existingData.parent_topic || ['General'],
           problem_link: problemInfo.url,
           language: problemInfo.language || existingData.language || 'python',  // Store language
+          code: problemInfo.code || PUBLIC_CODE || existingData.code || '',
+          attempts: this.attempts || [],
           // Time values from ProblemTimer utility
           problemStartTime: timer?.getStartTime() || existingData.problemStartTime || Date.now(),
           pausedTime: timer?.getPausedTime() || existingData.pausedTime || 0,
@@ -469,6 +582,21 @@
           topics: problemInfo.topics
         });
 
+        // Add successful submit attempt if not already present
+        const lastSubmitAttempt = this.attempts.filter(a => a.type === 'submit').pop();
+        if (lastSubmitAttempt) {
+          lastSubmitAttempt.successful = true;
+        } else if (problemInfo.code) {
+          const successfulAttempt = {
+            code: problemInfo.code,
+            language: problemInfo.language || SELECTED_LANGUAGE,
+            timestamp: new Date().toISOString(),
+            type: 'submit',
+            successful: true
+          };
+          this.attempts.push(successfulAttempt);
+        }
+
         // Store problem as solved BEFORE pushing to backend
         await this.storeProblemData(problemInfo, true);
         debugLog('[TakeUforward] Stored problem as solved');
@@ -485,6 +613,10 @@
               const allAttempts = this.attempts.filter(a => a.code && a.code.length > 10);
               debugLog(`[TakeUforward] Sending ${allAttempts.length} code iterations to Gemini`);
 
+              if (this.submissionTracker) {
+                this.submissionTracker.setAIStarted();
+              }
+
               const geminiResult = await geminiAPI.analyzeMistakes(allAttempts, problemInfo);
 
               if (geminiResult.success) {
@@ -494,28 +626,45 @@
 
                 // Update stored problem data with AI analysis
                 await this.storeProblemData(problemInfo, true);
+                if (this.submissionTracker) {
+                  this.submissionTracker.setAIComplete();
+                }
               } else {
                 debugLog(`[TakeUforward] Gemini analysis failed: ${geminiResult.error}`);
+                if (this.submissionTracker) {
+                  this.submissionTracker.setAISkipped();
+                }
               }
             } else {
               debugLog(`[TakeUforward] Gemini API key not configured - skipping analysis`);
+              if (this.submissionTracker) {
+                this.submissionTracker.setAISkipped();
+              }
             }
           } catch (error) {
             debugError(`[TakeUforward] Gemini analysis error:`, error);
+            if (this.submissionTracker) {
+              this.submissionTracker.setAISkipped();
+            }
             // Continue with submission even if Gemini fails
           }
+        } else {
+          if (this.submissionTracker) {
+            this.submissionTracker.setAISkipped();
+          }
         }
+
+        // Store problem data (normal solution)
+        await this.storeProblemData(problemInfo, true);
 
         // Step 1: Push to Backend API
         debugLog('[TakeUforward] Step 1: Pushing to backend...');
         
-        // Show immediate feedback that push is starting
-        let syncToast = null;
-        if (window.LeetFeedbackToast) {
-          syncToast = window.LeetFeedbackToast.info('Analyzing solution...', 0); // 0 = no auto-dismiss
-        }
-        
         try {
+          if (this.submissionTracker) {
+            this.submissionTracker.setBackendStarted();
+          }
+
           if (!backendAPI) {
             debugLog('[TakeUforward] Initializing BackendAPI...');
             backendAPI = new BackendAPI();
@@ -526,24 +675,30 @@
 
           if (backendResult.success) {
             debugLog('[TakeUforward] Backend push successful!', backendResult.data);
-            // Update toast to success
-            if (syncToast && window.LeetFeedbackToast) {
+            if (this.submissionTracker) {
               const message = backendResult.data?.message || 'Solution synced to Traverse!';
-              window.LeetFeedbackToast.update(syncToast, message, 'success', 5000);
+              this.submissionTracker.succeed(message);
+              this.submissionTracker = null;
             }
           } else {
             debugLog('[TakeUforward] Backend push failed:', backendResult.error);
-            // Update toast to error
-            if (syncToast && window.LeetFeedbackToast) {
-              window.LeetFeedbackToast.update(syncToast, `Sync failed: ${backendResult.error}`, 'error', 6000);
+            if (this.submissionTracker) {
+              this.submissionTracker.fail(`Sync failed: ${backendResult.error}`);
+              this.submissionTracker = null;
             }
+            // Preserve state for retry
+            debugLog('[TakeUforward] Backend push did not succeed - preserving state for retry');
+            return;
           }
         } catch (error) {
           debugError('[TakeUforward] Backend push error:', error);
-          // Update toast to error
-          if (syncToast && window.LeetFeedbackToast) {
-            window.LeetFeedbackToast.update(syncToast, `Sync error: ${error.message}`, 'error', 6000);
+          if (this.submissionTracker) {
+            this.submissionTracker.fail(`Sync error: ${error.message}`);
+            this.submissionTracker = null;
           }
+          // Preserve state for retry
+          debugLog('[TakeUforward] Backend push did not succeed - preserving state for retry');
+          return;
         }
 
         // Step 2: Check if GitHub push is enabled
@@ -560,37 +715,25 @@
 
             // Clear stored code data after successful push
             await chrome.storage.local.remove(['tuf_code_data']);
-
-            // Reset state
-            TRIES = 0;
-            PUBLIC_CODE = '';
-            SELECTED_LANGUAGE = '';
-            PROBLEM_SLUG = '';
-            this.attempts = [];
-            this.runCounter = 0;
-            this.incorrectRunCounter = 0;
-            this.hasAnalyzedMistakes = false;
-            this.shouldAnalyzeWithGemini = false;
-            this.aiAnalysis = null;
-            this.aiTags = [];
           } else {
             debugError('[TakeUforward] GitHub push failed:', githubResult.error);
           }
         } else {
           debugLog('[TakeUforward] GitHub push disabled by user - skipping');
-          // Still reset state
-          TRIES = 0;
-          PUBLIC_CODE = '';
-          SELECTED_LANGUAGE = '';
-          PROBLEM_SLUG = '';
-          this.attempts = [];
-          this.runCounter = 0;
-          this.incorrectRunCounter = 0;
-          this.hasAnalyzedMistakes = false;
-          this.shouldAnalyzeWithGemini = false;
-          this.aiAnalysis = null;
-          this.aiTags = [];
         }
+
+        // Reset state after successful backend submission
+        TRIES = 0;
+        PUBLIC_CODE = '';
+        SELECTED_LANGUAGE = '';
+        PROBLEM_SLUG = '';
+        this.attempts = [];
+        this.runCounter = 0;
+        this.incorrectRunCounter = 0;
+        this.hasAnalyzedMistakes = false;
+        this.shouldAnalyzeWithGemini = false;
+        this.aiAnalysis = null;
+        this.aiTags = [];
 
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error handling submission', error);

@@ -29,6 +29,120 @@ function spError(...args) {
 const LEGACY_ACCOUNT_ID = "internal://legacy-account";
 const ALFA_LEETCODE_API_BASE = "https://alfa-leetcode-api.onrender.com";
 
+/* ── Custom Searchable Select Component ── */
+class CustomSelect {
+  constructor(wrapperEl) {
+    this.wrapper = wrapperEl;
+    this.hiddenInput = wrapperEl.querySelector('input[type="hidden"]');
+    this.trigger = wrapperEl.querySelector('.custom-select-trigger');
+    this.valueDisplay = wrapperEl.querySelector('.custom-select-value');
+    this.dropdown = wrapperEl.querySelector('.custom-select-dropdown');
+    this.searchInput = wrapperEl.querySelector('.custom-select-search');
+    this.optionsContainer = wrapperEl.querySelector('.custom-select-options');
+    this.isOpen = false;
+    this._bind();
+  }
+
+  _bind() {
+    this.trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggle();
+    });
+
+    this.searchInput.addEventListener('input', () => this._filter());
+    this.searchInput.addEventListener('click', (e) => e.stopPropagation());
+
+    this.optionsContainer.addEventListener('click', (e) => {
+      const opt = e.target.closest('.custom-select-option');
+      if (opt && !opt.classList.contains('disabled')) this.select(opt.dataset.value, opt.textContent);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!this.wrapper.contains(e.target)) this.close();
+    });
+
+    this.searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.close();
+      if (e.key === 'Enter') {
+        const visible = this.optionsContainer.querySelector('.custom-select-option:not([style*="display: none"])');
+        if (visible) this.select(visible.dataset.value, visible.textContent);
+      }
+    });
+  }
+
+  toggle() {
+    this.isOpen ? this.close() : this.open();
+  }
+
+  open() {
+    this.isOpen = true;
+    this.wrapper.classList.add('open');
+    this.searchInput.value = '';
+    this._filter();
+    requestAnimationFrame(() => this.searchInput.focus());
+  }
+
+  close() {
+    this.isOpen = false;
+    this.wrapper.classList.remove('open');
+  }
+
+  select(value, label) {
+    this.hiddenInput.value = value;
+    this.valueDisplay.textContent = label;
+    this.optionsContainer.querySelectorAll('.custom-select-option').forEach(o => o.classList.toggle('selected', o.dataset.value === value));
+    this.close();
+    this.hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  /** Programmatically set value without dispatching change */
+  setValue(value) {
+    const opt = this.optionsContainer.querySelector(`[data-value="${CSS.escape(value)}"]`);
+    if (opt) {
+      this.hiddenInput.value = value;
+      this.valueDisplay.textContent = opt.textContent;
+      this.optionsContainer.querySelectorAll('.custom-select-option').forEach(o => o.classList.toggle('selected', o.dataset.value === value));
+    }
+  }
+
+  /** Replace all options */
+  setOptions(options, selectedValue) {
+    this.optionsContainer.innerHTML = '';
+    options.forEach(o => {
+      const div = document.createElement('div');
+      div.className = 'custom-select-option' + (o.value === selectedValue ? ' selected' : '');
+      div.dataset.value = o.value;
+      div.textContent = o.label;
+      this.optionsContainer.appendChild(div);
+    });
+    const match = options.find(o => o.value === selectedValue);
+    if (match) {
+      this.hiddenInput.value = match.value;
+      this.valueDisplay.textContent = match.label;
+    } else if (options.length > 0) {
+      this.hiddenInput.value = options[0].value;
+      this.valueDisplay.textContent = options[0].label;
+    }
+  }
+
+  _filter() {
+    const q = this.searchInput.value.toLowerCase();
+    this.optionsContainer.querySelectorAll('.custom-select-option').forEach(opt => {
+      opt.style.display = opt.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+}
+
+/** Initialize all custom selects in a container (defaults to document) */
+function initAllCustomSelects(root = document) {
+  const instances = {};
+  root.querySelectorAll('.custom-select').forEach(el => {
+    const id = el.dataset.selectId;
+    instances[id] = new CustomSelect(el);
+  });
+  return instances;
+}
+
 class PopupController {
   constructor() {
     this.config = {};
@@ -47,10 +161,10 @@ class PopupController {
   async initialize() {
     await this.loadStoredData();
     await this.initializeAuth();
+    this.initializeCustomSelects();
     this.setupEventListeners();
     this.updateUI();
     this.updateConnectionStatus();
-    this.initializePlatformIcons();
     this.initializeChromaText();
     this.checkForUpdates();
     this.updateSessionStatus();
@@ -61,16 +175,8 @@ class PopupController {
     // No JavaScript override needed
   }
 
-  initializePlatformIcons() {
-    // Add subtle hover animation to platform icons
-    document.querySelectorAll(".platform-icon").forEach((icon) => {
-      icon.addEventListener("mouseover", () => {
-        setTimeout(() => (icon.style.transform = "scale(1.1)"), 0);
-      });
-      icon.addEventListener("mouseout", () => {
-        setTimeout(() => (icon.style.transform = "scale(1.0)"), 0);
-      });
-    });
+  initializeCustomSelects() {
+    this.customSelects = initAllCustomSelects(document);
   }
 
   setupEventListeners() {
@@ -97,10 +203,25 @@ class PopupController {
               if (repoEl) repoEl.value = parsed.repo;
             }
           }
+          if (id === "gemini-key") {
+            const key = element.value.trim();
+            if (key) {
+              this.fetchGeminiModels(key);
+            } else {
+              this.toggleGeminiModelField(false);
+            }
+          }
           debouncedSave();
         });
       }
     });
+
+    const geminiModelInput = document.getElementById("gemini-model");
+    if (geminiModelInput) {
+      geminiModelInput.addEventListener("change", () => {
+        debouncedSave();
+      });
+    }
 
     // Toggle password visibility
     const toggleTokenBtn = document.getElementById("toggle-token");
@@ -110,12 +231,19 @@ class PopupController {
       });
     }
 
-    const aiProviderSelect = document.getElementById("ai-provider");
-    if (aiProviderSelect) {
-      aiProviderSelect.addEventListener("change", (e) => {
+    const aiProviderInput = document.getElementById("ai-provider");
+    if (aiProviderInput) {
+      aiProviderInput.addEventListener("change", (e) => {
         this.config.aiProvider = e.target.value;
         chrome.storage.sync.set({ ai_provider: e.target.value });
-        this.toggleGeminiKeyField(e.target.value === "gemini");
+        const isGemini = e.target.value === "gemini";
+        this.toggleGeminiKeyField(isGemini);
+        if (isGemini) {
+          const key = document.getElementById("gemini-key")?.value.trim();
+          if (key) {
+            this.fetchGeminiModels(key);
+          }
+        }
         this.debounce(() => this.saveConfiguration(), 500)();
       });
     }
@@ -201,6 +329,54 @@ class PopupController {
     if (field) {
       field.style.display = show ? "" : "none";
     }
+    const hasKey = !!document.getElementById("gemini-key")?.value.trim();
+    this.toggleGeminiModelField(show && hasKey);
+  }
+
+  toggleGeminiModelField(show) {
+    const field = document.getElementById("gemini-model-field");
+    if (field) {
+      field.style.display = show ? "" : "none";
+    }
+  }
+
+  async fetchGeminiModels(apiKey) {
+    if (!apiKey) return;
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch models: ${response.status}`);
+      }
+      const data = await response.json();
+      const models = (data.models || [])
+        .filter(m => m.supportedGenerationMethods.includes("generateContent"))
+        .map(m => ({
+          name: m.name.replace("models/", ""),
+          displayName: m.displayName || m.name
+        }));
+      
+      // Sort models descending to place the latest models at the top
+      const sortedModels = models.sort((a, b) => b.name.localeCompare(a.name));
+      
+      this.populateGeminiModels(sortedModels);
+      this.toggleGeminiModelField(this.config.aiProvider === "gemini");
+    } catch (error) {
+      console.error("Error fetching Gemini models:", error);
+      const select = document.getElementById("gemini-model");
+      if (select) {
+        select.innerHTML = '<option value="">(Error fetching models)</option>';
+      }
+      this.toggleGeminiModelField(this.config.aiProvider === "gemini");
+    }
+  }
+
+  populateGeminiModels(models) {
+    const cs = this.customSelects?.['gemini-model'];
+    if (!cs) return;
+    
+    const currentVal = this.config.geminiModel || (models.length > 0 ? models[0].name : "");
+    const options = models.map(m => ({ value: m.name, label: m.displayName }));
+    cs.setOptions(options, currentVal);
   }
 
   // Toggle GitHub config accordion visibility
@@ -429,6 +605,8 @@ class PopupController {
           "github_push_enabled",
           "timer_overlay_enabled",
           "leetcode_import_username",
+          "gemini_model",
+          "avatar_url",
         ],
         (data) => {
           this.config = {
@@ -442,6 +620,8 @@ class PopupController {
             githubPushEnabled: data.github_push_enabled !== false, // Default true
             timerOverlayEnabled: data.timer_overlay_enabled !== false, // Default true
             leetcodeImportUsername: data.leetcode_import_username || "",
+            geminiModel: data.gemini_model || "gemini-3-flash-preview",
+            avatarUrl: data.avatar_url || "",
           };
           this.mistakeTags = data.mistake_tags || {};
           resolve();
@@ -470,10 +650,16 @@ class PopupController {
       leetcodeUsernameEl.value = this.config.leetcodeImportUsername || "";
     }
 
-    const aiProviderSelect = document.getElementById("ai-provider");
-    if (aiProviderSelect) {
-      aiProviderSelect.value = this.config.aiProvider || "g4f";
-      this.toggleGeminiKeyField(aiProviderSelect.value === "gemini");
+    const aiProviderInput = document.getElementById("ai-provider");
+    const aiProviderCs = this.customSelects?.['ai-provider'];
+    if (aiProviderInput) {
+      const val = this.config.aiProvider || "g4f";
+      aiProviderInput.value = val;
+      if (aiProviderCs) aiProviderCs.setValue(val);
+      this.toggleGeminiKeyField(val === "gemini");
+      if (this.config.geminiKey && val === "gemini") {
+        this.fetchGeminiModels(this.config.geminiKey);
+      }
     }
 
     // New settings
@@ -501,6 +687,12 @@ class PopupController {
     });
     document.querySelector(`[data-tab="${tabName}"]`).classList.add("active");
 
+    // Toggle sliding indicator position class on the container
+    const tabsContainer = document.querySelector(".tabs");
+    if (tabsContainer) {
+      tabsContainer.classList.toggle("settings-active", tabName === "settings");
+    }
+
     // Update tab panels
     document.querySelectorAll(".tab-panel").forEach((panel) => {
       panel.classList.remove("active");
@@ -521,6 +713,7 @@ class PopupController {
           gemini_api_key: formData.geminiKey,
           ai_provider: formData.aiProvider || "g4f",
           debug_mode: formData.debugMode,
+          gemini_model: formData.geminiModel,
         },
         () => { },
       );
@@ -551,6 +744,7 @@ class PopupController {
       geminiKey: document.getElementById("gemini-key").value.trim(),
       aiProvider: aiProviderEl ? aiProviderEl.value : "g4f",
       debugMode: document.getElementById("debug-mode").checked,
+      geminiModel: document.getElementById("gemini-model")?.value || "gemini-3-flash-preview",
     };
   }
 
@@ -705,9 +899,32 @@ class PopupController {
     }
   }
 
+  async fetchNewCatAvatar() {
+    try {
+      const response = await fetch("https://api.thecatapi.com/v1/images/search");
+      if (!response.ok) throw new Error("Failed to fetch cat image");
+      const data = await response.json();
+      if (data && data.length > 0 && data[0].url) {
+        const newUrl = data[0].url;
+        this.config.avatarUrl = newUrl;
+        await chrome.storage.sync.set({ avatar_url: newUrl });
+        return newUrl;
+      }
+    } catch (e) {
+      console.error("Error fetching cat avatar:", e);
+    }
+    const fallbackUrl = `https://robohash.org/${encodeURIComponent(this.authStatus.user?.username || "user")}?set=set4`;
+    this.config.avatarUrl = fallbackUrl;
+    await chrome.storage.sync.set({ avatar_url: fallbackUrl });
+    return fallbackUrl;
+  }
+
   updateAuthSection() {
     const authSection = document.getElementById("auth-section");
     if (!authSection) return;
+
+    const accountSettingsSec = document.getElementById("account-settings-section");
+    const authSettingsDetails = document.getElementById("auth-settings-details");
 
     const isAuthenticated =
       this.authStatus?.isAuthenticated && this.authStatus.user;
@@ -726,48 +943,77 @@ class PopupController {
         user.email ||
         "User";
       const email = user.email || "";
-      const avatarMarkup = user.photoURL
-        ? `<img src="${user.photoURL}" alt="${displayName}" />`
-        : `<div class="default-avatar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>`;
+
+      // Cat profile picture using persisted URL or fallback
+      const avatarUrl = this.config.avatarUrl || `https://robohash.org/${encodeURIComponent(displayName)}?set=set4`;
+      const avatarMarkup = `<img id="profile-avatar-img" src="${avatarUrl}" alt="${displayName}" />`;
 
       // Get session status for badge
       const sessionBadge = this.getSessionStatusBadge();
 
+      // Hide settings tab section since we are presenting this directly on the home tab dashboard
+      if (accountSettingsSec) {
+        accountSettingsSec.style.display = "none";
+      }
+
+      // Render Home tab profile dashboard (large avatar with refresh, displayName, email, badge, actions, and switcher)
       authSection.innerHTML = `
-        <div class="profile-card">
-          <div class="profile-left">
-            <div class="profile-avatar">
-              ${avatarMarkup}
+        <div class="profile-dashboard">
+          <div class="profile-header-card">
+            <div class="profile-avatar-large-container" style="position: relative; display: inline-block;">
+              <div class="profile-avatar-large">
+                ${avatarMarkup}
+              </div>
+              <button type="button" class="avatar-refresh-btn" id="avatar-refresh-btn" title="Refresh Profile Picture">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              </button>
             </div>
-            <div class="profile-info">
-              <div class="profile-name">${displayName}</div>
-              ${email ? `<div class="profile-email">${email}</div>` : ""}
-              ${sessionBadge}
+            <div class="profile-info-center">
+              <div class="profile-name-large">${displayName}</div>
+              ${email ? `<div class="profile-email-large">${email}</div>` : ""}
+              <div class="status-badge-container" style="margin-top: 4px;">
+                ${sessionBadge}
+              </div>
             </div>
           </div>
-          <div class="profile-right">
-            <button class="btn" id="add-account-btn">Add Account</button>
-            <button class="btn" id="sign-out-btn">Sign Out</button>
+
+          <div class="auth-actions" style="margin-top: 6px;">
+            <button class="btn btn-secondary" id="add-account-btn">Add Account</button>
+            <button class="btn btn-secondary" id="sign-out-btn">Sign Out</button>
           </div>
-        </div>
-        <div class="account-controls">
-          <label for="active-account-select">Active Account</label>
-          <select id="active-account-select" class="account-select"></select>
-        </div>
-        <div class="add-account-panel" id="add-account-panel">
-          <h4 class="account-form-title">Add Another Account</h4>
-          <form class="auth-form active" id="auth-add-account-form" data-form="add-account" aria-label="Add another account">
-            <div class="field">
-              <label for="auth-add-username">Username</label>
-              <input type="text" id="auth-add-username" name="username" placeholder="johndoe" autocomplete="username" required />
+
+          <div class="account-controls" style="margin-top: 4px;">
+            <label for="active-account-select" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.06em; text-transform: uppercase;">Active Account</label>
+            <div class="custom-select" id="active-account-wrapper" data-select-id="active-account-select">
+              <input type="hidden" id="active-account-select" value="" />
+              <button type="button" class="custom-select-trigger" aria-haspopup="listbox">
+                <span class="custom-select-value">Select account</span>
+                <svg class="custom-select-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+              <div class="custom-select-dropdown" role="listbox">
+                <div class="custom-select-search-wrap">
+                  <input type="text" class="custom-select-search" placeholder="Search&hellip;" autocomplete="off" />
+                </div>
+                <div class="custom-select-options"></div>
+              </div>
             </div>
-            <div class="field">
-              <label for="auth-add-password">Password</label>
-              <input type="password" id="auth-add-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
-            </div>
-            <button type="submit" class="btn btn-primary">Add Account & Switch</button>
-          </form>
-          <div class="auth-form-message" id="auth-form-message"></div>
+          </div>
+
+          <div class="add-account-panel" id="add-account-panel" style="display: none;">
+            <h4 class="account-form-title">Add Another Account</h4>
+            <form class="auth-form active" id="auth-add-account-form" data-form="add-account" aria-label="Add another account">
+              <div class="field" style="margin-bottom: 10px;">
+                <label for="auth-add-username">Username</label>
+                <input type="text" id="auth-add-username" name="username" placeholder="johndoe" autocomplete="username" required />
+              </div>
+              <div class="field" style="margin-bottom: 10px;">
+                <label for="auth-add-password">Password</label>
+                <input type="password" id="auth-add-password" name="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password" required />
+              </div>
+              <button type="submit" class="btn btn-primary">Add Account & Switch</button>
+            </form>
+            <div class="auth-form-message" id="auth-form-message"></div>
+          </div>
         </div>
       `;
 
@@ -775,24 +1021,27 @@ class PopupController {
       if (signOutBtn) {
         signOutBtn.addEventListener("click", () => this.signOut());
       }
-      const accountSelect = document.getElementById("active-account-select");
-      if (accountSelect) {
-        accountOptions.forEach((account) => {
+      // Initialize custom select for account switcher
+      const accountWrapper = document.getElementById("active-account-wrapper");
+      if (accountWrapper) {
+        const cs = new CustomSelect(accountWrapper);
+        const options = accountOptions.map(account => {
           const accountName =
             account?.user?.username ||
             account?.user?.displayName ||
             account?.user?.name ||
             account?.user?.email ||
             "User";
-          const option = document.createElement("option");
-          option.value = account.id;
-          option.textContent = accountName;
-          option.selected = account.id === currentAccountId;
-          accountSelect.appendChild(option);
+          return { value: account.id, label: accountName };
         });
-        accountSelect.addEventListener("change", (event) =>
-          this.handleAccountSwitch(event),
-        );
+        cs.setOptions(options, currentAccountId);
+        // Listen for changes on the hidden input
+        const hiddenInput = document.getElementById("active-account-select");
+        if (hiddenInput) {
+          hiddenInput.addEventListener("change", (event) =>
+            this.handleAccountSwitch(event),
+          );
+        }
       }
       const addAccountBtn = document.getElementById("add-account-btn");
       if (addAccountBtn) {
@@ -804,7 +1053,23 @@ class PopupController {
           this.handleLoginSubmit(event),
         );
       }
+      const refreshBtn = document.getElementById("avatar-refresh-btn");
+      if (refreshBtn) {
+        refreshBtn.addEventListener("click", async () => {
+          refreshBtn.classList.add("spinning");
+          const newUrl = await this.fetchNewCatAvatar();
+          const avatarImg = document.getElementById("profile-avatar-img");
+          if (avatarImg) {
+            avatarImg.src = newUrl;
+          }
+          refreshBtn.classList.remove("spinning");
+        });
+      }
     } else {
+      if (accountSettingsSec) {
+        accountSettingsSec.style.display = "none";
+      }
+
       authSection.innerHTML = `
         <div class="auth-login-compact">
           <div class="auth-toggle">
@@ -1511,7 +1776,7 @@ class PopupController {
     return date.toISOString();
   }
 
-  // Check for extension updates from GitHub releases
+  // Check for extension updates from Chrome Web Store
   async checkForUpdates() {
     const updateNotification = document.getElementById("update-notification");
     if (!updateNotification) return;
@@ -1523,26 +1788,47 @@ class PopupController {
       const now = Date.now();
       const oneDay = 24 * 60 * 60 * 1000;
 
+      const storeUrl = "https://chromewebstore.google.com/detail/traverse/nnapafjmoelkehjedfgjchoeelgbiama";
+
       if (cache && cache.timestamp && (now - cache.timestamp) < oneDay) {
         // Use cached latest version but compare against CURRENT manifest version
         const currentVersion = chrome.runtime.getManifest().version;
         const hasUpdate = this.compareVersions(cache.latestVersion, currentVersion) > 0;
-        this.renderUpdateNotification(hasUpdate, cache.latestVersion, currentVersion);
+        this.renderUpdateNotification(hasUpdate, cache.latestVersion, currentVersion, storeUrl);
         return;
       }
 
-      // Fetch latest release from GitHub
-      const response = await fetch(
-        "https://api.github.com/repos/lqSky7/leetFeedback-extension/releases/latest",
-        { headers: { Accept: "application/vnd.github.v3+json" } }
-      );
+      // Fetch web store page content
+      const response = await fetch(storeUrl);
 
       if (!response.ok) {
-        throw new Error(`GitHub API returned ${response.status}`);
+        throw new Error(`Chrome Web Store page returned status ${response.status}`);
       }
 
-      const release = await response.json();
-      const latestVersion = release.tag_name.replace(/^v/, "");
+      const htmlText = await response.text();
+      let latestVersion = null;
+
+      // Extract version using regex matching
+      const regexMatch = htmlText.match(/\\?"version\\?":\s*\\?"([0-9.]+)\\?"/);
+      if (regexMatch) {
+        latestVersion = regexMatch[1];
+      } else {
+        // Fallback to DOM parsing
+        const doc = new DOMParser().parseFromString(htmlText, "text/html");
+        const divs = Array.from(doc.querySelectorAll("div"));
+        const versionDiv = divs.find(el => el.textContent.trim() === "Version");
+        if (versionDiv && versionDiv.nextElementSibling) {
+          const versionStr = versionDiv.nextElementSibling.textContent.trim();
+          if (/^\d+(\.\d+)+$/.test(versionStr)) {
+            latestVersion = versionStr;
+          }
+        }
+      }
+
+      if (!latestVersion) {
+        throw new Error("Could not parse version from Chrome Web Store");
+      }
+
       const currentVersion = chrome.runtime.getManifest().version;
 
       // Compare versions
@@ -1554,12 +1840,12 @@ class PopupController {
           hasUpdate,
           latestVersion,
           currentVersion,
-          releaseUrl: release.html_url,
+          releaseUrl: storeUrl,
           timestamp: now
         }
       });
 
-      this.renderUpdateNotification(hasUpdate, latestVersion, currentVersion, release.html_url);
+      this.renderUpdateNotification(hasUpdate, latestVersion, currentVersion, storeUrl);
 
     } catch (error) {
       spError("[Update Check] Error:", error);
@@ -1572,7 +1858,7 @@ class PopupController {
     }
   }
 
-  renderUpdateNotification(hasUpdate, latestVersion, currentVersion, releaseUrl = "https://github.com/lqSky7/leetFeedback-extension/releases") {
+  renderUpdateNotification(hasUpdate, latestVersion, currentVersion, releaseUrl = "https://chromewebstore.google.com/detail/traverse/nnapafjmoelkehjedfgjchoeelgbiama") {
     const updateNotification = document.getElementById("update-notification");
     if (!updateNotification) return;
 
@@ -1585,7 +1871,7 @@ class PopupController {
             <span class="update-latest">v${latestVersion} available</span>
           </div>
           <a href="${releaseUrl}" target="_blank" class="update-link">
-            Download Update
+            Update from Chrome Web Store
           </a>
         </div>
       `;
