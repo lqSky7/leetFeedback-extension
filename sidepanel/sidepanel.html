@@ -21,27 +21,7 @@
             </div>
         </header>
 
-        <div class="platform-icons">
-            <a href="https://leetcode.com" target="_blank">
-                <img src="../icons/leetcode-svgrepo-com.svg" alt="LeetCode" class="platform-icon" />
-            </a>
 
-            <a href="https://geeksforgeeks.org" target="_blank">
-                <img src="../icons/geeksforgeeks.svg" alt="GeeksForGeeks" class="platform-icon" />
-            </a>
-
-            <a href="https://takeuforward.org" target="_blank">
-                <img src="../icons/TufPlusDark.2f9770f2ccd35b40c4c5.svg" alt="TakeuForward" class="platform-icon" />
-            </a>
-            <a href="https://hackerrank.com" target="_blank">
-                <img src="../icons/hackerrank-svgrepo-com.svg" alt="HackerRank" class="platform-icon" />
-            </a>
-            <a href="https://codechef.com" target="_blank">
-                <img src="../icons/codechef-svgrepo-com.svg" alt="CodeChef" class="platform-icon" />
-            </a>
-        </div>
-
-        <div class="separator"></div>
 
         <nav class="tabs">
             <div class="tab-indicator"></div>
@@ -89,19 +69,17 @@
                 </div>
 
                 <!-- LeetCode Import -->
-                <div class="settings-section" id="leetcode-import-section">
+                <div class="settings-section settings-card" id="leetcode-import-section">
                     <h3>LeetCode Import</h3>
                     <div class="leetcode-import">
                         <div class="field">
-                            <label for="leetcode-username">LeetCode Username</label>
-                            <input type="text" id="leetcode-username" placeholder="leetcode_user" autocomplete="off" />
+                            <input type="text" id="leetcode-username" placeholder="LeetCode Username" autocomplete="off" />
                         </div>
-                        <button type="button" class="btn btn-primary" id="leetcode-import-preview">
+                        <button type="button" class="btn btn-secondary" id="leetcode-import-preview">
                             Preview Import
                         </button>
                         <div class="leetcode-import-status" id="leetcode-import-status"></div>
                     </div>
-                    <div class="separator"></div>
                 </div>
 
                 <!-- GitHub Section with Progressive Disclosure -->
@@ -160,17 +138,29 @@
                 </div>
 
                 <!-- AI for Mistake Analysis: default G4F, optional Gemini -->
-                <div class="settings-section" id="gemini-section">
+                <div class="settings-section settings-card" id="gemini-section">
                     <h3>Mistake Analysis (AI)</h3>
                     <div class="field">
                         <label for="ai-provider">
                             Provider
                             <span class="info-icon" data-tooltip="Default: G4F. Use Gemini if you have an API key.">ⓘ</span>
                         </label>
-                        <select id="ai-provider" class="input-group">
-                            <option value="g4f">G4F (free, no key)</option>
-                            <option value="gemini">Gemini (API key)</option>
-                        </select>
+                        <div class="custom-select" id="ai-provider-wrapper" data-select-id="ai-provider">
+                            <input type="hidden" id="ai-provider" value="g4f" />
+                            <button type="button" class="custom-select-trigger" aria-haspopup="listbox">
+                                <span class="custom-select-value">G4F (free, no key)</span>
+                                <svg class="custom-select-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
+                            <div class="custom-select-dropdown" role="listbox">
+                                <div class="custom-select-search-wrap">
+                                    <input type="text" class="custom-select-search" placeholder="Search…" autocomplete="off" />
+                                </div>
+                                <div class="custom-select-options">
+                                    <div class="custom-select-option selected" data-value="g4f">G4F (free, no key)</div>
+                                    <div class="custom-select-option" data-value="gemini">Gemini (API key)</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="field" id="gemini-key-field">
                         <label for="gemini-key">Gemini API Key (only if Provider = Gemini)</label>
@@ -185,11 +175,22 @@
                     </div>
                     <div class="field" id="gemini-model-field" style="display: none;">
                         <label for="gemini-model">Gemini Model</label>
-                        <select id="gemini-model" class="input-group">
-                            <option value="gemini-3-flash-preview">Gemini 3 Flash Preview (default)</option>
-                        </select>
+                        <div class="custom-select" id="gemini-model-wrapper" data-select-id="gemini-model">
+                            <input type="hidden" id="gemini-model" value="gemini-3-flash-preview" />
+                            <button type="button" class="custom-select-trigger" aria-haspopup="listbox">
+                                <span class="custom-select-value">Gemini 3 Flash Preview (default)</span>
+                                <svg class="custom-select-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
+                            <div class="custom-select-dropdown" role="listbox">
+                                <div class="custom-select-search-wrap">
+                                    <input type="text" class="custom-select-search" placeholder="Search…" autocomplete="off" />
+                                </div>
+                                <div class="custom-select-options">
+                                    <div class="custom-select-option selected" data-value="gemini-3-flash-preview">Gemini 3 Flash Preview (default)</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="separator"></div>
                 </div>
 
                 <!-- Options/Debug Section -->

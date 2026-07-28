@@ -511,6 +511,8 @@
           parent_topic: problemInfo.topics || existingData.parent_topic || ['General'],
           problem_link: problemInfo.url,
           language: problemInfo.language || existingData.language || 'python',  // Store language
+          code: problemInfo.code || PUBLIC_CODE || existingData.code || '',
+          attempts: this.attempts || [],
           // Time values from ProblemTimer utility
           problemStartTime: timer?.getStartTime() || existingData.problemStartTime || Date.now(),
           pausedTime: timer?.getPausedTime() || existingData.pausedTime || 0,
@@ -579,6 +581,21 @@
           language: problemInfo.language,
           topics: problemInfo.topics
         });
+
+        // Add successful submit attempt if not already present
+        const lastSubmitAttempt = this.attempts.filter(a => a.type === 'submit').pop();
+        if (lastSubmitAttempt) {
+          lastSubmitAttempt.successful = true;
+        } else if (problemInfo.code) {
+          const successfulAttempt = {
+            code: problemInfo.code,
+            language: problemInfo.language || SELECTED_LANGUAGE,
+            timestamp: new Date().toISOString(),
+            type: 'submit',
+            successful: true
+          };
+          this.attempts.push(successfulAttempt);
+        }
 
         // Store problem as solved BEFORE pushing to backend
         await this.storeProblemData(problemInfo, true);

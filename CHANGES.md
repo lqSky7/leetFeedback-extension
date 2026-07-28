@@ -1,3 +1,14 @@
+# Changes in 1.8.0 (since 1.7.3)
+
+## What's New & Improvements
+- **Sidepanel Redesign & UI Enhancements**: Re-architected sidepanel layout, styles, and HTML for improved visual hierarchy, responsiveness, and state handling.
+- **Timer Overlay Improvements**: Refined problem timer overlay UI with a sleek pill design, integrated section dividers, pause/resume, and reset timer options.
+- **Submission State Management**: Fixed edge cases in clearing submission state across content scripts and background handlers.
+- **Backend API & Data Sync**: Enhanced backend sync capabilities for problem sessions and feedback handling.
+- **Version Bump**: Extension version updated to 1.8.0.
+
+---
+
 # Changes in 1.7.3 (since 1.7)
 
 ## What it means for users

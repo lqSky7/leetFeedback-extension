@@ -29,6 +29,120 @@ function spError(...args) {
 const LEGACY_ACCOUNT_ID = "internal://legacy-account";
 const ALFA_LEETCODE_API_BASE = "https://alfa-leetcode-api.onrender.com";
 
+/* ── Custom Searchable Select Component ── */
+class CustomSelect {
+  constructor(wrapperEl) {
+    this.wrapper = wrapperEl;
+    this.hiddenInput = wrapperEl.querySelector('input[type="hidden"]');
+    this.trigger = wrapperEl.querySelector('.custom-select-trigger');
+    this.valueDisplay = wrapperEl.querySelector('.custom-select-value');
+    this.dropdown = wrapperEl.querySelector('.custom-select-dropdown');
+    this.searchInput = wrapperEl.querySelector('.custom-select-search');
+    this.optionsContainer = wrapperEl.querySelector('.custom-select-options');
+    this.isOpen = false;
+    this._bind();
+  }
+
+  _bind() {
+    this.trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggle();
+    });
+
+    this.searchInput.addEventListener('input', () => this._filter());
+    this.searchInput.addEventListener('click', (e) => e.stopPropagation());
+
+    this.optionsContainer.addEventListener('click', (e) => {
+      const opt = e.target.closest('.custom-select-option');
+      if (opt && !opt.classList.contains('disabled')) this.select(opt.dataset.value, opt.textContent);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!this.wrapper.contains(e.target)) this.close();
+    });
+
+    this.searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.close();
+      if (e.key === 'Enter') {
+        const visible = this.optionsContainer.querySelector('.custom-select-option:not([style*="display: none"])');
+        if (visible) this.select(visible.dataset.value, visible.textContent);
+      }
+    });
+  }
+
+  toggle() {
+    this.isOpen ? this.close() : this.open();
+  }
+
+  open() {
+    this.isOpen = true;
+    this.wrapper.classList.add('open');
+    this.searchInput.value = '';
+    this._filter();
+    requestAnimationFrame(() => this.searchInput.focus());
+  }
+
+  close() {
+    this.isOpen = false;
+    this.wrapper.classList.remove('open');
+  }
+
+  select(value, label) {
+    this.hiddenInput.value = value;
+    this.valueDisplay.textContent = label;
+    this.optionsContainer.querySelectorAll('.custom-select-option').forEach(o => o.classList.toggle('selected', o.dataset.value === value));
+    this.close();
+    this.hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  /** Programmatically set value without dispatching change */
+  setValue(value) {
+    const opt = this.optionsContainer.querySelector(`[data-value="${CSS.escape(value)}"]`);
+    if (opt) {
+      this.hiddenInput.value = value;
+      this.valueDisplay.textContent = opt.textContent;
+      this.optionsContainer.querySelectorAll('.custom-select-option').forEach(o => o.classList.toggle('selected', o.dataset.value === value));
+    }
+  }
+
+  /** Replace all options */
+  setOptions(options, selectedValue) {
+    this.optionsContainer.innerHTML = '';
+    options.forEach(o => {
+      const div = document.createElement('div');
+      div.className = 'custom-select-option' + (o.value === selectedValue ? ' selected' : '');
+      div.dataset.value = o.value;
+      div.textContent = o.label;
+      this.optionsContainer.appendChild(div);
+    });
+    const match = options.find(o => o.value === selectedValue);
+    if (match) {
+      this.hiddenInput.value = match.value;
+      this.valueDisplay.textContent = match.label;
+    } else if (options.length > 0) {
+      this.hiddenInput.value = options[0].value;
+      this.valueDisplay.textContent = options[0].label;
+    }
+  }
+
+  _filter() {
+    const q = this.searchInput.value.toLowerCase();
+    this.optionsContainer.querySelectorAll('.custom-select-option').forEach(opt => {
+      opt.style.display = opt.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+}
+
+/** Initialize all custom selects in a container (defaults to document) */
+function initAllCustomSelects(root = document) {
+  const instances = {};
+  root.querySelectorAll('.custom-select').forEach(el => {
+    const id = el.dataset.selectId;
+    instances[id] = new CustomSelect(el);
+  });
+  return instances;
+}
+
 class PopupController {
   constructor() {
     this.config = {};
@@ -47,10 +161,10 @@ class PopupController {
   async initialize() {
     await this.loadStoredData();
     await this.initializeAuth();
+    this.initializeCustomSelects();
     this.setupEventListeners();
     this.updateUI();
     this.updateConnectionStatus();
-    this.initializePlatformIcons();
     this.initializeChromaText();
     this.checkForUpdates();
     this.updateSessionStatus();
@@ -61,16 +175,8 @@ class PopupController {
     // No JavaScript override needed
   }
 
-  initializePlatformIcons() {
-    // Add subtle hover animation to platform icons
-    document.querySelectorAll(".platform-icon").forEach((icon) => {
-      icon.addEventListener("mouseover", () => {
-        setTimeout(() => (icon.style.transform = "scale(1.1)"), 0);
-      });
-      icon.addEventListener("mouseout", () => {
-        setTimeout(() => (icon.style.transform = "scale(1.0)"), 0);
-      });
-    });
+  initializeCustomSelects() {
+    this.customSelects = initAllCustomSelects(document);
   }
 
   setupEventListeners() {
@@ -110,9 +216,9 @@ class PopupController {
       }
     });
 
-    const geminiModelSelect = document.getElementById("gemini-model");
-    if (geminiModelSelect) {
-      geminiModelSelect.addEventListener("change", () => {
+    const geminiModelInput = document.getElementById("gemini-model");
+    if (geminiModelInput) {
+      geminiModelInput.addEventListener("change", () => {
         debouncedSave();
       });
     }
@@ -125,9 +231,9 @@ class PopupController {
       });
     }
 
-    const aiProviderSelect = document.getElementById("ai-provider");
-    if (aiProviderSelect) {
-      aiProviderSelect.addEventListener("change", (e) => {
+    const aiProviderInput = document.getElementById("ai-provider");
+    if (aiProviderInput) {
+      aiProviderInput.addEventListener("change", (e) => {
         this.config.aiProvider = e.target.value;
         chrome.storage.sync.set({ ai_provider: e.target.value });
         const isGemini = e.target.value === "gemini";
@@ -265,25 +371,12 @@ class PopupController {
   }
 
   populateGeminiModels(models) {
-    const select = document.getElementById("gemini-model");
-    if (!select) return;
+    const cs = this.customSelects?.['gemini-model'];
+    if (!cs) return;
     
-    // Prioritize the saved configuration first, then fall back to the first available model
     const currentVal = this.config.geminiModel || (models.length > 0 ? models[0].name : "");
-    select.innerHTML = "";
-    
-    models.forEach(m => {
-      const option = document.createElement("option");
-      option.value = m.name;
-      option.textContent = m.displayName;
-      select.appendChild(option);
-    });
-    
-    if (models.some(m => m.name === currentVal)) {
-      select.value = currentVal;
-    } else if (select.options.length > 0) {
-      select.selectedIndex = 0;
-    }
+    const options = models.map(m => ({ value: m.name, label: m.displayName }));
+    cs.setOptions(options, currentVal);
   }
 
   // Toggle GitHub config accordion visibility
@@ -513,6 +606,7 @@ class PopupController {
           "timer_overlay_enabled",
           "leetcode_import_username",
           "gemini_model",
+          "avatar_url",
         ],
         (data) => {
           this.config = {
@@ -527,6 +621,7 @@ class PopupController {
             timerOverlayEnabled: data.timer_overlay_enabled !== false, // Default true
             leetcodeImportUsername: data.leetcode_import_username || "",
             geminiModel: data.gemini_model || "gemini-3-flash-preview",
+            avatarUrl: data.avatar_url || "",
           };
           this.mistakeTags = data.mistake_tags || {};
           resolve();
@@ -555,11 +650,14 @@ class PopupController {
       leetcodeUsernameEl.value = this.config.leetcodeImportUsername || "";
     }
 
-    const aiProviderSelect = document.getElementById("ai-provider");
-    if (aiProviderSelect) {
-      aiProviderSelect.value = this.config.aiProvider || "g4f";
-      this.toggleGeminiKeyField(aiProviderSelect.value === "gemini");
-      if (this.config.geminiKey && aiProviderSelect.value === "gemini") {
+    const aiProviderInput = document.getElementById("ai-provider");
+    const aiProviderCs = this.customSelects?.['ai-provider'];
+    if (aiProviderInput) {
+      const val = this.config.aiProvider || "g4f";
+      aiProviderInput.value = val;
+      if (aiProviderCs) aiProviderCs.setValue(val);
+      this.toggleGeminiKeyField(val === "gemini");
+      if (this.config.geminiKey && val === "gemini") {
         this.fetchGeminiModels(this.config.geminiKey);
       }
     }
@@ -801,6 +899,26 @@ class PopupController {
     }
   }
 
+  async fetchNewCatAvatar() {
+    try {
+      const response = await fetch("https://api.thecatapi.com/v1/images/search");
+      if (!response.ok) throw new Error("Failed to fetch cat image");
+      const data = await response.json();
+      if (data && data.length > 0 && data[0].url) {
+        const newUrl = data[0].url;
+        this.config.avatarUrl = newUrl;
+        await chrome.storage.sync.set({ avatar_url: newUrl });
+        return newUrl;
+      }
+    } catch (e) {
+      console.error("Error fetching cat avatar:", e);
+    }
+    const fallbackUrl = `https://robohash.org/${encodeURIComponent(this.authStatus.user?.username || "user")}?set=set4`;
+    this.config.avatarUrl = fallbackUrl;
+    await chrome.storage.sync.set({ avatar_url: fallbackUrl });
+    return fallbackUrl;
+  }
+
   updateAuthSection() {
     const authSection = document.getElementById("auth-section");
     if (!authSection) return;
@@ -826,95 +944,126 @@ class PopupController {
         "User";
       const email = user.email || "";
 
-      // Cat profile picture using Robohash set4
-      const catPhotoUrl = `https://robohash.org/${encodeURIComponent(displayName)}?set=set4`;
-      const avatarMarkup = `<img src="${catPhotoUrl}" alt="${displayName}" />`;
+      // Cat profile picture using persisted URL or fallback
+      const avatarUrl = this.config.avatarUrl || `https://robohash.org/${encodeURIComponent(displayName)}?set=set4`;
+      const avatarMarkup = `<img id="profile-avatar-img" src="${avatarUrl}" alt="${displayName}" />`;
 
       // Get session status for badge
       const sessionBadge = this.getSessionStatusBadge();
 
-      // Render Config tab (ONLY pfp and name)
+      // Hide settings tab section since we are presenting this directly on the home tab dashboard
+      if (accountSettingsSec) {
+        accountSettingsSec.style.display = "none";
+      }
+
+      // Render Home tab profile dashboard (large avatar with refresh, displayName, email, badge, actions, and switcher)
       authSection.innerHTML = `
-        <div class="profile-card profile-card-minimal">
-          <div class="profile-left">
-            <div class="profile-avatar">
-              ${avatarMarkup}
+        <div class="profile-dashboard">
+          <div class="profile-header-card">
+            <div class="profile-avatar-large-container" style="position: relative; display: inline-block;">
+              <div class="profile-avatar-large">
+                ${avatarMarkup}
+              </div>
+              <button type="button" class="avatar-refresh-btn" id="avatar-refresh-btn" title="Refresh Profile Picture">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              </button>
             </div>
-            <div class="profile-info">
-              <div class="profile-name" style="font-size: 16px; font-weight: 600;">${displayName}</div>
+            <div class="profile-info-center">
+              <div class="profile-name-large">${displayName}</div>
+              ${email ? `<div class="profile-email-large">${email}</div>` : ""}
+              <div class="status-badge-container" style="margin-top: 4px;">
+                ${sessionBadge}
+              </div>
             </div>
+          </div>
+
+          <div class="auth-actions" style="margin-top: 6px;">
+            <button class="btn btn-secondary" id="add-account-btn">Add Account</button>
+            <button class="btn btn-secondary" id="sign-out-btn">Sign Out</button>
+          </div>
+
+          <div class="account-controls" style="margin-top: 4px;">
+            <label for="active-account-select" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.06em; text-transform: uppercase;">Active Account</label>
+            <div class="custom-select" id="active-account-wrapper" data-select-id="active-account-select">
+              <input type="hidden" id="active-account-select" value="" />
+              <button type="button" class="custom-select-trigger" aria-haspopup="listbox">
+                <span class="custom-select-value">Select account</span>
+                <svg class="custom-select-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+              <div class="custom-select-dropdown" role="listbox">
+                <div class="custom-select-search-wrap">
+                  <input type="text" class="custom-select-search" placeholder="Search&hellip;" autocomplete="off" />
+                </div>
+                <div class="custom-select-options"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="add-account-panel" id="add-account-panel" style="display: none;">
+            <h4 class="account-form-title">Add Another Account</h4>
+            <form class="auth-form active" id="auth-add-account-form" data-form="add-account" aria-label="Add another account">
+              <div class="field" style="margin-bottom: 10px;">
+                <label for="auth-add-username">Username</label>
+                <input type="text" id="auth-add-username" name="username" placeholder="johndoe" autocomplete="username" required />
+              </div>
+              <div class="field" style="margin-bottom: 10px;">
+                <label for="auth-add-password">Password</label>
+                <input type="password" id="auth-add-password" name="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password" required />
+              </div>
+              <button type="submit" class="btn btn-primary">Add Account & Switch</button>
+            </form>
+            <div class="auth-form-message" id="auth-form-message"></div>
           </div>
         </div>
       `;
 
-      // Render Settings tab details (email, badge, actions, active account select, and add panel)
-      if (accountSettingsSec && authSettingsDetails) {
-        accountSettingsSec.style.display = "block";
-        authSettingsDetails.innerHTML = `
-          <div class="profile-settings-details" style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0;">
-            ${email ? `<div class="profile-email" style="font-size: 13px; color: var(--text-secondary);">${email}</div>` : ""}
-            <div class="status-badge-container">
-              ${sessionBadge}
-            </div>
-            <div class="profile-actions" style="display: flex; gap: 10px; margin-top: 4px;">
-              <button class="btn" id="add-account-btn" style="flex: 1;">Add Account</button>
-              <button class="btn" id="sign-out-btn" style="flex: 1;">Sign Out</button>
-            </div>
-            <div class="account-controls" style="margin-top: 4px;">
-              <label for="active-account-select" style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Active Account</label>
-              <select id="active-account-select" class="account-select" style="width: 100%; padding: 8px 12px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--input-radius); color: var(--text);"></select>
-            </div>
-            <div class="add-account-panel" id="add-account-panel" style="display: none;">
-              <h4 class="account-form-title">Add Another Account</h4>
-              <form class="auth-form active" id="auth-add-account-form" data-form="add-account" aria-label="Add another account">
-                <div class="field" style="margin-bottom: 10px;">
-                  <label for="auth-add-username">Username</label>
-                  <input type="text" id="auth-add-username" name="username" placeholder="johndoe" autocomplete="username" required />
-                </div>
-                <div class="field" style="margin-bottom: 10px;">
-                  <label for="auth-add-password">Password</label>
-                  <input type="password" id="auth-add-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
-                </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Add Account & Switch</button>
-              </form>
-              <div class="auth-form-message" id="auth-form-message"></div>
-            </div>
-          </div>
-        `;
-
-        const signOutBtn = document.getElementById("sign-out-btn");
-        if (signOutBtn) {
-          signOutBtn.addEventListener("click", () => this.signOut());
-        }
-        const accountSelect = document.getElementById("active-account-select");
-        if (accountSelect) {
-          accountOptions.forEach((account) => {
-            const accountName =
-              account?.user?.username ||
-              account?.user?.displayName ||
-              account?.user?.name ||
-              account?.user?.email ||
-              "User";
-            const option = document.createElement("option");
-            option.value = account.id;
-            option.textContent = accountName;
-            option.selected = account.id === currentAccountId;
-            accountSelect.appendChild(option);
-          });
-          accountSelect.addEventListener("change", (event) =>
+      const signOutBtn = document.getElementById("sign-out-btn");
+      if (signOutBtn) {
+        signOutBtn.addEventListener("click", () => this.signOut());
+      }
+      // Initialize custom select for account switcher
+      const accountWrapper = document.getElementById("active-account-wrapper");
+      if (accountWrapper) {
+        const cs = new CustomSelect(accountWrapper);
+        const options = accountOptions.map(account => {
+          const accountName =
+            account?.user?.username ||
+            account?.user?.displayName ||
+            account?.user?.name ||
+            account?.user?.email ||
+            "User";
+          return { value: account.id, label: accountName };
+        });
+        cs.setOptions(options, currentAccountId);
+        // Listen for changes on the hidden input
+        const hiddenInput = document.getElementById("active-account-select");
+        if (hiddenInput) {
+          hiddenInput.addEventListener("change", (event) =>
             this.handleAccountSwitch(event),
           );
         }
-        const addAccountBtn = document.getElementById("add-account-btn");
-        if (addAccountBtn) {
-          addAccountBtn.addEventListener("click", () => this.toggleAddAccountForm());
-        }
-        const addAccountForm = document.getElementById("auth-add-account-form");
-        if (addAccountForm) {
-          addAccountForm.addEventListener("submit", (event) =>
-            this.handleLoginSubmit(event),
-          );
-        }
+      }
+      const addAccountBtn = document.getElementById("add-account-btn");
+      if (addAccountBtn) {
+        addAccountBtn.addEventListener("click", () => this.toggleAddAccountForm());
+      }
+      const addAccountForm = document.getElementById("auth-add-account-form");
+      if (addAccountForm) {
+        addAccountForm.addEventListener("submit", (event) =>
+          this.handleLoginSubmit(event),
+        );
+      }
+      const refreshBtn = document.getElementById("avatar-refresh-btn");
+      if (refreshBtn) {
+        refreshBtn.addEventListener("click", async () => {
+          refreshBtn.classList.add("spinning");
+          const newUrl = await this.fetchNewCatAvatar();
+          const avatarImg = document.getElementById("profile-avatar-img");
+          if (avatarImg) {
+            avatarImg.src = newUrl;
+          }
+          refreshBtn.classList.remove("spinning");
+        });
       }
     } else {
       if (accountSettingsSec) {

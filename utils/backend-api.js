@@ -279,6 +279,20 @@ class BackendAPI {
       // Generate idempotency key from problem slug and timestamp
       const idempotencyKey = `${problemSlug}-${solved.date || Date.now()}`;
 
+      // Ensure attempts array is populated and token-optimized via attempt diffing
+      let rawAttemptsList = Array.isArray(attempts) ? [...attempts] : [];
+      if (rawAttemptsList.length === 0 && storedProblemData.code && storedProblemData.code.length > 10) {
+        rawAttemptsList.push({
+          code: storedProblemData.code,
+          language: languageValue,
+          timestamp: solved.date ? new Date(solved.date).toISOString() : new Date().toISOString(),
+          type: 'submit',
+          successful: solved.value
+        });
+      }
+
+      const attemptsList = this.formatAttemptsWithDiffs(rawAttemptsList);
+
       const formattedData = {
         problemSlug: problemSlug,
         platform: platform.toLowerCase(),
@@ -296,6 +310,7 @@ class BackendAPI {
         category: mapTopicToCategory(parent_topic), // Map topic to category ID for ML model
         topic: parent_topic[0] || null,
         subtopic: parent_topic[1] || null,
+        attempts: attemptsList,
       };
 
       this._log('[Backend API] Formatted submission data:', formattedData);
@@ -342,6 +357,73 @@ class BackendAPI {
       this._error('[Backend API] Error pushing submission:', error);
       return { success: false, error: error.message };
     }
+  }
+
+  formatAttemptsWithDiffs(attempts) {
+    if (!Array.isArray(attempts) || attempts.length === 0) {
+      return [];
+    }
+
+    const diffedAttempts = [];
+    let previousCode = "";
+
+    for (let i = 0; i < attempts.length; i++) {
+      const att = attempts[i];
+      const currentCode = att.code || "";
+
+      if (i === 0) {
+        diffedAttempts.push({
+          ...att,
+          code: currentCode
+        });
+        previousCode = currentCode;
+      } else {
+        let codeContent = currentCode;
+        if (currentCode.length > 0 && previousCode.length > 0 && currentCode !== previousCode) {
+          codeContent = this.computeAttemptDiffSummary(previousCode, currentCode, i + 1);
+        } else if (currentCode === previousCode) {
+          codeContent = `// Attempt #${i + 1}: Same code as Attempt #${i}`;
+        }
+
+        diffedAttempts.push({
+          ...att,
+          code: codeContent
+        });
+        previousCode = currentCode;
+      }
+    }
+
+    return diffedAttempts;
+  }
+
+  computeAttemptDiffSummary(oldCode, newCode, attemptNumber) {
+    const oldLines = oldCode.split(/\r?\n/);
+    const newLines = newCode.split(/\r?\n/);
+
+    const changes = [];
+    const maxLines = Math.max(oldLines.length, newLines.length);
+
+    for (let lineIdx = 0; lineIdx < maxLines; lineIdx++) {
+      const oldLine = oldLines[lineIdx];
+      const newLine = newLines[lineIdx];
+
+      if (oldLine !== newLine) {
+        const lineNum = lineIdx + 1;
+        if (oldLine !== undefined && newLine !== undefined) {
+          changes.push(`// Line ${lineNum}:\n// - ${oldLine.trim()}\n// + ${newLine.trim()}`);
+        } else if (oldLine === undefined) {
+          changes.push(`// Line ${lineNum} added: + ${newLine.trim()}`);
+        } else if (newLine === undefined) {
+          changes.push(`// Line ${lineNum} removed: - ${oldLine.trim()}`);
+        }
+      }
+    }
+
+    if (changes.length === 0) {
+      return `// Attempt #${attemptNumber}: No code changes`;
+    }
+
+    return `// Attempt #${attemptNumber} changes:\n` + changes.join('\n');
   }
 }
 

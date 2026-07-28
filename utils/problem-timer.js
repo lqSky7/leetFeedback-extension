@@ -136,7 +136,7 @@ class ProblemTimer {
       this.pausedTime = 0;
       this._log("[ProblemTimer] Started fresh timer for:", problemUrl);
     } else {
-      console.log(
+      this._log(
         "[ProblemTimer] Resumed timer for:",
         problemUrl,
         "- elapsed:",
@@ -180,7 +180,7 @@ class ProblemTimer {
         if (this.tabHiddenAt && this.startTime && !this.isPaused) {
           const hiddenDuration = Date.now() - this.tabHiddenAt;
           this.pausedTime += hiddenDuration;
-          console.log(
+          this._log(
             `[ProblemTimer] Tab visible, was hidden for ${Math.floor(hiddenDuration / 1000)}s, total paused: ${Math.floor(this.pausedTime / 1000)}s`,
           );
           // Save updated pausedTime to storage
@@ -195,6 +195,12 @@ class ProblemTimer {
   getElapsedActiveTime() {
     if (!this.startTime) return 0;
 
+    // If currently paused, elapsed active time is frozen at the moment of pause
+    if (this.isPaused && this.pausedAt) {
+      const elapsed = this.pausedAt - this.startTime - this.pausedTime;
+      return Math.max(0, elapsed);
+    }
+
     const now = Date.now();
     let elapsed = now - this.startTime - this.pausedTime;
 
@@ -204,15 +210,9 @@ class ProblemTimer {
       elapsed -= currentHiddenDuration;
     }
 
-    // If currently paused, don't count the current paused duration
-    if (this.isPaused && this.pausedAt) {
-      const currentPausedDuration = now - this.pausedAt;
-      elapsed -= currentPausedDuration;
-    }
-
     // Ensure elapsed time is always positive
     if (elapsed < 0) {
-      console.warn(
+      this._warn(
         "[ProblemTimer] Negative elapsed time detected, resetting timer",
       );
       this.startTime = now;
@@ -329,7 +329,7 @@ class ProblemTimer {
       ]);
 
       if (sessionResult.browser_session_restarted) {
-        console.log(
+        this._log(
           "[ProblemTimer] Browser session restarted - resetting timer",
         );
         // Clear the restart flag
@@ -353,7 +353,7 @@ class ProblemTimer {
         const INACTIVITY_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
 
         if (isSolved || (referenceTime && (now - referenceTime > INACTIVITY_TIMEOUT))) {
-          console.log("[ProblemTimer] Solved or inactive for too long. Starting fresh timer.");
+          this._log("[ProblemTimer] Solved or inactive for too long. Starting fresh timer.");
           this.startTime = null;
           this.pausedTime = 0;
           this.isPaused = false;
@@ -369,7 +369,7 @@ class ProblemTimer {
             this.pausedTime = (problemData.pausedTime || 0) + offlineDuration;
             this.isPaused = !!problemData.isPaused;
             this.pausedAt = problemData.pausedAt || null;
-            console.log(`[ProblemTimer] Adjusted pausedTime by ${Math.floor(offlineDuration / 1000)}s for offline duration`);
+            this._log(`[ProblemTimer] Adjusted pausedTime by ${Math.floor(offlineDuration / 1000)}s for offline duration`);
             return;
           }
         }
@@ -389,7 +389,7 @@ class ProblemTimer {
         this.currentY = positionResult.timer_overlay_position.y;
       }
 
-      console.log(
+      this._log(
         "[ProblemTimer] Loaded from storage - startTime:",
         this.startTime,
         "pausedTime:",
@@ -496,26 +496,27 @@ class ProblemTimer {
       left: ${this.currentX}px;
       z-index: 2147483647;
       background: rgba(0, 0, 0, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 12px;
-      padding: 10px 16px;
+      padding: 0 0 0 14px;
       color: white;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
       font-size: 14px;
       font-weight: 500;
       display: flex;
       align-items: center;
-      gap: 10px;
+      height: 38px;
       opacity: 0.6;
       transition: opacity 0.2s ease, transform 0.2s ease;
       cursor: move;
       user-select: none;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
     `;
 
     // Timer icon
     const icon = document.createElement("span");
-    icon.style.cssText = `font-size: 16px; opacity: 0.8;`;
+    icon.style.cssText = `font-size: 16px; opacity: 0.8; margin-right: 8px; flex-shrink: 0;`;
     icon.textContent = "⏱";
 
     // Time display
@@ -525,35 +526,49 @@ class ProblemTimer {
       min-width: 60px;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.5px;
+      margin-right: 12px;
+      flex-shrink: 0;
     `;
     timeDisplay.textContent = "00:00";
+
+    // Dividers
+    const createDivider = () => {
+      const div = document.createElement("div");
+      div.style.cssText = `
+        width: 1px;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.15);
+        flex-shrink: 0;
+      `;
+      return div;
+    };
 
     // Pause/Resume button
     const pauseBtn = document.createElement("button");
     pauseBtn.id = "leetfeedback-timer-pause-btn";
     pauseBtn.style.cssText = `
-      background: rgba(255, 255, 255, 0.1);
+      background: transparent;
       border: none;
       color: rgba(255, 255, 255, 0.6);
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
+      height: 100%;
+      padding: 0 14px;
       cursor: pointer;
-      font-size: 12px;
+      font-size: 11px;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
+      flex-shrink: 0;
     `;
     pauseBtn.textContent = this.isPaused ? "▶" : "⏸";
     pauseBtn.title = this.isPaused ? "Resume timer" : "Pause timer";
 
     pauseBtn.addEventListener("mouseover", () => {
-      pauseBtn.style.background = "rgba(255, 255, 255, 0.2)";
+      pauseBtn.style.background = "rgba(255, 255, 255, 0.1)";
       pauseBtn.style.color = "white";
     });
     pauseBtn.addEventListener("mouseout", () => {
-      pauseBtn.style.background = "rgba(255, 255, 255, 0.1)";
+      pauseBtn.style.background = "transparent";
       pauseBtn.style.color = "rgba(255, 255, 255, 0.6)";
     });
     pauseBtn.addEventListener("click", async (e) => {
@@ -565,68 +580,31 @@ class ProblemTimer {
       }
     });
 
-    // Close button
-    const closeBtn = document.createElement("button");
-    closeBtn.style.cssText = `
-      background: rgba(255, 255, 255, 0.1);
-      border: none;
-      color: rgba(255, 255, 255, 0.6);
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s ease;
-      margin-left: 4px;
-    `;
-    closeBtn.textContent = "×";
-    closeBtn.title = "Hide timer (re-enable in extension settings)";
-
-    // Add event listeners instead of inline handlers
-    closeBtn.addEventListener("mouseover", () => {
-      closeBtn.style.background = "rgba(255, 255, 255, 0.2)";
-      closeBtn.style.color = "white";
-    });
-    closeBtn.addEventListener("mouseout", () => {
-      closeBtn.style.background = "rgba(255, 255, 255, 0.1)";
-      closeBtn.style.color = "rgba(255, 255, 255, 0.6)";
-    });
-    closeBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      this.hideOverlay();
-      // Disable in settings
-      chrome.storage.sync.set({ timer_overlay_enabled: false });
-    });
-
     // Reset button
     const resetBtn = document.createElement("button");
     resetBtn.style.cssText = `
-      background: rgba(255, 255, 255, 0.1);
+      background: transparent;
       border: none;
       color: rgba(255, 255, 255, 0.6);
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
+      height: 100%;
+      padding: 0 14px;
       cursor: pointer;
-      font-size: 12px;
+      font-size: 11px;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
+      flex-shrink: 0;
     `;
     resetBtn.textContent = "↺";
     resetBtn.title = "Reset timer";
 
-    // Add event listeners instead of inline handlers
     resetBtn.addEventListener("mouseover", () => {
-      resetBtn.style.background = "rgba(255, 255, 255, 0.2)";
+      resetBtn.style.background = "rgba(255, 255, 255, 0.1)";
       resetBtn.style.color = "white";
     });
     resetBtn.addEventListener("mouseout", () => {
-      resetBtn.style.background = "rgba(255, 255, 255, 0.1)";
+      resetBtn.style.background = "transparent";
       resetBtn.style.color = "rgba(255, 255, 255, 0.6)";
     });
     resetBtn.addEventListener("click", (e) => {
@@ -634,10 +612,47 @@ class ProblemTimer {
       this.resetTimer();
     });
 
+    // Close button
+    const closeBtn = document.createElement("button");
+    closeBtn.style.cssText = `
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      height: 100%;
+      padding: 0 14px;
+      border-radius: 0 11px 11px 0;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    `;
+    closeBtn.textContent = "×";
+    closeBtn.title = "Hide timer (re-enable in extension settings)";
+
+    closeBtn.addEventListener("mouseover", () => {
+      closeBtn.style.background = "rgba(255, 255, 255, 0.1)";
+      closeBtn.style.color = "white";
+    });
+    closeBtn.addEventListener("mouseout", () => {
+      closeBtn.style.background = "transparent";
+      closeBtn.style.color = "rgba(255, 255, 255, 0.6)";
+    });
+    closeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.hideOverlay();
+      chrome.storage.sync.set({ timer_overlay_enabled: false });
+    });
+
     this.overlay.appendChild(icon);
     this.overlay.appendChild(timeDisplay);
+    this.overlay.appendChild(createDivider());
     this.overlay.appendChild(pauseBtn);
+    this.overlay.appendChild(createDivider());
     this.overlay.appendChild(resetBtn);
+    this.overlay.appendChild(createDivider());
     this.overlay.appendChild(closeBtn);
 
     // Add drag functionality

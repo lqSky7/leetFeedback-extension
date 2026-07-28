@@ -269,6 +269,8 @@ ${diff}
 
         prompt += `
 
+IMPORTANT INSTRUCTION: Ignore typos, minor syntax slips, and silly formatting mistakes. Focus strictly on genuine algorithmic, logic, data structure, and conceptual errors, real problem-solving patterns, and relevant genuine data.
+
 CRITICAL: You MUST start your response with exactly this format:
 TAGS: tag1, tag2, tag3
 
@@ -289,8 +291,8 @@ Use ONLY these specific tag categories (pick 1-3 most relevant):
 
 Then provide brief analysis:
 1. **Time-Travel Debugging**: From all of them attempts choose the most clicking moments/code snippets, which even when user sees even after a long time, they should remember how he solved this problem.
-2. **Key Issues**: What specific errors occurred. 
-3. **Improvements**: As attemps progressed, what improved.
+2. **Key Issues**: What specific errors occurred (ignoring typos or silly slips, focusing only on genuine algorithmic or logic issues). 
+3. **Improvements**: As attempts progressed, what improved.
 Keep under 100 words total. Focus only on technical programming concepts.`;
 
         return prompt;

@@ -162,6 +162,7 @@
           ignored: existingData.ignored ?? false,
           parent_topic: problemInfo.topics || problemInfo.topicTags || existingData.parent_topic || [],
           problem_link: problemInfo.url || existingData.problem_link || window.location.href.split('?')[0],
+          code: problemInfo.code || existingData.code || '',
 
           // Include tracking state
           attempts: this.attempts || [],
