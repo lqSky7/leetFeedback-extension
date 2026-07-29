@@ -1,7 +1,7 @@
-{   
+{
     "manifest_version": 3,
     "name": "Traverse",
-    "version": "1.8.0",
+    "version": "1.5.2",
     "description": "Chrome extension for Traverse Ecosystem",
     "icons": {
         "16": "icons/16.png",
@@ -22,13 +22,11 @@
         "https://*.codechef.com/*",
         "https://api.github.com/*",
         "https://generativelanguage.googleapis.com/*",
-        "https://155-248-241-153.sslip.io/*",
-        "https://alfa-leetcode-api.onrender.com/*",
+        "https://traverse-backend-api.azurewebsites.net/*",
         "https://leet-feedback.vercel.app/*",
         "https://*.vercel.app/*",
         "https://*.netlify.app/*",
-        "https://g4f.space/*",
-        "https://chromewebstore.google.com/*"
+        "https://g4f.space/*"
     ],
     "background": {
         "service_worker": "background.js",
@@ -97,15 +95,6 @@
             "run_at": "document_end"
         }
     ],
-    "action": {
-        "default_title": "Open LeetFeedback",
-        "default_popup": "sidepanel/sidepanel.html",
-        "default_icon": {
-            "16": "icons/16.png",
-            "48": "icons/48.png",
-            "128": "icons/128.png"
-        }
-    },
     "web_accessible_resources": [
         {
             "resources": [
@@ -117,6 +106,16 @@
             ]
         }
     ],
+   
+        "action": {
+        "default_title": "Open LeetFeedback",
+        "default_popup": "sidepanel/sidepanel.html",
+        "default_icon": {
+        "16": "icons/16.png",
+        "48": "icons/48.png",
+        "128": "icons/128.png"
+        }
+    },
         "browser_specific_settings": {
         "gecko": {
         "id": "traverse@fire.com",

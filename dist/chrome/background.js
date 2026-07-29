@@ -1,10 +1,9 @@
-// Fixed background script
-
-// cross-browser polyfill for chrome and firefox both
+// Cross-browser polyfill: makes chrome.* work in Firefox and keeps Chrome happy
 if (typeof chrome === "undefined" && typeof browser !== "undefined") {
 globalThis.chrome = browser;
 }
 
+// Fixed background script
 
 // Global debug mode cache for background script
 let _bgDebugMode = false;
@@ -43,9 +42,11 @@ function bgWarn(...args) {
 bgLog("Background script starting...");
 
 // Allow users to open the side panel by clicking on the action toolbar icon
+if (chrome.sidePanel && typeof chrome.sidePanel.setPanelBehavior === 'function') {
 chrome.sidePanel
-  .setPanelBehavior({ openPanelOnActionClick: true })
-  .catch((error) => bgError(error));
+.setPanelBehavior({ openPanelOnActionClick: true })
+.catch((error) => bgError(error));
+}
 
 chrome.runtime.onInstalled.addListener(() => {
   bgLog("DSA to GitHub Extension installed.");
@@ -163,31 +164,12 @@ async function handleContentScriptReady(request, sender, sendResponse) {
 }
 // Handle backend API fetch (to bypass CORS from content scripts)
 async function handleBackendAPIFetch(request, sender, sendResponse) {
-  let timeoutId = null;
   try {
-    const { url, options, timeoutMs } = request;
+    const { url, options } = request;
     bgLog(`[Background] Making backend API request to: ${url}`);
 
-    const controller = typeof AbortController !== 'undefined' && timeoutMs
-      ? new AbortController()
-      : null;
-    timeoutId = controller
-      ? setTimeout(() => controller.abort(), timeoutMs)
-      : null;
-    const response = await fetch(url, {
-      ...(options || {}),
-      ...(controller ? { signal: controller.signal } : {}),
-    });
-    const text = await response.text();
-    let data = {};
-
-    if (text) {
-      try {
-        data = JSON.parse(text);
-      } catch (parseError) {
-        data = { raw: text };
-      }
-    }
+    const response = await fetch(url, options);
+    const data = await response.json();
 
     sendResponse({
       success: response.ok,
@@ -200,10 +182,6 @@ async function handleBackendAPIFetch(request, sender, sendResponse) {
       success: false,
       error: error.message
     });
-  } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
   }
 }
 // Helper function to get debug mode
