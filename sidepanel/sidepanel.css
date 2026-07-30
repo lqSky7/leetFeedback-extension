@@ -1893,58 +1893,6 @@ input {
   font-size: 10px;
 }
 
-.account-controls {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.account-controls label {
-  font-size: 10px;
-  color: var(--text-muted);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.account-select {
-  width: 100%;
-  padding: 9px 12px;
-  background: rgba(237, 236, 233, 0.03);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-input);
-  color: var(--text);
-  font-size: 12px;
-  font-family: 'HarmonyOS Sans', sans-serif;
-}
-
-.account-select:focus {
-  outline: none;
-  border-color: rgba(214, 209, 162, 0.4);
-}
-
-.add-account-panel {
-  margin-top: 12px;
-  padding: 8px 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  display: none;
-}
-
-.add-account-panel.active {
-  display: block;
-}
-
-.account-form-title {
-  margin: 0 0 10px 0;
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 /* Compact auth login form */
 .auth-login-compact {
   padding: 8px 0;

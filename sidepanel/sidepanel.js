@@ -26,7 +26,6 @@ function spError(...args) {
   }
 }
 
-const LEGACY_ACCOUNT_ID = "internal://legacy-account";
 const ALFA_LEETCODE_API_BASE = "https://alfa-leetcode-api.onrender.com";
 
 /* ── Custom Searchable Select Component ── */
@@ -151,8 +150,6 @@ class PopupController {
       isAuthenticated: false,
       user: null,
       token: null,
-      accounts: [],
-      activeAccountId: null,
     };
     this.pendingLeetcodeImport = null;
     this.initialize();
@@ -486,41 +483,6 @@ class PopupController {
     }
   }
 
-  async handleAccountSwitch(event) {
-    const accountId = event?.target?.value;
-    if (!accountId) return;
-    if (typeof extensionAuth === "undefined") {
-      this.showMessage("Account switching is not available - authentication service not loaded.", "error");
-      return;
-    }
-
-    try {
-      await extensionAuth.switchAccount(accountId);
-      const switchedAccount = extensionAuth
-        .getAccounts()
-        .find((account) => account.id === accountId);
-      const switchedName =
-        switchedAccount?.user?.username ||
-        switchedAccount?.user?.displayName ||
-        switchedAccount?.user?.name ||
-        switchedAccount?.user?.email ||
-        "User";
-      this.showMessage(`Switched to ${switchedName}`, "success");
-    } catch (error) {
-      this.showMessage(error?.message || "Failed to switch account.", "error");
-    }
-  }
-
-  toggleAddAccountForm() {
-    const panel = document.getElementById("add-account-panel");
-    if (!panel) return;
-    panel.classList.toggle("active");
-
-    if (!panel.classList.contains("active")) return;
-    const usernameInput = panel.querySelector('input[name="username"]');
-    if (usernameInput) usernameInput.focus();
-  }
-
   toggleAuthLoading(button, isLoading, loadingText = "Working...") {
     if (!button) return;
 
@@ -790,8 +752,6 @@ class PopupController {
 
       // Check local storage for cached auth data first
       const result = await chrome.storage.local.get([
-        "auth_accounts",
-        "auth_active_account_id",
         "auth_user",
         "auth_token",
         "auth_timestamp",
@@ -801,35 +761,7 @@ class PopupController {
       const now = Date.now();
       const maxAge = 24 * 60 * 60 * 1000; // 24 hours
 
-      const hasStoredAccounts =
-        Array.isArray(result.auth_accounts) && result.auth_accounts.length > 0;
-      const activeId = hasStoredAccounts
-        ? result.auth_active_account_id || result.auth_accounts[0]?.id || null
-        : null;
-      const activeAccount = hasStoredAccounts
-        ? result.auth_accounts.find((account) => account.id === activeId) ||
-          result.auth_accounts[0] ||
-          null
-        : null;
-      const activeAccountTimestamp =
-        typeof activeAccount?.timestamp === "number" ? activeAccount.timestamp : null;
-      const activeAccountCacheAge =
-        activeAccountTimestamp !== null ? now - activeAccountTimestamp : maxAge + 1;
-
-      if (
-        activeAccount?.user &&
-        activeAccount?.token &&
-        activeAccountCacheAge < maxAge
-      ) {
-        this.authStatus = {
-          isAuthenticated: true,
-          user: activeAccount.user,
-          token: activeAccount.token,
-          accounts: result.auth_accounts,
-          activeAccountId: activeAccount.id || activeId,
-        };
-        this.updateAuthSection();
-      } else if (result.auth_user && result.auth_timestamp) {
+      if (result.auth_user && result.auth_timestamp) {
         const cacheAge = now - result.auth_timestamp;
         if (cacheAge < maxAge) {
           spLog("[Popup] Found cached backend auth data");
@@ -837,13 +769,6 @@ class PopupController {
             isAuthenticated: true,
             user: result.auth_user,
             token: result.auth_token || null,
-            accounts: [
-              {
-                id: LEGACY_ACCOUNT_ID,
-                user: result.auth_user,
-              },
-            ],
-            activeAccountId: LEGACY_ACCOUNT_ID,
           };
           this.updateAuthSection();
         }
@@ -855,13 +780,6 @@ class PopupController {
             isAuthenticated: true,
             user: result.firebase_user,
             token: result.auth_token || null,
-            accounts: [
-              {
-                id: LEGACY_ACCOUNT_ID,
-                user: result.firebase_user,
-              },
-            ],
-            activeAccountId: LEGACY_ACCOUNT_ID,
           };
           this.updateAuthSection();
         }
@@ -876,10 +794,6 @@ class PopupController {
             isAuthenticated: authStatus.isAuthenticated,
             user: authStatus.user || null,
             token: authStatus.token || null,
-            accounts: Array.isArray(authStatus.accounts)
-              ? authStatus.accounts
-              : [],
-            activeAccountId: authStatus.activeAccountId || null,
           };
           this.updateAuthSection();
           this.updateConnectionStatus();
@@ -931,11 +845,6 @@ class PopupController {
 
     if (isAuthenticated) {
       const user = this.authStatus.user || {};
-      const accountOptions = (this.authStatus.accounts || []).length > 0
-        ? this.authStatus.accounts
-        : [{ id: this.authStatus.activeAccountId || "active-account", user }];
-      const currentAccountId =
-        this.authStatus.activeAccountId || accountOptions[0]?.id;
       const displayName =
         user.username ||
         user.displayName ||
@@ -944,8 +853,15 @@ class PopupController {
         "User";
       const email = user.email || "";
 
-      // Cat profile picture using persisted URL or fallback
-      const avatarUrl = this.config.avatarUrl || `https://robohash.org/${encodeURIComponent(displayName)}?set=set4`;
+      // Profile picture: use persisted URL, or compute+cache a fallback once
+      let avatarUrl = this.config.avatarUrl;
+      if (!avatarUrl) {
+        avatarUrl = `https://robohash.org/${encodeURIComponent(displayName)}?set=set4`;
+        this.config.avatarUrl = avatarUrl;
+        if (typeof chrome !== "undefined" && chrome.storage?.sync) {
+          chrome.storage.sync.set({ avatar_url: avatarUrl });
+        }
+      }
       const avatarMarkup = `<img id="profile-avatar-img" src="${avatarUrl}" alt="${displayName}" />`;
 
       // Get session status for badge
@@ -956,7 +872,7 @@ class PopupController {
         accountSettingsSec.style.display = "none";
       }
 
-      // Render Home tab profile dashboard (large avatar with refresh, displayName, email, badge, actions, and switcher)
+      // Render Home tab profile dashboard (large avatar with refresh, displayName, email, badge, actions)
       authSection.innerHTML = `
         <div class="profile-dashboard">
           <div class="profile-header-card">
@@ -978,41 +894,7 @@ class PopupController {
           </div>
 
           <div class="auth-actions" style="margin-top: 6px;">
-            <button class="btn btn-secondary" id="add-account-btn">Add Account</button>
             <button class="btn btn-secondary" id="sign-out-btn">Sign Out</button>
-          </div>
-
-          <div class="account-controls" style="margin-top: 4px;">
-            <label for="active-account-select" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.06em; text-transform: uppercase;">Active Account</label>
-            <div class="custom-select" id="active-account-wrapper" data-select-id="active-account-select">
-              <input type="hidden" id="active-account-select" value="" />
-              <button type="button" class="custom-select-trigger" aria-haspopup="listbox">
-                <span class="custom-select-value">Select account</span>
-                <svg class="custom-select-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-              </button>
-              <div class="custom-select-dropdown" role="listbox">
-                <div class="custom-select-search-wrap">
-                  <input type="text" class="custom-select-search" placeholder="Search&hellip;" autocomplete="off" />
-                </div>
-                <div class="custom-select-options"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="add-account-panel" id="add-account-panel" style="display: none;">
-            <h4 class="account-form-title">Add Another Account</h4>
-            <form class="auth-form active" id="auth-add-account-form" data-form="add-account" aria-label="Add another account">
-              <div class="field" style="margin-bottom: 10px;">
-                <label for="auth-add-username">Username</label>
-                <input type="text" id="auth-add-username" name="username" placeholder="johndoe" autocomplete="username" required />
-              </div>
-              <div class="field" style="margin-bottom: 10px;">
-                <label for="auth-add-password">Password</label>
-                <input type="password" id="auth-add-password" name="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password" required />
-              </div>
-              <button type="submit" class="btn btn-primary">Add Account & Switch</button>
-            </form>
-            <div class="auth-form-message" id="auth-form-message"></div>
           </div>
         </div>
       `;
@@ -1020,38 +902,6 @@ class PopupController {
       const signOutBtn = document.getElementById("sign-out-btn");
       if (signOutBtn) {
         signOutBtn.addEventListener("click", () => this.signOut());
-      }
-      // Initialize custom select for account switcher
-      const accountWrapper = document.getElementById("active-account-wrapper");
-      if (accountWrapper) {
-        const cs = new CustomSelect(accountWrapper);
-        const options = accountOptions.map(account => {
-          const accountName =
-            account?.user?.username ||
-            account?.user?.displayName ||
-            account?.user?.name ||
-            account?.user?.email ||
-            "User";
-          return { value: account.id, label: accountName };
-        });
-        cs.setOptions(options, currentAccountId);
-        // Listen for changes on the hidden input
-        const hiddenInput = document.getElementById("active-account-select");
-        if (hiddenInput) {
-          hiddenInput.addEventListener("change", (event) =>
-            this.handleAccountSwitch(event),
-          );
-        }
-      }
-      const addAccountBtn = document.getElementById("add-account-btn");
-      if (addAccountBtn) {
-        addAccountBtn.addEventListener("click", () => this.toggleAddAccountForm());
-      }
-      const addAccountForm = document.getElementById("auth-add-account-form");
-      if (addAccountForm) {
-        addAccountForm.addEventListener("submit", (event) =>
-          this.handleLoginSubmit(event),
-        );
       }
       const refreshBtn = document.getElementById("avatar-refresh-btn");
       if (refreshBtn) {
@@ -1213,13 +1063,11 @@ class PopupController {
       if (typeof extensionAuth !== "undefined") {
         await extensionAuth.signOut();
         await extensionAuth.requestAuthStatus();
-        this.showMessage("Signed out active account", "success");
-        this.showAuthFeedback("success", "Signed out active account.");
+        this.showMessage("Signed out", "success");
+        this.showAuthFeedback("success", "Signed out.");
       } else {
         // Fallback: clear local storage
         await chrome.storage.local.remove([
-          "auth_accounts",
-          "auth_active_account_id",
           "auth_user",
           "auth_token",
           "auth_timestamp",
@@ -1229,8 +1077,6 @@ class PopupController {
           isAuthenticated: false,
           user: null,
           token: null,
-          accounts: [],
-          activeAccountId: null,
         };
         this.updateAuthSection();
         this.showMessage("Signed out locally", "success");
@@ -1240,8 +1086,6 @@ class PopupController {
       spError("Error signing out:", error);
       // Even if sign out fails, clear local state
       await chrome.storage.local.remove([
-        "auth_accounts",
-        "auth_active_account_id",
         "auth_user",
         "auth_token",
         "auth_timestamp",
@@ -1251,8 +1095,6 @@ class PopupController {
         isAuthenticated: false,
         user: null,
         token: null,
-        accounts: [],
-        activeAccountId: null,
       };
       this.updateAuthSection();
       this.showMessage(
