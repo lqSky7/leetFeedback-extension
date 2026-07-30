@@ -23,6 +23,7 @@
         "https://*.codechef.com/*",
         "https://api.github.com/*",
         "https://generativelanguage.googleapis.com/*",
+        "https://*.ngrok-free.dev/*",
         "https://traverse-backend.duckdns.org/*",
         "https://alfa-leetcode-api.onrender.com/*",
         "https://leet-feedback.vercel.app/*",

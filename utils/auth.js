@@ -42,7 +42,7 @@ class ExtensionAuth {
   }
 
   getApiBaseUrl() {
-    return 'https://traverse-backend.duckdns.org';
+    return 'https://neatness-enlarged-curled.ngrok-free.dev';
   }
 
   async init() {

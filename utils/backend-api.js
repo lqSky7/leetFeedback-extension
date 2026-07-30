@@ -56,7 +56,7 @@ function mapTopicToCategory(topics) {
 
 class BackendAPI {
   constructor() {
-    this.baseURL = 'https://traverse-backend.duckdns.org';
+    this.baseURL = 'https://neatness-enlarged-curled.ngrok-free.dev';
     this.authToken = null;
     this.initialized = false;
     this._log(`[Backend API] BackendAPI constructor called`);
