@@ -42,7 +42,7 @@ class ExtensionAuth {
   }
 
   getApiBaseUrl() {
-    return 'https://155-248-241-153.sslip.io';
+    return 'https://traverse-backend.duckdns.org';
   }
 
   async init() {

@@ -56,7 +56,7 @@ function mapTopicToCategory(topics) {
 
 class BackendAPI {
   constructor() {
-    this.baseURL = 'https://155-248-241-153.sslip.io';
+    this.baseURL = 'https://traverse-backend.duckdns.org';
     this.authToken = null;
     this.initialized = false;
     this._log(`[Backend API] BackendAPI constructor called`);
