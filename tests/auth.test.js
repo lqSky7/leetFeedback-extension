@@ -97,26 +97,7 @@ async function testPickers() {
   assert.strictEqual(ExtensionAuth.pickUser(null, fallback), fallback);
 }
 
-async function testNormalizeAccountsGuards() {
-  const auth = new ExtensionAuth({ fetch: createMockFetch() });
-
-  assert.deepStrictEqual(auth.normalizeAccounts(null), []);
-  assert.deepStrictEqual(auth.normalizeAccounts({}), []);
-
-  const normalized = auth.normalizeAccounts([
-    null,
-    {},
-    { id: 'missing-user', token: 'abc' },
-    { id: 'missing-token', user: { username: 'x' } },
-    { user: { username: 'ok' }, token: 'ok-token' },
-  ]);
-
-  assert.strictEqual(normalized.length, 1);
-  assert.strictEqual(normalized[0].user.username, 'ok');
-  assert.strictEqual(normalized[0].token, 'ok-token');
-}
-
-async function testLoginStoresActiveAccount() {
+async function testLoginStoresSession() {
   resetStorage();
   const auth = new ExtensionAuth({ fetch: createMockFetch() });
 
@@ -127,98 +108,76 @@ async function testLoginStoresActiveAccount() {
 
   assert.strictEqual(auth.isAuthenticated, true);
   assert.strictEqual(auth.token, 'admin-token');
+  assert.strictEqual(auth.user.username, 'admin');
 
   const stored = await chrome.storage.local.get([
-    'auth_accounts',
-    'auth_active_account_id',
     'auth_user',
     'auth_token',
+    'auth_timestamp',
   ]);
 
-  assert.strictEqual(Array.isArray(stored.auth_accounts), true);
-  assert.strictEqual(stored.auth_accounts.length, 1);
-  assert.strictEqual(stored.auth_accounts[0].user.username, 'admin');
-  assert.strictEqual(
-    Number.isFinite(stored.auth_accounts[0].timestamp),
-    true,
-  );
   assert.strictEqual(stored.auth_user.username, 'admin');
   assert.strictEqual(stored.auth_token, 'admin-token');
-  assert.strictEqual(
-    stored.auth_active_account_id,
-    stored.auth_accounts[0].id,
-  );
+  assert.strictEqual(Number.isFinite(stored.auth_timestamp), true);
 }
 
-async function testSwitchingBetweenMultipleAccounts() {
-  resetStorage();
-  const auth = new ExtensionAuth({ fetch: createMockFetch() });
-
-  await auth.login({
-    username: 'alice',
-    password: 'alice-pass',
-  });
-
-  const aliceId = auth.getAccounts()[0].id;
-
-  await auth.login({
-    username: 'bob',
-    password: 'bob-pass',
-  });
-
-  assert.strictEqual(auth.getAccounts().length, 2);
-  assert.strictEqual(auth.user.username, 'bob');
-
-  await auth.switchAccount(aliceId);
-
-  assert.strictEqual(auth.user.username, 'alice');
-  assert.strictEqual(auth.token, 'alice-token');
-
-  const stored = await chrome.storage.local.get([
-    'auth_active_account_id',
-    'auth_user',
-    'auth_token',
-  ]);
-  assert.strictEqual(stored.auth_active_account_id, aliceId);
-  assert.strictEqual(stored.auth_user.username, 'alice');
-  assert.strictEqual(stored.auth_token, 'alice-token');
-}
-
-async function testSignOutRemovesOnlyActiveAccount() {
+async function testLoggingInAgainReplacesSession() {
   resetStorage();
   const auth = new ExtensionAuth({ fetch: createMockFetch() });
 
   await auth.login({ username: 'alice', password: 'alice-pass' });
-  await auth.login({ username: 'bob', password: 'bob-pass' });
-
-  await auth.signOut();
-
-  assert.strictEqual(auth.isAuthenticated, true);
   assert.strictEqual(auth.user.username, 'alice');
-  assert.strictEqual(auth.getAccounts().length, 1);
 
+  await auth.login({ username: 'bob', password: 'bob-pass' });
+  assert.strictEqual(auth.user.username, 'bob');
+  assert.strictEqual(auth.token, 'bob-token');
+
+  const stored = await chrome.storage.local.get(['auth_user', 'auth_token']);
+  assert.strictEqual(stored.auth_user.username, 'bob');
+  assert.strictEqual(stored.auth_token, 'bob-token');
+}
+
+async function testSignOutClearsSession() {
+  resetStorage();
+  const auth = new ExtensionAuth({ fetch: createMockFetch() });
+
+  await auth.login({ username: 'alice', password: 'alice-pass' });
   await auth.signOut();
 
   assert.strictEqual(auth.isAuthenticated, false);
-  assert.strictEqual(auth.getAccounts().length, 0);
+  assert.strictEqual(auth.user, null);
+  assert.strictEqual(auth.token, null);
 
   const stored = await chrome.storage.local.get([
-    'auth_accounts',
     'auth_user',
     'auth_token',
+    'auth_timestamp',
   ]);
-  assert.strictEqual(stored.auth_accounts, undefined);
   assert.strictEqual(stored.auth_user, undefined);
   assert.strictEqual(stored.auth_token, undefined);
+  assert.strictEqual(stored.auth_timestamp, undefined);
+}
+
+async function testSyncFromStorageRestoresSession() {
+  resetStorage();
+  const seedAuth = new ExtensionAuth({ fetch: createMockFetch() });
+  await seedAuth.login({ username: 'carol', password: 'carol-pass' });
+
+  const restoredAuth = new ExtensionAuth({ fetch: createMockFetch() });
+  await restoredAuth.syncFromStorage();
+
+  assert.strictEqual(restoredAuth.isAuthenticated, true);
+  assert.strictEqual(restoredAuth.user.username, 'carol');
+  assert.strictEqual(restoredAuth.token, 'carol-token');
 }
 
 (async () => {
   try {
     await testPickers();
-    await testNormalizeAccountsGuards();
-    await testLoginStoresActiveAccount();
-    await testSwitchingBetweenMultipleAccounts();
-    await testSignOutRemovesOnlyActiveAccount();
+    await testLoginStoresSession();
+    await testLoggingInAgainReplacesSession();
+    await testSignOutClearsSession();
+    await testSyncFromStorageRestoresSession();
     console.log('Auth tests passed');
   } catch (error) {
     console.error('Auth tests failed:', error);

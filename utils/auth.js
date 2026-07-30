@@ -33,8 +33,6 @@ class ExtensionAuth {
     this.user = null;
     this.token = null;
     this.isAuthenticated = false;
-    this.accounts = [];
-    this.activeAccountId = null;
     this.authStatusCallbacks = [];
     this.fetchImpl =
       options.fetch ||
@@ -56,61 +54,13 @@ class ExtensionAuth {
 
     try {
       const data = await chrome.storage.local.get([
-        'auth_accounts',
-        'auth_active_account_id',
         'auth_user',
         'auth_token',
         'auth_timestamp',
       ]);
 
-      const normalizedAccounts = this.normalizeAccounts(data.auth_accounts);
-      if (normalizedAccounts.length > 0) {
-        this.accounts = normalizedAccounts;
-
-        let activeAccount =
-          normalizedAccounts.find((account) => account.id === data.auth_active_account_id) ||
-          normalizedAccounts[0];
-
-        const hasSession = Boolean(activeAccount?.user && activeAccount?.token);
-        this.activeAccountId = activeAccount?.id || null;
-
-        await this.updateAuthStatus(
-          hasSession,
-          hasSession ? activeAccount.user : null,
-          hasSession ? activeAccount.token : null,
-          {
-            persist: false,
-            silent: true,
-            accountId: activeAccount?.id || null,
-            keepAccounts: true,
-          },
-        );
-        return;
-      }
-
       const hasSession = Boolean(data.auth_user && data.auth_token);
-      if (hasSession) {
-        const accountId = this.buildAccountId(data.auth_user);
-        this.accounts = [
-          {
-            id: accountId,
-            user: data.auth_user,
-            token: data.auth_token,
-            timestamp: data.auth_timestamp || Date.now(),
-          },
-        ];
-        this.activeAccountId = accountId;
-        await this.updateAuthStatus(true, data.auth_user, data.auth_token, {
-          persist: false,
-          silent: true,
-          accountId,
-          keepAccounts: true,
-        });
-        await this.persistAuthState();
-        return;
-      }
-
-      await this.updateAuthStatus(false, null, null, {
+      await this.updateAuthStatus(hasSession, data.auth_user || null, data.auth_token || null, {
         persist: false,
         silent: true,
       });
@@ -121,55 +71,6 @@ class ExtensionAuth {
         silent: true,
       });
     }
-  }
-
-  normalizeAccounts(rawAccounts) {
-    if (!Array.isArray(rawAccounts)) return [];
-
-    return rawAccounts
-      .map((account) => {
-        if (!account || typeof account !== 'object') return null;
-        const user = account.user || null;
-        const token = account.token || null;
-        const id = account.id || this.buildAccountId(user);
-
-        if (!user || !token || !id) return null;
-
-        return {
-          id,
-          user,
-          token,
-          timestamp: account.timestamp || Date.now(),
-        };
-      })
-      .filter(Boolean);
-  }
-
-  buildAccountId(user) {
-    const provider = user?.provider || 'backend';
-    const username = user?.username || user?.email || user?.name;
-    let objectFingerprint = 'anonymous';
-    if (user && typeof user === 'object') {
-      const entries = Object.entries(user)
-        .filter(([key, value]) => key !== 'token' && value !== undefined && value !== null)
-        .sort(([left], [right]) => left.localeCompare(right));
-      if (entries.length > 0) {
-        objectFingerprint = entries
-          .map(([key, value]) => `${key}:${String(value)}`)
-          .join('|');
-      }
-    }
-    const stableIdentity =
-      user?.id ||
-      user?.sub ||
-      username ||
-      objectFingerprint;
-    return `${provider}:${stableIdentity}`;
-  }
-
-  getActiveAccountEntry() {
-    if (!this.activeAccountId) return null;
-    return this.accounts.find((account) => account.id === this.activeAccountId) || null;
   }
 
   static pickToken(response) {
@@ -300,48 +201,16 @@ class ExtensionAuth {
       authDbgLog('[ExtensionAuth] Token received from login');
     }
 
-    const accountId = this.buildAccountId(user);
-    await this.updateAuthStatus(true, user, token || null, { accountId });
+    await this.updateAuthStatus(true, user, token || null);
 
     return { token: token || null, user, data };
   }
 
   /**
    * Signs out the current account.
-   * @param {{ clearAll?: boolean }} options - Pass clearAll=true to remove all stored accounts.
    */
-  async signOut(options = {}) {
-    const clearAll = Boolean(options.clearAll);
-
-    if (clearAll || this.accounts.length === 0) {
-      this.accounts = [];
-      this.activeAccountId = null;
-      await this.updateAuthStatus(false, null, null);
-      return;
-    }
-
-    const activeId = this.activeAccountId;
-    if (!activeId) {
-      this.accounts = [];
-      await this.updateAuthStatus(false, null, null);
-      return;
-    }
-
-    const remainingAccounts = this.accounts.filter((account) => account.id !== activeId);
-    this.accounts = remainingAccounts;
-
-    if (remainingAccounts.length === 0) {
-      this.activeAccountId = null;
-      await this.updateAuthStatus(false, null, null);
-      return;
-    }
-
-    const nextActive = remainingAccounts[0];
-    this.activeAccountId = nextActive.id;
-    await this.updateAuthStatus(true, nextActive.user, nextActive.token, {
-      accountId: nextActive.id,
-      keepAccounts: true,
-    });
+  async signOut() {
+    await this.updateAuthStatus(false, null, null);
   }
 
   async requestAuthStatus() {
@@ -352,38 +221,23 @@ class ExtensionAuth {
   async persistAuthState() {
     if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
 
-    await chrome.storage.local.set({
-      auth_accounts: this.accounts,
-      auth_active_account_id: this.activeAccountId || null,
-    });
-
-    const active = this.getActiveAccountEntry();
-    const hasLegacySession = Boolean(active?.user && active?.token);
-
-    if (hasLegacySession) {
+    if (this.isAuthenticated && this.user && this.token) {
       await chrome.storage.local.set({
-        auth_user: active.user,
-        auth_token: active.token,
-        auth_timestamp: active.timestamp || Date.now(),
+        auth_user: this.user,
+        auth_token: this.token,
+        auth_timestamp: Date.now(),
       });
-      authDbgLog('[ExtensionAuth] Storing active account token in chrome.storage.local');
+      authDbgLog('[ExtensionAuth] Storing account token in chrome.storage.local');
       return;
     }
 
-    await chrome.storage.local.remove([
-      'auth_user',
-      'auth_token',
-      'auth_timestamp',
-      'firebase_user',
-    ]);
+    await this.clearSession();
   }
 
   async clearSession() {
     if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
 
     await chrome.storage.local.remove([
-      'auth_accounts',
-      'auth_active_account_id',
       'auth_user',
       'auth_token',
       'auth_timestamp',
@@ -396,34 +250,8 @@ class ExtensionAuth {
     this.user = this.isAuthenticated ? user : null;
     this.token = this.isAuthenticated ? token || null : null;
 
-    if (this.isAuthenticated && this.user && this.token) {
-      const accountId = options.accountId || this.buildAccountId(this.user);
-      this.activeAccountId = accountId;
-
-      const existingIndex = this.accounts.findIndex((account) => account.id === accountId);
-      const nextEntry = {
-        id: accountId,
-        user: this.user,
-        token: this.token,
-        timestamp: Date.now(),
-      };
-
-      if (existingIndex >= 0) {
-        this.accounts[existingIndex] = nextEntry;
-      } else {
-        this.accounts.push(nextEntry);
-      }
-    } else if (options.keepAccounts !== true) {
-      this.accounts = [];
-      this.activeAccountId = null;
-    }
-
     if (options.persist !== false) {
-      if (this.isAuthenticated || options.keepAccounts === true) {
-        await this.persistAuthState();
-      } else {
-        await this.clearSession();
-      }
+      await this.persistAuthState();
     }
 
     if (!options.silent) {
@@ -442,8 +270,6 @@ class ExtensionAuth {
       isAuthenticated: this.isAuthenticated,
       user: this.user,
       token: this.token,
-      accounts: this.getAccounts(),
-      activeAccountId: this.activeAccountId,
     });
 
     return () => {
@@ -459,8 +285,6 @@ class ExtensionAuth {
       isAuthenticated: this.isAuthenticated,
       user: this.user,
       token: this.token,
-      accounts: this.getAccounts(),
-      activeAccountId: this.activeAccountId,
     };
 
     this.authStatusCallbacks.forEach((callback) => {
@@ -470,39 +294,6 @@ class ExtensionAuth {
         authDbgError('[ExtensionAuth] Auth callback failed:', error);
       }
     });
-  }
-
-  getAccounts() {
-    return this.accounts.map((account) => ({
-      id: account.id,
-      user: account.user,
-      timestamp: account.timestamp || null,
-    }));
-  }
-
-  async switchAccount(accountId) {
-    if (!accountId) {
-      throw new Error('Account ID is required to switch accounts. Please provide a valid account ID.');
-    }
-
-    const targetAccount = this.accounts.find((account) => account.id === accountId);
-    if (!targetAccount) {
-      throw new Error('Selected account not found.');
-    }
-
-    await this.updateAuthStatus(true, targetAccount.user, targetAccount.token, {
-      accountId: targetAccount.id,
-      keepAccounts: true,
-    });
-
-    return {
-      id: targetAccount.id,
-      user: {
-        username: targetAccount.user?.username || null,
-        email: targetAccount.user?.email || null,
-        displayName: targetAccount.user?.displayName || null,
-      },
-    };
   }
 
   getCurrentUser() {
