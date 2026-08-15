@@ -360,10 +360,12 @@ You MUST respond with valid JSON adhering to this exact schema (no markdown fenc
   "cognitiveTier": 1 | 2 | 3 | 4,
   "recallScore": 0.85,
   "mistakeTags": ["specific-kebab-case-tag1", "specific-kebab-case-tag2"],
-  "summary": "Brief 1-2 sentence markdown summary of the technical mistake and how it was resolved."
+  "summary": "Markdown text containing:\n1. **Time-Travel Debugging**: The most clicking moment/code snippet that instantly reminds the user of the core insight/solution.\n2. **Key Issues**: What specific logic/algorithmic errors occurred (ignoring typos).\n3. **Improvements**: What changed to achieve the accepted solve."
 }
 
-Note: For "mistakeTags", provide 1-3 highly descriptive kebab-case tags explaining the specific error (e.g. "binary-search-boundary", "monotonic-stack-pop", "dp-state-transition", "null-pointer", "integer-overflow", "unvisited-cycle").`;
+Note:
+- For "mistakeTags", provide 1-3 highly descriptive kebab-case tags explaining the specific error (e.g. "binary-search-boundary", "monotonic-stack-pop", "dp-state-transition", "null-pointer", "integer-overflow", "unvisited-cycle").
+- Keep the total summary concise (under 120 words), focused strictly on technical programming concepts.`;
 
         return prompt;
     }
