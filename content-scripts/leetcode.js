@@ -35,6 +35,8 @@
       this.currentRunId = null;
       this.aiAnalysis = null; // Store Gemini AI analysis
       this.aiTags = []; // Store Gemini mistake tags
+      this.cognitiveTier = null; // Store Gemini cognitive tier (1-4)
+      this.recallScore = null; // Store Gemini recall score (0.0-1.0)
       this.shouldAnalyzeWithGemini = false; // Flag to run Gemini on submit
     }
 
@@ -230,6 +232,8 @@
           this.submitCounter = problemData.submitCounter || 0;
           this.aiAnalysis = problemData.aiAnalysis || null;
           this.aiTags = problemData.aiTags || [];
+          this.cognitiveTier = problemData.cognitiveTier ?? null;
+          this.recallScore = problemData.recallScore ?? null;
           this.shouldAnalyzeWithGemini = problemData.shouldAnalyzeWithGemini || false;
 
           debugLog(`[LeetCode] Restored - Runs: ${this.runCounter}, Failed: ${this.incorrectRunCounter}/3, Analyzed: ${this.hasAnalyzedMistakes}`);
@@ -265,6 +269,8 @@
           submitCounter: overrides.submitCounter ?? this.submitCounter,
           aiAnalysis: overrides.aiAnalysis ?? this.aiAnalysis,
           aiTags: overrides.aiTags ?? this.aiTags,
+          cognitiveTier: overrides.cognitiveTier ?? this.cognitiveTier,
+          recallScore: overrides.recallScore ?? this.recallScore,
           shouldAnalyzeWithGemini: overrides.shouldAnalyzeWithGemini ?? this.shouldAnalyzeWithGemini,
           // Time values from ProblemTimer
           problemStartTime: timer?.getStartTime() || problemData.problemStartTime || Date.now(),
@@ -401,12 +407,39 @@
       new MutationObserver(() => {
         if (location.href !== currentUrl) {
           currentUrl = location.href;
+          if (window.ProblemTimer) {
+            if (this.isProblemPage()) {
+              window.ProblemTimer.getInstance().reset();
+              window.ProblemTimer.getInstance().startTimer(this.getCurrentProblemUrl());
+            } else {
+              window.ProblemTimer.getInstance().hideOverlay();
+            }
+          }
           setTimeout(() => {
             this.checkPageType();
             this.extractProblemInfo();
           }, 1000);
         }
       }).observe(document, { subtree: true, childList: true });
+    }
+
+    isProblemPage() {
+      const url = window.location.href;
+      return url.includes('/problems/') && url.includes('leetcode.com');
+    }
+
+    checkPageType() {
+      if (this.isProblemPage()) {
+        const currentUrl = this.getCurrentProblemUrl();
+        if (window.ProblemTimer && currentUrl) {
+          window.ProblemTimer.getInstance().startTimer(currentUrl);
+        }
+        setTimeout(() => this.extractProblemInfo(), 1500);
+      } else {
+        if (window.ProblemTimer) {
+          window.ProblemTimer.getInstance().hideOverlay();
+        }
+      }
     }
 
     async handleSubmissionAttemptFromNetwork(payload) {
@@ -493,7 +526,14 @@
 
         const attempt = this.currentSubmissionAttempt;
 
-        if (runSuccess) {
+        // LeetCode status_code 10 is Accepted ("Accepted").
+        // Other status_codes: 11 (Wrong Answer), 12 (Memory Limit Exceeded), 13 (Time Limit Exceeded), 14 (Output Limit Exceeded), 15 (Compile Error), 16 (Runtime Error).
+        // Note: run_success is true on LeetCode whenever evaluation completes, even for Wrong Answer/TLE.
+        const isAccepted = checkData.status_code === 10 ||
+          checkData.status_msg === 'Accepted' ||
+          (runSuccess && checkData.total_correct !== undefined && checkData.total_correct > 0 && checkData.total_correct === checkData.total_testcases);
+
+        if (isAccepted) {
           attempt.successful = true;
           DSAUtils.logDebug(PLATFORM, 'Submission result detected: ACCEPTED');
           await this.savePersistedState();
@@ -505,6 +545,10 @@
           attempt.successful = false;
           const statusText = checkData.status_msg || 'Submission failed';
           DSAUtils.logDebug(PLATFORM, `Submission result detected: ${statusText}`);
+          this.incorrectRunCounter++;
+          if (this.incorrectRunCounter >= 2 && !this.hasAnalyzedMistakes) {
+            this.handleThreeIncorrectRuns();
+          }
           if (this.submissionTracker) {
             this.submissionTracker.fail(statusText);
             this.submissionTracker = null;
@@ -522,7 +566,12 @@
 
         const attempt = this.currentRunAttempt;
 
-        if (runSuccess) {
+        const isRunSuccess = runSuccess && (
+          checkData.correct_answer === true ||
+          (checkData.total_correct !== undefined && checkData.total_correct > 0 && checkData.total_correct === checkData.total_testcases)
+        );
+
+        if (isRunSuccess) {
           if (attempt.successful !== true) {
             attempt.successful = true;
             DSAUtils.logDebug(PLATFORM, `Run #${attempt.runNumber} - SUCCESS`);
@@ -841,7 +890,9 @@
               if (geminiResult.success) {
                 this.aiAnalysis = geminiResult.analysis;
                 this.aiTags = geminiResult.tags || [];
-                debugLog(`[LeetCode] Gemini analysis complete. Tags: ${this.aiTags.join(', ')}`);
+                this.cognitiveTier = geminiResult.cognitiveTier ?? null;
+                this.recallScore = geminiResult.recallScore ?? null;
+                debugLog(`[LeetCode] Gemini analysis complete. Tier: ${this.cognitiveTier}, Score: ${this.recallScore}, Tags: ${this.aiTags.join(', ')}`);
                 if (this.submissionTracker) {
                   this.submissionTracker.setAIComplete();
                 }
@@ -957,6 +1008,8 @@
         this.currentRunId = null;
         this.aiAnalysis = null;
         this.aiTags = [];
+        this.cognitiveTier = null;
+        this.recallScore = null;
 
         await this.savePersistedState({
           attempts: attemptsToPersist,
@@ -966,7 +1019,9 @@
           shouldAnalyzeWithGemini: false,
           submitCounter: 0,
           aiAnalysis: null,
-          aiTags: []
+          aiTags: [],
+          cognitiveTier: null,
+          recallScore: null
         });
 
       } catch (error) {

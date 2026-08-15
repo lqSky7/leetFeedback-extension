@@ -224,6 +224,8 @@ class BackendAPI {
         runCounter = 0,
         aiAnalysis = null,
         aiTags = [],  // Gemini-generated mistake tags
+        cognitiveTier = null, // AI cognitive error tier (1-4)
+        recallScore = null,   // AI recall quality score (0.0-1.0)
         problemStartTime = null,
         timestamp,
         language = null  // Add language from stored data (for TakeUforward/GFG)
@@ -236,7 +238,7 @@ class BackendAPI {
       // Generate problem slug from URL or name
       let problemSlug = '';
       if (problem_link) {
-        const match = problem_link.match(/problems\/([^\/\?]+)/);
+        const match = problem_link.match(/(?:problem-details|problems)\/([^\/\?]+)/);
         problemSlug = match ? match[1] : name.toLowerCase().replace(/\s+/g, '-');
       } else {
         problemSlug = name.toLowerCase().replace(/\s+/g, '-');
@@ -262,9 +264,8 @@ class BackendAPI {
           this._warn('[Backend API] Negative active time detected, resetting to 0. Active time:', activeTime, 'ms');
           timeTaken = 0;
         } else {
-          // Cap at 2 hours for takeuforward, and 24 hours for others to prevent overflow issues
-          const isTakeUforward = platform && platform.toLowerCase() === 'takeuforward';
-          const MAX_TIME_SECONDS = isTakeUforward ? 2 * 60 * 60 : 24 * 60 * 60;
+          // Cap at 2 hours for all platforms to match problem-timer.js
+          const MAX_TIME_SECONDS = 2 * 60 * 60; // 2 hours
           const rawTimeTaken = Math.floor(activeTime / 1000); // Convert ms to seconds
 
           if (rawTimeTaken > MAX_TIME_SECONDS) {
@@ -305,6 +306,8 @@ class BackendAPI {
         deviceId: 1, // Default device ID
         aiAnalysis: aiAnalysis, // Gemini AI analysis if available
         mistakeTags: aiTags || [], // Gemini-generated mistake tags
+        cognitiveTier: typeof cognitiveTier === 'number' ? cognitiveTier : null,
+        recallScore: typeof recallScore === 'number' ? recallScore : null,
         numberOfTries: Number(runCounter) || 1, // Use runCounter (run button presses)
         timeTaken: timeTaken,
         category: mapTopicToCategory(parent_topic), // Map topic to category ID for ML model

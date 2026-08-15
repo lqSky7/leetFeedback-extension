@@ -34,6 +34,8 @@
       this.shouldAnalyzeWithGemini = false;
       this.aiAnalysis = null;
       this.aiTags = [];
+      this.cognitiveTier = null;
+      this.recallScore = null;
     }
 
     async initialize() {
@@ -98,6 +100,8 @@
           this.shouldAnalyzeWithGemini = false;
           this.aiAnalysis = null;
           this.aiTags = [];
+          this.cognitiveTier = null;
+          this.recallScore = null;
 
           // Reset the unified problem timer based on page type
           if (window.ProblemTimer) {
@@ -519,6 +523,8 @@
           // Gemini analysis data
           aiAnalysis: this.aiAnalysis || null,
           aiTags: this.aiTags || [],
+          cognitiveTier: this.cognitiveTier ?? null,
+          recallScore: this.recallScore ?? null,
           shouldAnalyzeWithGemini: this.shouldAnalyzeWithGemini || false,
           // Run tracking
           runCounter: this.runCounter || 0,
@@ -622,7 +628,9 @@
               if (geminiResult.success) {
                 this.aiAnalysis = geminiResult.analysis;
                 this.aiTags = geminiResult.tags || [];
-                debugLog(`[TakeUforward] Gemini analysis complete. Tags: ${this.aiTags.join(', ')}`);
+                this.cognitiveTier = geminiResult.cognitiveTier ?? null;
+                this.recallScore = geminiResult.recallScore ?? null;
+                debugLog(`[TakeUforward] Gemini analysis complete. Tier: ${this.cognitiveTier}, Score: ${this.recallScore}, Tags: ${this.aiTags.join(', ')}`);
 
                 // Update stored problem data with AI analysis
                 await this.storeProblemData(problemInfo, true);
@@ -734,6 +742,8 @@
         this.shouldAnalyzeWithGemini = false;
         this.aiAnalysis = null;
         this.aiTags = [];
+        this.cognitiveTier = null;
+        this.recallScore = null;
 
       } catch (error) {
         DSAUtils.logError(PLATFORM, 'Error handling submission', error);

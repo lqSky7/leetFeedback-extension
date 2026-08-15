@@ -47,6 +47,8 @@
       this.shouldAnalyzeWithGemini = false;
       this.aiAnalysis = null;
       this.aiTags = [];
+      this.cognitiveTier = null;
+      this.recallScore = null;
       this.topics = [];
       this.currentProblemUrl = null;
     }
@@ -99,6 +101,8 @@
           this.shouldAnalyzeWithGemini = problemData.shouldAnalyzeWithGemini || false;
           this.aiAnalysis = problemData.aiAnalysis || null;
           this.aiTags = problemData.aiTags || [];
+          this.cognitiveTier = problemData.cognitiveTier ?? null;
+          this.recallScore = problemData.recallScore ?? null;
           this.currentProblemUrl = problemData.currentProblemUrl || currentUrl;
           this.topics = problemData.parent_topic || [];
 
@@ -120,6 +124,9 @@
         const result = await chrome.storage.local.get([`problem_data_${currentUrl}`]);
         let problemData = result[`problem_data_${currentUrl}`] || {};
 
+        // Get time values from ProblemTimer utility
+        const timer = window.ProblemTimer ? window.ProblemTimer.getInstance() : null;
+
         // Merge tracking state into problem data
         problemData = {
           ...problemData,
@@ -131,8 +138,12 @@
           shouldAnalyzeWithGemini: overrides.shouldAnalyzeWithGemini ?? this.shouldAnalyzeWithGemini,
           aiAnalysis: overrides.aiAnalysis ?? this.aiAnalysis,
           aiTags: overrides.aiTags ?? this.aiTags,
+          cognitiveTier: overrides.cognitiveTier ?? this.cognitiveTier,
+          recallScore: overrides.recallScore ?? this.recallScore,
           currentProblemUrl: overrides.currentProblemUrl ?? this.currentProblemUrl,
           parent_topic: overrides.parent_topic ?? this.topics,
+          problemStartTime: timer?.getStartTime() || problemData.problemStartTime || Date.now(),
+          pausedTime: timer?.getPausedTime() || problemData.pausedTime || 0,
           timestamp: overrides.timestamp ?? new Date().toISOString()
         };
 
@@ -174,6 +185,8 @@
           };
         }
 
+        const timer = window.ProblemTimer ? window.ProblemTimer.getInstance() : null;
+
         const problemData = {
           ...existingData,
           name: problemInfo.title || existingData.name || 'Unknown Problem',
@@ -194,6 +207,8 @@
           aiAnalysis: this.aiAnalysis || null,
           aiTags: this.aiTags || [],
           currentProblemUrl: this.currentProblemUrl || currentUrl,
+          problemStartTime: timer?.getStartTime() || existingData.problemStartTime || Date.now(),
+          pausedTime: timer?.getPausedTime() || existingData.pausedTime || 0,
           timestamp: new Date().toISOString()
         };
 
@@ -254,6 +269,14 @@
       new MutationObserver(() => {
         if (location.href !== currentUrl) {
           currentUrl = location.href;
+          if (window.ProblemTimer) {
+            if (this.isProblemPage()) {
+              window.ProblemTimer.getInstance().reset();
+              window.ProblemTimer.getInstance().startTimer(this.getCurrentProblemUrl());
+            } else {
+              window.ProblemTimer.getInstance().hideOverlay();
+            }
+          }
           setTimeout(() => {
             this.checkPageType();
             this.extractProblemInfo();
@@ -262,12 +285,23 @@
       }).observe(document, { subtree: true, childList: true });
     }
 
-    checkPageType() {
+    isProblemPage() {
       const url = window.location.href;
+      return url.includes('/problems/') &&
+        (url.includes('geeksforgeeks.org') || url.includes('practice.geeksforgeeks.org'));
+    }
 
-      if (url.includes('/problems/') &&
-        (url.includes('geeksforgeeks.org') || url.includes('practice.geeksforgeeks.org'))) {
+    checkPageType() {
+      if (this.isProblemPage()) {
+        const currentUrl = this.getCurrentProblemUrl();
+        if (window.ProblemTimer && currentUrl) {
+          window.ProblemTimer.getInstance().startTimer(currentUrl);
+        }
         setTimeout(() => this.extractProblemInfo(), 1500);
+      } else {
+        if (window.ProblemTimer) {
+          window.ProblemTimer.getInstance().hideOverlay();
+        }
       }
     }
 
@@ -990,7 +1024,9 @@
               if (geminiResult.success) {
                 this.aiAnalysis = geminiResult.analysis;
                 this.aiTags = geminiResult.tags || [];
-                debugLog(`[GeeksforGeeks] Gemini analysis complete. Tags: ${this.aiTags.join(', ')}`);
+                this.cognitiveTier = geminiResult.cognitiveTier ?? null;
+                this.recallScore = geminiResult.recallScore ?? null;
+                debugLog(`[GeeksforGeeks] Gemini analysis complete. Tier: ${this.cognitiveTier}, Score: ${this.recallScore}, Tags: ${this.aiTags.join(', ')}`);
                 if (this.submissionTracker) {
                   this.submissionTracker.setAIComplete();
                 }
@@ -1098,6 +1134,8 @@
         this.shouldAnalyzeWithGemini = false;
         this.aiAnalysis = null;
         this.aiTags = [];
+        this.cognitiveTier = null;
+        this.recallScore = null;
 
         // Persist final state
         await this.savePersistedState({
@@ -1107,7 +1145,9 @@
           hasAnalyzedMistakes: false,
           shouldAnalyzeWithGemini: false,
           aiAnalysis: null,
-          aiTags: []
+          aiTags: [],
+          cognitiveTier: null,
+          recallScore: null
         });
 
       } catch (error) {

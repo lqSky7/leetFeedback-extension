@@ -21,6 +21,7 @@
         "https://practice.geeksforgeeks.org/*",
         "https://*.takeuforward.org/*",
         "https://*.codechef.com/*",
+        "https://*.naukri.com/*",
         "https://api.github.com/*",
         "https://generativelanguage.googleapis.com/*",
         "https://*.ngrok-free.dev/*",
@@ -94,6 +95,21 @@
                 "utils/problem-timer.js",
                 "utils/toast.js",
                 "content-scripts/codechef.js"
+            ],
+            "run_at": "document_end"
+        },
+        {
+            "matches": [
+                "https://*.naukri.com/*"
+            ],
+            "js": [
+                "utils/common.js",
+                "utils/github-api.js",
+                "utils/gemini-api.js",
+                "utils/backend-api.js",
+                "utils/problem-timer.js",
+                "utils/toast.js",
+                "content-scripts/naukri.js"
             ],
             "run_at": "document_end"
         }
