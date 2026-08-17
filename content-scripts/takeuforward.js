@@ -607,59 +607,9 @@
         await this.storeProblemData(problemInfo, true);
         debugLog('[TakeUforward] Stored problem as solved');
 
-        // Step 0: Run Gemini analysis if flagged (before backend push)
-        if (this.shouldAnalyzeWithGemini) {
-          debugLog(`[TakeUforward] Step 0: Running Gemini analysis before backend push...`);
-          try {
-            const geminiAPI = new GeminiAPI();
-            const geminiConfigured = await geminiAPI.initialize();
-
-            if (geminiConfigured) {
-              // Send ALL attempts (not just failed) to Gemini for full context
-              const allAttempts = this.attempts.filter(a => a.code && a.code.length > 10);
-              debugLog(`[TakeUforward] Sending ${allAttempts.length} code iterations to Gemini`);
-
-              if (this.submissionTracker) {
-                this.submissionTracker.setAIStarted();
-              }
-
-              const geminiResult = await geminiAPI.analyzeMistakes(allAttempts, problemInfo);
-
-              if (geminiResult.success) {
-                this.aiAnalysis = geminiResult.analysis;
-                this.aiTags = geminiResult.tags || [];
-                this.cognitiveTier = geminiResult.cognitiveTier ?? null;
-                this.recallScore = geminiResult.recallScore ?? null;
-                debugLog(`[TakeUforward] Gemini analysis complete. Tier: ${this.cognitiveTier}, Score: ${this.recallScore}, Tags: ${this.aiTags.join(', ')}`);
-
-                // Update stored problem data with AI analysis
-                await this.storeProblemData(problemInfo, true);
-                if (this.submissionTracker) {
-                  this.submissionTracker.setAIComplete();
-                }
-              } else {
-                debugLog(`[TakeUforward] Gemini analysis failed: ${geminiResult.error}`);
-                if (this.submissionTracker) {
-                  this.submissionTracker.setAISkipped();
-                }
-              }
-            } else {
-              debugLog(`[TakeUforward] Gemini API key not configured - skipping analysis`);
-              if (this.submissionTracker) {
-                this.submissionTracker.setAISkipped();
-              }
-            }
-          } catch (error) {
-            debugError(`[TakeUforward] Gemini analysis error:`, error);
-            if (this.submissionTracker) {
-              this.submissionTracker.setAISkipped();
-            }
-            // Continue with submission even if Gemini fails
-          }
-        } else {
-          if (this.submissionTracker) {
+        // AI analysis now happens server-side after submission
+        if (this.submissionTracker) {
             this.submissionTracker.setAISkipped();
-          }
         }
 
         // Store problem data (normal solution)

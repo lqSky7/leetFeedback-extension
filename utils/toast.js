@@ -264,21 +264,13 @@ class SubmissionTracker {
     }
 
     setAIStarted() {
-        this._transitionTo('analyzing', () => {
-            this._setText('Analyzing with Gemini...');
-            if (this.orbiter) {
-                this.orbiter.className = 'lfb-sync-orbiter lfb-state-analyzing';
-            }
-        });
+        // AI analysis now happens server-side, skip to syncing state
+        this.setAISkipped();
     }
 
     setAIComplete() {
-        this._transitionTo('slow-rise', () => {
-            this._setText('AI Logged');
-            if (this.orbiter) {
-                this.orbiter.className = 'lfb-sync-orbiter lfb-state-syncing';
-            }
-        });
+        // AI analysis now happens server-side, skip to syncing state
+        this.setAISkipped();
     }
 
     setAISkipped() {

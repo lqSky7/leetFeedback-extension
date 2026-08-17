@@ -430,19 +430,9 @@
         this.hasAnalyzedMistakes = true;
         this.shouldAnalyzeWithGemini = true;
 
-        const geminiAPI = new GeminiAPI();
-        const key = await geminiAPI.getApiKey();
-
-        if (key) {
-          const problemInfo = this.extractProblemInfo();
-          const analysis = await geminiAPI.analyzeMistakes(problemInfo, this.attempts);
-          if (analysis) {
-            this.aiAnalysis = analysis.summary || analysis;
-            this.aiTags = analysis.tags || [];
-            this.cognitiveTier = analysis.cognitiveTier ?? null;
-            this.recallScore = analysis.recallScore ?? null;
-            DSAUtils.logDebug(PLATFORM, 'Gemini mistake analysis generated:', this.aiAnalysis, 'Tier:', this.cognitiveTier, 'Score:', this.recallScore);
-          }
+        // AI analysis now happens server-side after submission
+        if (this.submissionTracker) {
+            this.submissionTracker.setAISkipped();
         }
         await this.savePersistedState();
       } catch (error) {

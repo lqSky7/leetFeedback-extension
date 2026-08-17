@@ -195,41 +195,13 @@ class GitHubAPI {
       const dirPath = DSAUtils.createDirectoryPath(platform, problemInfo);
       const filePath = `${dirPath}/solution.md`;
 
-      let content, commitMessage, analysisResult;
+      let content, commitMessage;
 
-      if (contentType === 'solution') {
+      if (contentType === 'solution' || contentType === 'mistake-analysis') {
         // Successful solution - just the solution
         content = this.generateSolutionContent(problemInfo, platform);
         commitMessage = `Add solution for ${title}`;
-        this._log(`[GitHub API] Creating successful solution`);
-
-      } else if (contentType === 'mistake-analysis') {
-        // Failed attempts - solution + mistake analysis
-        const failedAttempts = problemInfo.attempts || [];
-
-        if (failedAttempts.length < 3) {
-          return { success: false, error: `Need at least 3 failed attempts for mistake analysis. Found: ${failedAttempts.length}` };
-        }
-
-        // Generate Gemini analysis from all attempts
-        const geminiAPI = new GeminiAPI();
-        const geminiConfigured = await geminiAPI.initialize();
-        if (!geminiConfigured) {
-          return { success: false, error: 'Gemini API key not configured' };
-        }
-
-        const analysisResult = await geminiAPI.analyzeMistakes(failedAttempts, problemInfo);
-        if (!analysisResult.success) {
-          return { success: false, error: 'Failed to generate mistake analysis: ' + analysisResult.error };
-        }
-
-        // Get the final (latest) solution from attempts
-        const finalAttempt = failedAttempts[failedAttempts.length - 1];
-
-        // Create combined content: final solution + mistake analysis
-        content = this.generateSolutionWithMistakeAnalysis(problemInfo, platform, finalAttempt, analysisResult.analysis, failedAttempts);
-        commitMessage = `Add solution with mistake analysis for ${title} (${failedAttempts.length} attempts analyzed)`;
-        this._log(`[GitHub API] Creating solution with mistake analysis`);
+        this._log(`[GitHub API] Creating solution`);
       }
 
       // Check if solution.md already exists for updates
@@ -242,8 +214,7 @@ class GitHubAPI {
 
       if (result.success) {
         this._log(`[GitHub API] Content pushed successfully: ${filePath}`);
-        // Return analysis with result so it can be stored for backend submission
-        return { ...result, analysis: analysisResult?.analysis };
+        return result;
       }
 
       return result;

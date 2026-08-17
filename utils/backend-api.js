@@ -211,7 +211,7 @@ class BackendAPI {
   }
 
   // Convert stored problem data to backend API format
-  formatProblemDataForBackend(storedProblemData) {
+  async formatProblemDataForBackend(storedProblemData) {
     try {
       const {
         name,
@@ -222,14 +222,23 @@ class BackendAPI {
         problem_link,
         attempts = [],
         runCounter = 0,
-        aiAnalysis = null,
-        aiTags = [],  // Gemini-generated mistake tags
-        cognitiveTier = null, // AI cognitive error tier (1-4)
-        recallScore = null,   // AI recall quality score (0.0-1.0)
+        shouldAnalyzeWithGemini = false,
         problemStartTime = null,
         timestamp,
         language = null  // Add language from stored data (for TakeUforward/GFG)
       } = storedProblemData;
+
+      // Read AI config for server-side analysis
+      let geminiApiKey = null;
+      let geminiModel = null;
+      try {
+          const geminiAPI = new GeminiAPI();
+          await geminiAPI.initialize();
+          geminiApiKey = geminiAPI.getGeminiApiKey();
+          geminiModel = geminiAPI.getGeminiModel();
+      } catch (e) {
+          this._warn('[Backend API] Failed to read Gemini config:', e);
+      }
 
       // Convert difficulty: 0 -> easy, 1 -> medium, 2 -> hard
       const difficultyMap = { 0: 'easy', 1: 'medium', 2: 'hard' };
@@ -304,10 +313,9 @@ class BackendAPI {
         idempotencyKey: idempotencyKey,
         happenedAt: solved.date ? new Date(solved.date).toISOString() : new Date().toISOString(),
         deviceId: 1, // Default device ID
-        aiAnalysis: aiAnalysis, // Gemini AI analysis if available
-        mistakeTags: aiTags || [], // Gemini-generated mistake tags
-        cognitiveTier: typeof cognitiveTier === 'number' ? cognitiveTier : null,
-        recallScore: typeof recallScore === 'number' ? recallScore : null,
+        shouldAnalyzeWithAI: shouldAnalyzeWithGemini,
+        geminiApiKey: geminiApiKey,
+        geminiModel: geminiModel,
         numberOfTries: Number(runCounter) || 1, // Use runCounter (run button presses)
         timeTaken: timeTaken,
         category: mapTopicToCategory(parent_topic), // Map topic to category ID for ML model
@@ -346,7 +354,7 @@ class BackendAPI {
       this._log('[Backend API] Retrieved stored problem data:', storedData);
 
       // Format data for backend API
-      const formattedData = this.formatProblemDataForBackend(storedData);
+      const formattedData = await this.formatProblemDataForBackend(storedData);
 
       // Push to backend
       return await this.pushSubmissionData(formattedData);

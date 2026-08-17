@@ -1079,57 +1079,9 @@
         // Calculate total tries
         const totalTries = totalRunCounter + 1; // +1 for the successful submission
 
-        // Step 0: Run Gemini analysis if flagged (before backend push)
-        // Step 0: Run Gemini analysis if flagged (before backend push)
-        if (this.shouldAnalyzeWithGemini) {
-          DSAUtils.logDebug(PLATFORM, `Step 0: Running Gemini analysis before backend push...`);
-          try {
-            const geminiAPI = new GeminiAPI();
-            const geminiConfigured = await geminiAPI.initialize();
-
-            if (geminiConfigured) {
-              // Send ALL attempts (not just failed) to Gemini for full context
-              const allAttempts = this.attempts.filter(a => a.code && a.code.length > 10);
-              DSAUtils.logDebug(PLATFORM, `Sending ${allAttempts.length} code iterations to Gemini`);
-
-              if (this.submissionTracker) {
-                this.submissionTracker.setAIStarted();
-              }
-
-              const geminiResult = await geminiAPI.analyzeMistakes(allAttempts, this.currentProblem);
-
-              if (geminiResult.success) {
-                this.aiAnalysis = geminiResult.analysis;
-                this.aiTags = geminiResult.tags || [];
-                this.cognitiveTier = geminiResult.cognitiveTier ?? null;
-                this.recallScore = geminiResult.recallScore ?? null;
-                DSAUtils.logDebug(PLATFORM, `Gemini analysis complete. Tier: ${this.cognitiveTier}, Score: ${this.recallScore}, Tags: ${this.aiTags.join(', ')}`);
-                if (this.submissionTracker) {
-                  this.submissionTracker.setAIComplete();
-                }
-              } else {
-                DSAUtils.logDebug(PLATFORM, `Gemini analysis failed: ${geminiResult.error}`);
-                if (this.submissionTracker) {
-                  this.submissionTracker.setAISkipped();
-                }
-              }
-            } else {
-              DSAUtils.logDebug(PLATFORM, `Gemini API key not configured - skipping analysis`);
-              if (this.submissionTracker) {
-                this.submissionTracker.setAISkipped();
-              }
-            }
-          } catch (error) {
-            DSAUtils.logError(PLATFORM, `Gemini analysis error:`, error);
-            if (this.submissionTracker) {
-              this.submissionTracker.setAISkipped();
-            }
-            // Continue with submission even if Gemini fails
-          }
-        } else {
-          if (this.submissionTracker) {
+        // AI analysis now happens server-side after submission
+        if (this.submissionTracker) {
             this.submissionTracker.setAISkipped();
-          }
         }
 
         // Store problem data with AI analysis (will be picked up by backend push)
