@@ -39,6 +39,15 @@ class ExtensionAuth {
     this.fetchImpl =
       options.fetch ||
       (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
+
+    if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === 'local' && (changes.auth_token || changes.auth_user)) {
+          authDbgLog('[ExtensionAuth] Storage auth change detected, syncing...');
+          this.syncFromStorage().then(() => this.notifyAuthStatus());
+        }
+      });
+    }
   }
 
   getApiBaseUrl() {
@@ -56,12 +65,28 @@ class ExtensionAuth {
 
     try {
       const data = await chrome.storage.local.get([
-        'auth_accounts',
-        'auth_active_account_id',
         'auth_user',
         'auth_token',
         'auth_timestamp',
+        'auth_accounts',
+        'auth_active_account_id',
       ]);
+
+      const hasDirectSession = Boolean(data.auth_user && data.auth_token);
+      if (hasDirectSession) {
+        this.user = data.auth_user;
+        this.token = data.auth_token;
+        this.isAuthenticated = true;
+        this.accounts = [{ id: 'primary', user: data.auth_user, token: data.auth_token }];
+        this.activeAccountId = 'primary';
+        await this.updateAuthStatus(true, data.auth_user, data.auth_token, {
+          persist: false,
+          silent: true,
+          accountId: 'primary',
+          keepAccounts: true,
+        });
+        return;
+      }
 
       const normalizedAccounts = this.normalizeAccounts(data.auth_accounts);
       if (normalizedAccounts.length > 0) {
@@ -308,40 +333,26 @@ class ExtensionAuth {
 
   /**
    * Signs out the current account.
-   * @param {{ clearAll?: boolean }} options - Pass clearAll=true to remove all stored accounts.
    */
-  async signOut(options = {}) {
-    const clearAll = Boolean(options.clearAll);
+  async signOut() {
+    this.accounts = [];
+    this.activeAccountId = null;
+    this.user = null;
+    this.token = null;
+    this.isAuthenticated = false;
 
-    if (clearAll || this.accounts.length === 0) {
-      this.accounts = [];
-      this.activeAccountId = null;
-      await this.updateAuthStatus(false, null, null);
-      return;
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      await chrome.storage.local.remove([
+        'auth_user',
+        'auth_token',
+        'auth_timestamp',
+        'auth_accounts',
+        'auth_active_account_id',
+        'firebase_user',
+      ]);
     }
 
-    const activeId = this.activeAccountId;
-    if (!activeId) {
-      this.accounts = [];
-      await this.updateAuthStatus(false, null, null);
-      return;
-    }
-
-    const remainingAccounts = this.accounts.filter((account) => account.id !== activeId);
-    this.accounts = remainingAccounts;
-
-    if (remainingAccounts.length === 0) {
-      this.activeAccountId = null;
-      await this.updateAuthStatus(false, null, null);
-      return;
-    }
-
-    const nextActive = remainingAccounts[0];
-    this.activeAccountId = nextActive.id;
-    await this.updateAuthStatus(true, nextActive.user, nextActive.token, {
-      accountId: nextActive.id,
-      keepAccounts: true,
-    });
+    await this.updateAuthStatus(false, null, null);
   }
 
   async requestAuthStatus() {

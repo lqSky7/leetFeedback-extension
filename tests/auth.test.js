@@ -150,64 +150,26 @@ async function testLoginStoresActiveAccount() {
   );
 }
 
-async function testSwitchingBetweenMultipleAccounts() {
-  resetStorage();
-  const auth = new ExtensionAuth({ fetch: createMockFetch() });
-
-  await auth.login({
-    username: 'alice',
-    password: 'alice-pass',
-  });
-
-  const aliceId = auth.getAccounts()[0].id;
-
-  await auth.login({
-    username: 'bob',
-    password: 'bob-pass',
-  });
-
-  assert.strictEqual(auth.getAccounts().length, 2);
-  assert.strictEqual(auth.user.username, 'bob');
-
-  await auth.switchAccount(aliceId);
-
-  assert.strictEqual(auth.user.username, 'alice');
-  assert.strictEqual(auth.token, 'alice-token');
-
-  const stored = await chrome.storage.local.get([
-    'auth_active_account_id',
-    'auth_user',
-    'auth_token',
-  ]);
-  assert.strictEqual(stored.auth_active_account_id, aliceId);
-  assert.strictEqual(stored.auth_user.username, 'alice');
-  assert.strictEqual(stored.auth_token, 'alice-token');
-}
-
-async function testSignOutRemovesOnlyActiveAccount() {
+async function testSingleAccountLoginAndSignOut() {
   resetStorage();
   const auth = new ExtensionAuth({ fetch: createMockFetch() });
 
   await auth.login({ username: 'alice', password: 'alice-pass' });
-  await auth.login({ username: 'bob', password: 'bob-pass' });
-
-  await auth.signOut();
 
   assert.strictEqual(auth.isAuthenticated, true);
   assert.strictEqual(auth.user.username, 'alice');
-  assert.strictEqual(auth.getAccounts().length, 1);
+  assert.strictEqual(auth.token, 'alice-token');
 
   await auth.signOut();
 
   assert.strictEqual(auth.isAuthenticated, false);
-  assert.strictEqual(auth.getAccounts().length, 0);
+  assert.strictEqual(auth.user, null);
+  assert.strictEqual(auth.token, null);
 
   const stored = await chrome.storage.local.get([
-    'auth_accounts',
     'auth_user',
     'auth_token',
   ]);
-  assert.strictEqual(stored.auth_accounts, undefined);
   assert.strictEqual(stored.auth_user, undefined);
   assert.strictEqual(stored.auth_token, undefined);
 }
@@ -217,8 +179,7 @@ async function testSignOutRemovesOnlyActiveAccount() {
     await testPickers();
     await testNormalizeAccountsGuards();
     await testLoginStoresActiveAccount();
-    await testSwitchingBetweenMultipleAccounts();
-    await testSignOutRemovesOnlyActiveAccount();
+    await testSingleAccountLoginAndSignOut();
     console.log('Auth tests passed');
   } catch (error) {
     console.error('Auth tests failed:', error);
