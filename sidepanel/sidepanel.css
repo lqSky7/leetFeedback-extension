@@ -1002,30 +1002,6 @@ input {
   color: var(--text-muted);
 }
 
-.profile-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  color: #34D399;
-  background: var(--success-dim);
-  padding: 3px 10px;
-  border-radius: var(--radius-pill);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.profile-status-badge.warning {
-  color: var(--warning);
-  background: var(--warning-dim);
-}
-
-.profile-status-badge.error {
-  color: #F87171;
-  background: var(--error-dim);
-}
-
 .auth-actions {
   display: flex;
   gap: 10px;
@@ -1225,49 +1201,6 @@ input {
   color: #F87171;
   background: var(--error-dim);
   border-color: rgba(225, 25, 0, 0.3);
-}
-
-/* ── Session Status ────────────────────────────────────────────────────── */
-.session-status {
-  margin-top: 10px;
-  padding: 10px 14px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-input);
-  font-size: 12px;
-}
-
-.session-status.warning {
-  border-color: rgba(255, 192, 67, 0.3);
-  background: var(--warning-dim);
-}
-
-.session-status.error {
-  border-color: rgba(225, 25, 0, 0.3);
-  background: var(--error-dim);
-}
-
-.session-status-label {
-  color: var(--text-muted);
-  font-size: 10px;
-  margin-bottom: 4px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
-.session-status-value {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.session-status-action {
-  margin-top: 8px;
-}
-
-.session-status-action .btn {
-  padding: 6px 12px;
-  font-size: 10px;
 }
 
 /* ── Update Notification ───────────────────────────────────────────────── */

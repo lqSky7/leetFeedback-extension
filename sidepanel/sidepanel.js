@@ -167,7 +167,6 @@ class PopupController {
     this.updateConnectionStatus();
     this.initializeChromaText();
     this.checkForUpdates();
-    this.updateSessionStatus();
   }
 
   initializeChromaText() {
@@ -948,15 +947,12 @@ class PopupController {
       const avatarUrl = this.config.avatarUrl || `https://robohash.org/${encodeURIComponent(displayName)}?set=set4`;
       const avatarMarkup = `<img id="profile-avatar-img" src="${avatarUrl}" alt="${displayName}" />`;
 
-      // Get session status for badge
-      const sessionBadge = this.getSessionStatusBadge();
-
       // Hide settings tab section since we are presenting this directly on the home tab dashboard
       if (accountSettingsSec) {
         accountSettingsSec.style.display = "none";
       }
 
-      // Render Home tab profile dashboard (large avatar with refresh, displayName, email, badge, actions, and switcher)
+      // Render Home tab profile dashboard (large avatar with refresh, displayName, email and actions)
       authSection.innerHTML = `
         <div class="profile-dashboard">
           <div class="profile-header-card">
@@ -971,9 +967,6 @@ class PopupController {
             <div class="profile-info-center">
               <div class="profile-name-large">${displayName}</div>
               ${email ? `<div class="profile-email-large">${email}</div>` : ""}
-              <div class="status-badge-container" style="margin-top: 4px;">
-                ${sessionBadge}
-              </div>
             </div>
           </div>
 
@@ -1032,49 +1025,6 @@ class PopupController {
 
       this.setupAuthForms(authSection);
       this.showAuthFeedback();
-    }
-  }
-
-  // Get session status as a badge element
-  getSessionStatusBadge() {
-    try {
-      // Try to determine session status from stored data
-      const token = this.authStatus?.token;
-      if (!token) {
-        return `<div class="profile-status-badge">Active</div>`;
-      }
-
-      // Try to decode JWT for expiration
-      let expiresAt = null;
-      if (token.includes(".")) {
-        try {
-          const payload = JSON.parse(atob(token.split(".")[1]));
-          if (payload.exp) {
-            expiresAt = payload.exp * 1000;
-          }
-        } catch (e) {
-          // Token might not be JWT
-        }
-      }
-
-      if (expiresAt) {
-        const now = Date.now();
-        const timeLeft = expiresAt - now;
-        const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
-        const daysLeft = Math.floor(hoursLeft / 24);
-
-        if (timeLeft < 0) {
-          return `<div class="profile-status-badge error">Session expired</div>`;
-        } else if (hoursLeft < 24) {
-          return `<div class="profile-status-badge warning">Expires in ${hoursLeft}h</div>`;
-        } else {
-          return `<div class="profile-status-badge">Active (${daysLeft} day${daysLeft !== 1 ? "s" : ""} remaining)</div>`;
-        }
-      }
-
-      return `<div class="profile-status-badge">Active</div>`;
-    } catch (e) {
-      return `<div class="profile-status-badge">Active</div>`;
     }
   }
 
