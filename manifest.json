@@ -29,12 +29,24 @@
         "https://alfa-leetcode-api.onrender.com/*",
         "https://leet-feedback.vercel.app/*",
         "https://*.vercel.app/*",
+        "https://traverses.tech/*",
+        "https://*.traverses.tech/*",
         "https://*.netlify.app/*",
         "https://g4f.space/*",
         "https://chromewebstore.google.com/*"
     ],
     "background": {
         "service_worker": "background.js"
+    },
+    "externally_connectable": {
+        "matches": [
+            "https://traverses.tech/*",
+            "https://*.traverses.tech/*",
+            "https://leet-feedback.vercel.app/*",
+            "https://*.vercel.app/*",
+            "http://localhost:5173/*",
+            "http://localhost:3000/*"
+        ]
     },
     "content_scripts": [
         {
@@ -110,6 +122,19 @@
                 "utils/problem-timer.js",
                 "utils/toast.js",
                 "content-scripts/naukri.js"
+            ],
+            "run_at": "document_end"
+        },
+        {
+            "matches": [
+                "https://traverses.tech/*",
+                "https://*.traverses.tech/*",
+                "https://leet-feedback.vercel.app/*",
+                "http://localhost:5173/*",
+                "http://localhost:3000/*"
+            ],
+            "js": [
+                "content-scripts/website-sync.js"
             ],
             "run_at": "document_end"
         }
