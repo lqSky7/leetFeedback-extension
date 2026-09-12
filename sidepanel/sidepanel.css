@@ -1656,6 +1656,21 @@ input {
   margin: 4px 0 14px;
 }
 
+/* What will happen to the capture. Deliberately its own line rather than part of
+   the flow list: "no flows yet" and "flows captured but not yet sent" are the
+   two states a user needs told apart. */
+.recon-flows-summary {
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  margin: -6px 0 12px;
+}
+
+.recon-flows-summary.is-ready {
+  color: var(--accent);
+}
+
 .recon-status-grid {
   display: flex;
   flex-direction: column;

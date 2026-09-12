@@ -86,10 +86,20 @@ via `window.LeetFeedbackToast` / `window.LeetFeedbackHintPrompt` /
   build shipped with an empty `defaultToken` and no stored override stays idle.
 - **Recording must never require user setup.** The baked-in token exists so that
   someone who installs the extension and just opens a problem page contributes
-  captures without ever opening the sidepanel. The sidepanel field is an
-  *override*, not a prerequisite. `tests/recon.test.js` pins this ("arms with the
-  built-in token and no user setup") — a change that reintroduces a mandatory
-  paste breaks that scenario, and with it the whole point of the feature.
+  captures without ever opening the sidepanel. A stored override is not a
+  prerequisite either. `tests/recon.test.js` pins this ("arms with the built-in
+  token and no user setup") — a change that reintroduces a mandatory setup step
+  breaks that scenario, and with it the whole point of the feature.
+- **Delivery must not wait for a complete session.** The four flows describe what
+  a *complete* picture looks like, not a precondition. Auto-upload fires once the
+  page goes quiet (`scheduleAutoUpload`), with a longer quiet period when there is
+  no pass/fail pair yet — that pair is what lets the backend diff two responses
+  and name the verdict field, so it is worth a little patience but never a
+  blocker. The bug this replaced required all four flows, which meant captures sat
+  in `chrome.storage` forever on any platform that does not expose every path.
+  `tests/recon.test.js` pins this ("auto-uploads a partial capture with no
+  failure"). Re-uploads are keyed on the set of observed flows, so a later, fuller
+  capture is delivered without looping on an identical one.
 - **The ingest token is a client credential, not a per-user secret.** It ships in
   the extension bundle; its only job is to stop someone who guesses the endpoint
   URL from mailing the operator or filling the server's disk. It must match

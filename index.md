@@ -137,6 +137,18 @@ off for LeetCode, TakeUforward, and Traverse's own surfaces. See
 10. **Background handlers must `return true`** when responding asynchronously.
 11. **The service worker holds no problem state.** MV3 terminates it when idle;
     everything must be rehydrated from `chrome.storage`.
+12. **Recon must work with zero user setup.** The ingest token is baked into
+    `config.js` (`recon.defaultToken`) and nothing user-facing gates recording —
+    the whole point is that someone who installs the extension, opens a problem
+    page and submits contributes a capture without touching a setting.
+    `tests/recon.test.js` pins this; a change that reintroduces a mandatory
+    setup step breaks the feature, not just a test.
+13. **Recon delivers partial captures.** Auto-upload fires once the page goes
+    quiet, whatever was captured — it must never block on all four flows, because
+    most platforms do not expose every path and a capture that never uploads is
+    indistinguishable from one that was never taken. The pass/fail pair earns a
+    longer wait (it is what lets the backend name the verdict field) but is never
+    a precondition.
 
 ---
 
@@ -192,10 +204,6 @@ Payload for `/api/submissions`, built by `core/backend-api.js`:
 | `recon_bundle` | local | `core/recon-controller.js` | The staged capture, read by the background worker on `RECON_UPLOAD` |
 | `recon_flow_labels` | local | `core/recon-controller.js` | Which of the four flows (run/submit × pass/fail) have been seen |
 | `recon_ingest_token` | local | *(nothing)* | Legacy override, no longer written — the token comes from `config.recon.defaultToken` |
-| `recon_enabled`, `recon_ingest_token` | sync | sidepanel | Recon opt-in and the ingest shared secret (see `core/index.md`) |
-| `recon_status` | local | `core/recon-controller.js` | Live arm state, captured flows, selector scrape — the sidepanel renders this |
-| `recon_bundle` | local | `core/recon-controller.js` | The staged capture, read by the background worker on `RECON_UPLOAD` |
-| `recon_flow_labels` | local | `core/recon-controller.js` | Which of the four flows (run/submit × pass/fail) have been seen |
 
 ## 6. Where to make common changes
 

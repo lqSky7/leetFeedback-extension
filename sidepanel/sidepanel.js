@@ -1534,7 +1534,12 @@ class PopupController {
     const keys = this.reconKeys();
     const stored = await chrome.storage.local.get([keys.status, keys.token]);
     const status = stored[keys.status] || {};
-    const hasToken = Boolean(stored[keys.token]);
+
+    // Whether recording is possible comes from the controller, which resolves
+    // the stored override *and* the built-in token. Reading the storage key
+    // directly would report "no token" for every user who never set one — i.e.
+    // all of them, now that the field is gone.
+    const hasToken = status.hasToken !== false;
 
     const setText = (id, value) => {
       const el = document.getElementById(id);
@@ -1559,7 +1564,7 @@ class PopupController {
     );
     setText("recon-st-uploaded", status.uploadedAt ? this.formatRelativeTime(status.uploadedAt) : "never");
 
-    this.renderReconFlows(status.flows || {});
+    this.renderReconFlows(status.flows || {}, status);
   }
 
   /**
@@ -1567,7 +1572,7 @@ class PopupController {
    * string scraped from a third-party page, and must never be interpreted as
    * markup inside the extension's own UI.
    */
-  renderReconFlows(flows) {
+  renderReconFlows(flows, status = {}) {
     const container = document.getElementById("recon-flows");
     if (!container) return;
 
@@ -1596,17 +1601,54 @@ class PopupController {
 
       const detail = document.createElement("span");
       detail.className = "recon-flow-status";
+      // "not seen", not "waiting": the four flows describe a complete picture,
+      // not a requirement. Saying "waiting" implied the upload was blocked on
+      // flows that most platforms will never produce.
       const detailText = observed
         ? (flow.verdict && flow.verdict.status) || "captured"
         : uncertain
           ? "no verdict"
-          : "waiting";
+          : "not seen";
       detail.textContent = detailText;
       detail.title = detailText;
 
       row.append(dot, label, detail);
       container.append(row);
     }
+
+    this.renderReconFlowsSummary(status);
+  }
+
+  /**
+   * Say plainly what will happen to what has been captured, because the failure
+   * this replaced was silent: a capture that never uploaded looked identical to
+   * one still in progress.
+   */
+  renderReconFlowsSummary(status) {
+    const el = document.getElementById("recon-flows-summary");
+    if (!el) return;
+
+    const count = typeof status.observedFlowCount === "number"
+      ? status.observedFlowCount
+      : Object.values(status.flows || {}).filter((f) => f && f.status === "observed").length;
+
+    el.classList.remove("is-ready");
+
+    if (!count) {
+      el.textContent = "Nothing captured yet — run or submit on this page.";
+      return;
+    }
+
+    if (status.uploadedAt && !status.uploadPending) {
+      el.textContent = `${count} flow${count === 1 ? "" : "s"} captured · uploaded ${this.formatRelativeTime(status.uploadedAt)}`;
+      return;
+    }
+
+    const timing = status.hasPassFailPair
+      ? "uploads in a few seconds"
+      : "uploads shortly unless another attempt comes in";
+    el.textContent = `${count} flow${count === 1 ? "" : "s"} captured — ${timing}.`;
+    el.classList.add("is-ready");
   }
 
   formatRelativeTime(iso) {

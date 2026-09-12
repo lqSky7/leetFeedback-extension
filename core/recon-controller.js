@@ -18,9 +18,14 @@
 //
 // Capture is gated on an upload token, but not on *user* setup: the token is
 // baked into core/config.js (recon.defaultToken) so a user who never opens the
-// sidepanel still contributes captures. The sidepanel field only overrides it.
-// With no token at all the controller stays idle rather than silently
-// accumulating data it cannot deliver.
+// sidepanel still contributes captures. A stored value overrides it, for
+// rotating without shipping a build. With no token at all the controller stays
+// idle rather than silently accumulating data it cannot deliver.
+//
+// Delivery is likewise not gated on a perfect session. The four flows
+// (run/submit × pass/fail) are what a *complete* picture looks like, not a
+// precondition: most platforms will never produce all four, so the recorder
+// uploads whatever it has once the page goes quiet. See scheduleAutoUpload.
 
 (function () {
   'use strict';
@@ -499,6 +504,11 @@
       this.uploadedAt = null;
       this.lastError = null;
       this.pending = null;
+      this._uploadedSignature = '';
+      if (this._uploadTimer) {
+        clearTimeout(this._uploadTimer);
+        this._uploadTimer = null;
+      }
       for (const id of FLOW_IDS) this.flows[id] = { status: 'missing' };
 
       this.scanDom();
@@ -624,6 +634,11 @@
         verdict: verdict || null,
       };
       logger.log(`flow recorded: ${id}${verdict && verdict.status ? ` (${verdict.status})` : ''}`);
+
+      // Schedule from here rather than from the caller: every path that records
+      // a flow should arm the upload timer, and putting it at the single point
+      // where a flow is recorded is what keeps that true.
+      this.scheduleAutoUpload();
     }
 
     /* ── network events ── */
@@ -687,17 +702,73 @@
 
       if (this._windowTimer) clearTimeout(this._windowTimer);
       this.pending = null;
-
-      this.maybeAutoUpload();
     }
 
-    maybeAutoUpload() {
+    /**
+     * Arm the auto-upload timer.
+     *
+     * This used to require **all four** flows before uploading. On most
+     * platforms that never happens — plenty of judges expose only a Run, or
+     * make a failing run awkward to force — so captures sat in storage forever
+     * and nothing was ever delivered. That defeated the point of the feature.
+     *
+     * Anything observed is worth sending: the digest is a summary, and a
+     * capture with one flow still names the judge endpoint and its response
+     * shape. So the rule is now "upload once the session goes quiet", with the
+     * quiet period chosen by what we have (see cfg.idleMs / idleMsNoPair).
+     */
+    scheduleAutoUpload() {
       if (!cfg.autoUpload) return;
-      const allObserved = FLOW_IDS.every((id) => this.flows[id].status === 'observed');
-      if (!allObserved) return;
+      if (this.observedFlowIds().length === 0) return; // nothing to send yet
 
-      logger.log('all four flows observed — uploading');
-      this.upload().catch((error) => logger.error('auto upload failed:', error));
+      if (this._uploadTimer) clearTimeout(this._uploadTimer);
+      this._uploadTimer = setTimeout(() => {
+        this._uploadTimer = null;
+        this.autoUploadNow();
+      }, this.hasPassFailPair() ? cfg.idleMs : cfg.idleMsNoPair);
+    }
+
+    observedFlowIds() {
+      return FLOW_IDS.filter((id) => this.flows[id].status === 'observed');
+    }
+
+    /**
+     * A pass and a fail, anywhere in the capture.
+     *
+     * This pair is what lets the backend diff two responses and identify the
+     * verdict field, so it is the difference between a conclusive digest and a
+     * suggestive one — worth a shorter wait, but never a precondition.
+     */
+    hasPassFailPair() {
+      const observed = this.observedFlowIds();
+      return (
+        observed.some((id) => id.endsWith('-pass')) &&
+        observed.some((id) => id.endsWith('-fail'))
+      );
+    }
+
+    /**
+     * Signature of what has been captured, used to avoid re-sending an
+     * identical bundle. Capturing a new flow changes it, so a later, fuller
+     * capture is delivered too — the user asked for coverage, not one shot.
+     */
+    flowSignature() {
+      return this.observedFlowIds().sort().join(',');
+    }
+
+    autoUploadNow() {
+      const signature = this.flowSignature();
+      if (!signature) return;
+      if (signature === this._uploadedSignature) return; // already sent this exact set
+
+      const flows = this.observedFlowIds();
+      logger.log(`auto-uploading recon capture (${flows.length} flow(s): ${flows.join(', ')})`);
+
+      this.upload()
+        .then(() => {
+          this._uploadedSignature = signature;
+        })
+        .catch((error) => logger.error('auto upload failed:', error));
     }
 
     /* ── bundle ── */
@@ -811,6 +882,9 @@
         eventCount: this.events.size,
         bundleChars: this.bundleChars,
         flows: this.flows,
+        observedFlowCount: this.observedFlowIds().length,
+        hasPassFailPair: this.hasPassFailPair(),
+        uploadPending: Boolean(this._uploadTimer),
         buttons: this.dom.buttons.slice(0, 6),
         updatedAt: Date.now(),
       };
@@ -868,6 +942,10 @@
       if (this._persistTimer) {
         clearTimeout(this._persistTimer);
         this._persistTimer = null;
+      }
+      if (this._uploadTimer) {
+        clearTimeout(this._uploadTimer);
+        this._uploadTimer = null;
       }
       if (this._urlObserver && typeof this._urlObserver.disconnect === 'function') {
         this._urlObserver.disconnect();

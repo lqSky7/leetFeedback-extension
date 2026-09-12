@@ -500,6 +500,57 @@ async function uploadsTheStagedBundle() {
   assert.ok(env.localStore.recon_status.uploadedAt, 'a successful upload should be stamped');
 }
 
+/**
+ * The regression this guards: auto-upload used to require **all four** flows.
+ * Plenty of judges expose only a Run, or make a failing attempt awkward to
+ * force, so captures sat in chrome.storage forever and nothing was ever
+ * delivered — the feature silently produced nothing on exactly the platforms it
+ * exists for. Two passes and no failure must still upload.
+ */
+async function autoUploadsAPartialCapture() {
+  const env = createEnvironment({ storage: {} }); // built-in token, zero setup
+  const buttons = standardButtons(env);
+  loadReconStack(env);
+  await sleep(20);
+
+  // Shorten the quiet window. What is under test is that a partial capture is
+  // sent at all, not how long we wait first.
+  globalThis.Traverse.config.recon.idleMsNoPair = 30;
+
+  // Two passes, no failure anywhere.
+  env.click(buttons.submit);
+  const submitUrl = 'https://www.hackerrank.com/rest/contests/master/challenges/solve-me/submissions';
+  env.emit(reconEvent({ seq: 1, phase: 'response', url: submitUrl, method: 'POST', status: 200,
+    responseBody: JSON.stringify({ status: 'Accepted', score: 1 }) }));
+
+  env.click(buttons.run);
+  const runUrl = 'https://www.hackerrank.com/rest/contests/master/challenges/solve-me/run';
+  env.emit(reconEvent({ seq: 2, phase: 'response', url: runUrl, method: 'POST', status: 200,
+    responseBody: JSON.stringify({ status: 'Accepted' }) }));
+
+  // Long enough for the auto-upload (shortened above) *and* for the debounced
+  // status write to land — the status record lags the controller by ~1.5s.
+  await sleep(PERSIST_SETTLE_MS);
+
+  const controller = globalThis.__traverseRecon;
+  assert.strictEqual(controller.observedFlowIds().length, 2, 'two flows should be observed');
+  assert.strictEqual(controller.hasPassFailPair(), false, 'there is no failing attempt in this capture');
+
+  assert.ok(
+    env.sentMessages.some((m) => m.type === 'RECON_UPLOAD'),
+    'a capture with only passes must still upload — waiting for all four flows is the bug'
+  );
+
+  const status = env.localStore.recon_status;
+  assert.ok(status.uploadedAt, 'a successful auto-upload should be stamped');
+
+  // And it must not fire again for the same set of flows.
+  const before = env.sentMessages.filter((m) => m.type === 'RECON_UPLOAD').length;
+  await sleep(200);
+  const after = env.sentMessages.filter((m) => m.type === 'RECON_UPLOAD').length;
+  assert.strictEqual(after, before, 'the same capture must not be re-uploaded in a loop');
+}
+
 /* ───────────────────────────────── runner ──────────────────────────────── */
 
 const SCENARIOS = [
@@ -510,6 +561,7 @@ const SCENARIOS = [
   ['a stored token overrides the built-in one', storedTokenOverridesTheBuiltInOne],
   ['stays off when no token exists at all', doesNotArmWithoutAToken],
   ['stays off away from problem pages', doesNotArmOffAProblemPage],
+  ['auto-uploads a partial capture with no failure', autoUploadsAPartialCapture],
   ['delegates uploads to the background worker', uploadsTheStagedBundle],
 ];
 

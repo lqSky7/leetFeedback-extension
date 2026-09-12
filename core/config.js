@@ -154,11 +154,19 @@
       maxBodyChars: 120000,
       maxBundleChars: 12000000,
 
-      // Idle time after the last captured event before an auto-upload is
-      // considered "finished" (used by the sidepanel status line).
+      // Idle time after the last captured event before an auto-upload fires.
+      //
+      // Two values, because the wait exists to let the *next* attempt land, and
+      // what we are waiting for depends on what we already have. Once a pass and
+      // a fail are both captured, the pair is enough to diff the two responses
+      // and name the verdict field, so a short wait suffices. With only passes
+      // (or only fails) we hold a little longer in case the user is about to
+      // submit a failing attempt — but we do not wait for it indefinitely: a
+      // capture with one flow is still worth delivering.
       idleMs: 20000,
+      idleMsNoPair: 60000,
 
-      // Upload automatically once all four flows are observed. Off means the
+      // Upload automatically once something has been captured. Off means the
       // capture is staged and only sent when Send now is pressed.
       autoUpload: true,
 
