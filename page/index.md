@@ -60,6 +60,13 @@ verdict lives). Adapters switch on `phase`.
 - `monaco-bridge.js` is the only way to read editor code *before* a submission.
   The network capture only sees code the user actually submitted, so this is not
   redundant — don't delete it as a "DOM fallback".
+- **The interceptor only logs on the request phase.** `[Traverse][net] fetch <method>
+  <url>` means an outgoing request; the response-phase emit goes through
+  `response.clone().text()` and arrives later (and with a different stack frame).
+  When debugging a verdict that fires at the wrong time, use the request-phase
+  log lines to reconstruct the real event ordering — that is how the LeetCode
+  pending-poll bug was diagnosed (a check request was sent, its empty response
+  arrived before the submit response, and the adapter had no guard).
 
 ## 5. Where to make common changes
 
