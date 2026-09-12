@@ -504,14 +504,28 @@
 
     async handleSuccessfulSubmission(problemInfo, code, language) {
       try {
-        const storedData = await this.storeProblemData({
+        await this.storeProblemData({
           ...problemInfo,
           code,
           language
         }, true);
 
+        // Step 0: Ask how much help was used. Asked BEFORE the backend push so the
+        // answer rides along in the same request. Skipping (or timing out) records 'none'.
+        let assistanceLevel = 'none';
+        try {
+          if (typeof LeetFeedbackHintPrompt !== 'undefined' && LeetFeedbackHintPrompt) {
+            assistanceLevel = await LeetFeedbackHintPrompt.ask();
+            DSAUtils.logDebug(PLATFORM, `Assistance level reported: ${assistanceLevel}`);
+          }
+        } catch (hintError) {
+          DSAUtils.logError(PLATFORM, 'Hint prompt failed, defaulting to none', hintError);
+        }
+
         if (backendAPI) {
-          await backendAPI.pushProblemData(storedData);
+          // Shared helper — the previous pushProblemData() call did not exist on
+          // BackendAPI, so this push silently did nothing until now.
+          await backendAPI.pushCurrentProblemData(this.getCurrentProblemUrl(), { assistanceLevel });
         }
 
         if (githubAPI && githubAPI.isConfigured()) {

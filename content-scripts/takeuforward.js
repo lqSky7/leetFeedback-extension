@@ -615,6 +615,18 @@
         // Store problem data (normal solution)
         await this.storeProblemData(problemInfo, true);
 
+        // Step 0: Ask how much help was used. Asked BEFORE the backend push so the
+        // answer rides along in the same request. Skipping (or timing out) records 'none'.
+        let assistanceLevel = 'none';
+        try {
+          if (typeof LeetFeedbackHintPrompt !== 'undefined' && LeetFeedbackHintPrompt) {
+            assistanceLevel = await LeetFeedbackHintPrompt.ask();
+            debugLog(`[TakeUforward] Assistance level reported: ${assistanceLevel}`);
+          }
+        } catch (hintError) {
+          debugError(`[TakeUforward] Hint prompt failed, defaulting to none:`, hintError);
+        }
+
         // Step 1: Push to Backend API
         debugLog('[TakeUforward] Step 1: Pushing to backend...');
         
@@ -629,7 +641,7 @@
             await backendAPI.initialize();
           }
 
-          const backendResult = await backendAPI.pushCurrentProblemData(problemInfo.url);
+          const backendResult = await backendAPI.pushCurrentProblemData(problemInfo.url, { assistanceLevel });
 
           if (backendResult.success) {
             debugLog('[TakeUforward] Backend push successful!', backendResult.data);

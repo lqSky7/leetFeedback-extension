@@ -211,7 +211,12 @@ class BackendAPI {
   }
 
   // Convert stored problem data to backend API format
-  async formatProblemDataForBackend(storedProblemData) {
+  // assistanceLevel: 'none' | 'hint' | 'solution' | null
+  //   How much help the user reported using on this solve. null when unknown
+  //   (e.g. a caller that never asked). The revision scheduler discounts
+  //   assisted solves, since a solution found with the editorial is not
+  //   evidence of durable recall.
+  async formatProblemDataForBackend(storedProblemData, assistanceLevel = null) {
     try {
       const {
         name,
@@ -321,6 +326,7 @@ class BackendAPI {
         category: mapTopicToCategory(parent_topic), // Map topic to category ID for ML model
         topic: parent_topic[0] || null,
         subtopic: parent_topic[1] || null,
+        assistanceLevel: assistanceLevel,
         attempts: attemptsList,
       };
 
@@ -336,7 +342,8 @@ class BackendAPI {
   }
 
   // Main method to push current problem data from localStorage
-  async pushCurrentProblemData(currentProblemUrl) {
+  // options.assistanceLevel: 'none' | 'hint' | 'solution' | null
+  async pushCurrentProblemData(currentProblemUrl, options = {}) {
     try {
       if (!currentProblemUrl) {
         throw new Error('No current problem URL provided');
@@ -354,7 +361,10 @@ class BackendAPI {
       this._log('[Backend API] Retrieved stored problem data:', storedData);
 
       // Format data for backend API
-      const formattedData = await this.formatProblemDataForBackend(storedData);
+      const formattedData = await this.formatProblemDataForBackend(
+        storedData,
+        options.assistanceLevel ?? null
+      );
 
       // Push to backend
       return await this.pushSubmissionData(formattedData);

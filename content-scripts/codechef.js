@@ -1088,6 +1088,18 @@
         await this.storeProblemData(this.currentProblem, true, totalTries);
         DSAUtils.logDebug(PLATFORM, `Stored problem as solved with ${totalTries} tries`);
 
+        // Step 0: Ask how much help was used. Asked BEFORE the backend push so the
+        // answer rides along in the same request. Skipping (or timing out) records 'none'.
+        let assistanceLevel = 'none';
+        try {
+          if (typeof LeetFeedbackHintPrompt !== 'undefined' && LeetFeedbackHintPrompt) {
+            assistanceLevel = await LeetFeedbackHintPrompt.ask();
+            DSAUtils.logDebug(PLATFORM, `Assistance level reported: ${assistanceLevel}`);
+          }
+        } catch (hintError) {
+          DSAUtils.logError(PLATFORM, 'Hint prompt failed, defaulting to none', hintError);
+        }
+
         // Step 1: Push to Backend API
         DSAUtils.logDebug(PLATFORM, `Step 1: Pushing to backend...`);
         try {
@@ -1104,7 +1116,7 @@
           const currentUrl = this.getCurrentProblemUrl();
           DSAUtils.logDebug(PLATFORM, `Current problem URL: ${currentUrl}`);
 
-          const backendResult = await backendAPI.pushCurrentProblemData(currentUrl);
+          const backendResult = await backendAPI.pushCurrentProblemData(currentUrl, { assistanceLevel });
 
           if (backendResult.success) {
             DSAUtils.logDebug(PLATFORM, `Backend push successful!`, backendResult.data);

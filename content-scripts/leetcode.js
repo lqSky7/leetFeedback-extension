@@ -878,6 +878,18 @@
         await this.storeProblemData(problemInfo, true, totalTries);
         debugLog(`[LeetCode Submission] Stored problem as solved with ${totalTries} tries`);
 
+        // Step 0: Ask how much help was used. Asked BEFORE the backend push so the
+        // answer rides along in the same request. Skipping (or timing out) records 'none'.
+        let assistanceLevel = 'none';
+        try {
+          if (typeof LeetFeedbackHintPrompt !== 'undefined' && LeetFeedbackHintPrompt) {
+            assistanceLevel = await LeetFeedbackHintPrompt.ask();
+            debugLog(`[LeetCode Submission] Assistance level reported: ${assistanceLevel}`);
+          }
+        } catch (hintError) {
+          debugError(`[LeetCode Submission] Hint prompt failed, defaulting to none:`, hintError);
+        }
+
         // Step 1: Push to Backend API
         debugLog(`[LeetCode Submission] Step 1: Pushing to backend...`);
         debugLog(`[LeetCode Debug] BackendAPI available:`, typeof BackendAPI !== 'undefined');
@@ -899,7 +911,7 @@
           const currentUrl = this.getCurrentProblemUrl();
           debugLog(`[LeetCode Submission] Current problem URL: ${currentUrl}`);
 
-          const backendResult = await backendAPI.pushCurrentProblemData(currentUrl);
+          const backendResult = await backendAPI.pushCurrentProblemData(currentUrl, { assistanceLevel });
 
           if (backendResult.success) {
             backendPushSucceeded = true;

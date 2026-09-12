@@ -60,6 +60,7 @@
                 "utils/backend-api.js",
                 "utils/problem-timer.js",
                 "utils/toast.js",
+                "utils/hint-prompt.js",
                 "content-scripts/leetcode.js"
             ],
             "run_at": "document_end"
@@ -76,6 +77,7 @@
                 "utils/backend-api.js",
                 "utils/problem-timer.js",
                 "utils/toast.js",
+                "utils/hint-prompt.js",
                 "content-scripts/geeksforgeeks.js"
             ],
             "run_at": "document_end"
@@ -91,6 +93,7 @@
                 "utils/backend-api.js",
                 "utils/problem-timer.js",
                 "utils/toast.js",
+                "utils/hint-prompt.js",
                 "content-scripts/takeuforward.js"
             ],
             "run_at": "document_end"
@@ -106,6 +109,7 @@
                 "utils/backend-api.js",
                 "utils/problem-timer.js",
                 "utils/toast.js",
+                "utils/hint-prompt.js",
                 "content-scripts/codechef.js"
             ],
             "run_at": "document_end"
@@ -121,6 +125,7 @@
                 "utils/backend-api.js",
                 "utils/problem-timer.js",
                 "utils/toast.js",
+                "utils/hint-prompt.js",
                 "content-scripts/naukri.js"
             ],
             "run_at": "document_end"
