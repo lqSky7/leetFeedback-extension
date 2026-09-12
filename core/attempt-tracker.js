@@ -25,9 +25,8 @@
       this.attempts = state.attempts || [];
       this.runCounter = state.runCounter || 0;
       this.incorrectRunCounter = state.incorrectRunCounter || 0;
-      this.submitCounter = state.submitCounter || 0;
       this.hasAnalyzedMistakes = state.hasAnalyzedMistakes || false;
-      this.shouldAnalyzeWithGemini = state.shouldAnalyzeWithGemini || false;
+      this.shouldAnalyzeWithGemini = state.shouldAnalyzeWithGemini !== undefined ? state.shouldAnalyzeWithGemini : true;
       this.currentSubmissionAttempt = null;
       this.currentRunAttempt = null;
       this.currentSubmissionId = null;

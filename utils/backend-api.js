@@ -350,7 +350,7 @@ class BackendAPI {
         idempotencyKey: idempotencyKey,
         happenedAt: solved.date ? new Date(solved.date).toISOString() : new Date().toISOString(),
         deviceId: 1, // Default device ID
-        shouldAnalyzeWithAI: shouldAnalyzeWithGemini,
+        shouldAnalyzeWithAI: true,
         geminiApiKey: geminiApiKey,
         geminiModel: geminiModel,
         numberOfTries: Number(runCounter) || 1, // Use runCounter (run button presses)
