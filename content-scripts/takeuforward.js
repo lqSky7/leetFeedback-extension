@@ -128,11 +128,24 @@
             await this.handleRunAttempt(this.publicCode, this.selectedLanguage);
           } else if (data.type === 'SUBMISSION_RESPONSE') {
             const res = data.payload || {};
-            const isSuccess = Boolean(res.success);
+            const statusLower = (res.status || '').toLowerCase();
+            const pendingStatuses = ['judging', 'running', 'compiling', 'pending', 'processing', 'queued'];
+            if (pendingStatuses.includes(statusLower)) {
+              this.logger.log(`Submission is pending (${res.status}) — waiting for final verdict...`);
+              return;
+            }
+            const isSuccess = Boolean(res.success || statusLower === 'accepted');
             await this.handleSubmissionResult(isSuccess, res);
           } else if (data.type === 'RUN_RESPONSE') {
             const res = data.payload || {};
-            await this.handleRunResult(Boolean(res.success));
+            const statusLower = (res.status || '').toLowerCase();
+            const pendingStatuses = ['judging', 'running', 'compiling', 'pending', 'processing', 'queued'];
+            if (pendingStatuses.includes(statusLower)) {
+              this.logger.log(`Run is pending (${res.status}) — waiting for final verdict...`);
+              return;
+            }
+            const isSuccess = Boolean(res.success || statusLower === 'accepted');
+            await this.handleRunResult(isSuccess);
           }
         } catch (err) {
           this.logger.error('Error handling TUF message:', err);
