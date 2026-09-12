@@ -1,37 +1,24 @@
-// Fixed background script
+importScripts(
+  'shared/config.js',
+  'shared/logger.js',
+  'shared/events.js'
+);
 
-// Global debug mode cache for background script
-let _bgDebugMode = false;
-
-// Initialize debug mode cache
-chrome.storage.sync.get(['debug_mode'], (data) => {
-  _bgDebugMode = data.debug_mode || false;
-});
-
-// Listen for debug mode changes
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'sync' && changes.debug_mode) {
-    _bgDebugMode = changes.debug_mode.newValue || false;
-  }
-});
+const bgLogger = globalThis.Traverse && globalThis.Traverse.createLogger
+  ? globalThis.Traverse.createLogger('Background')
+  : console;
 
 // Debug-aware logging functions for background script
 function bgLog(...args) {
-  if (_bgDebugMode) {
-    console.log(...args);
-  }
+  bgLogger.log(...args);
 }
 
 function bgError(...args) {
-  if (_bgDebugMode) {
-    console.error(...args);
-  }
+  bgLogger.error(...args);
 }
 
 function bgWarn(...args) {
-  if (_bgDebugMode) {
-    console.warn(...args);
-  }
+  bgLogger.warn(...args);
 }
 
 bgLog("Background script starting...");
@@ -118,29 +105,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Handle getting user solution for GeeksforGeeks
+// Handle getting user solution (deprecated in favor of network interception)
 async function handleGetUserSolution(request, sender, sendResponse) {
-  try {
-    if (request.platform === 'geeksforgeeks') {
-      // Get debug mode first
-      const debugMode = await getDebugMode();
-
-      // Inject script to extract solution from GeeksforGeeks
-      const results = await chrome.scripting.executeScript({
-        target: { tabId: sender.tab.id },
-        func: extractGfGSolution,
-        args: [debugMode]
-      });
-
-      const solution = results[0]?.result || '';
-      sendResponse({ success: true, solution });
-    } else {
-      sendResponse({ success: false, error: 'Platform not supported for solution extraction' });
-    }
-  } catch (error) {
-    bgError('Error getting user solution:', error);
-    sendResponse({ success: false, error: error.message });
-  }
+  sendResponse({
+    success: false,
+    error: 'Direct DOM extraction is deprecated; solutions are captured via network interception.',
+  });
 }
 
 
@@ -168,8 +138,25 @@ async function handleBackendAPIFetch(request, sender, sendResponse) {
     timeoutId = controller
       ? setTimeout(() => controller.abort(), timeoutMs)
       : null;
-    const response = await fetch(url, {
+
+    // Enforce latest auth_token from storage to prevent stale tab tokens
+    const fetchOptions = {
       ...(options || {}),
+      credentials: 'omit', // Prevent ambient browser cookies from overriding Bearer token
+    };
+    if (fetchOptions.headers && fetchOptions.headers.Authorization) {
+      try {
+        const storedAuth = await chrome.storage.local.get(['auth_token']);
+        if (storedAuth && storedAuth.auth_token) {
+          fetchOptions.headers.Authorization = `Bearer ${storedAuth.auth_token}`;
+        }
+      } catch (authErr) {
+        bgWarn('[Background] Failed to re-fetch latest auth_token:', authErr);
+      }
+    }
+
+    const response = await fetch(url, {
+      ...fetchOptions,
       ...(controller ? { signal: controller.signal } : {}),
     });
     const text = await response.text();
@@ -209,135 +196,6 @@ async function getDebugMode() {
   });
 }
 
-// Function to be injected into GeeksforGeeks page
-function extractGfGSolution(debugMode = false) {
-  try {
-    if (debugMode) console.log('[GFG Debug] Starting solution extraction...');
-    let code = '';
-
-    // Method 1: Try to get from ACE editor
-    if (debugMode) console.log('[GFG Debug] Checking ACE editor...');
-    if (window.ace && window.ace.edit) {
-      const editors = document.querySelectorAll('.ace_editor');
-      if (debugMode) console.log('[GFG Debug] Found', editors.length, 'ACE editors');
-      if (editors.length > 0) {
-        try {
-          const editor = window.ace.edit(editors[0]);
-          code = editor.getValue();
-          if (debugMode) console.log('[GFG Debug] ACE editor code length:', code.length);
-          if (code && code.trim().length > 10) {
-            if (debugMode) console.log('[GFG Debug] Successfully extracted from ACE editor');
-            return code;
-          }
-        } catch (e) {
-          if (debugMode) console.log('[GFG Debug] ACE editor error:', e);
-        }
-      }
-    }
-
-    // Method 2: Try to get from CodeMirror
-    if (!code && window.CodeMirror) {
-      if (debugMode) console.log('[GFG Debug] Checking CodeMirror...');
-      const cmElements = document.querySelectorAll('.CodeMirror');
-      if (debugMode) console.log('[GFG Debug] Found', cmElements.length, 'CodeMirror elements');
-      if (cmElements.length > 0) {
-        const cm = cmElements[0].CodeMirror;
-        if (cm) {
-          code = cm.getValue();
-          if (debugMode) console.log('[GFG Debug] CodeMirror code length:', code.length);
-          if (code && code.trim().length > 10) {
-            if (debugMode) console.log('[GFG Debug] Successfully extracted from CodeMirror');
-            return code;
-          }
-        }
-      }
-    }
-
-    // Method 3: Try to get from Monaco editor
-    if (!code && window.monaco && window.monaco.editor) {
-      if (debugMode) console.log('[GFG Debug] Checking Monaco editor...');
-      const models = window.monaco.editor.getModels();
-      if (debugMode) console.log('[GFG Debug] Found', models.length, 'Monaco models');
-      if (models.length > 0) {
-        code = models[0].getValue();
-        if (debugMode) console.log('[GFG Debug] Monaco code length:', code.length);
-        if (code && code.trim().length > 10) {
-          if (debugMode) console.log('[GFG Debug] Successfully extracted from Monaco');
-          return code;
-        }
-      }
-    }
-
-    // Method 4: Try to get from specific textarea with the right content
-    if (debugMode) console.log('[GFG Debug] Checking all textareas for code content...');
-    const allTextareas = document.querySelectorAll('textarea');
-    if (debugMode) console.log('[GFG Debug] Found', allTextareas.length, 'textareas');
-
-    for (let i = 0; i < allTextareas.length; i++) {
-      const textarea = allTextareas[i];
-      const value = textarea.value;
-      if (debugMode) console.log('[GFG Debug] Textarea', i, 'value length:', value.length);
-      if (debugMode) console.log('[GFG Debug] Textarea', i, 'preview:', value.substring(0, 50));
-
-      // Check if this textarea contains actual code (look for common programming patterns)
-      if (value && value.trim().length > 10) {
-        const hasCodePatterns = value.includes('{') ||
-          value.includes('}') ||
-          value.includes('class') ||
-          value.includes('function') ||
-          value.includes('def') ||
-          value.includes('int ') ||
-          value.includes('#include') ||
-          value.includes('public') ||
-          value.includes('return');
-
-        if (hasCodePatterns) {
-          code = value;
-          if (debugMode) console.log('[GFG Debug] Using textarea', i, 'with code patterns detected');
-          if (debugMode) console.log('[GFG Debug] Code preview:', code.substring(0, 200));
-          return code;
-        }
-      }
-    }
-
-    // Method 5: Try to get from DOM elements with line extraction
-    if (!code) {
-      if (debugMode) console.log('[GFG Debug] Checking DOM elements for code lines...');
-      const codeElements = [
-        '.ace_content',
-        '.CodeMirror-code',
-        '.monaco-editor .view-lines',
-        '.ace_text-layer'
-      ];
-
-      for (const selector of codeElements) {
-        const element = document.querySelector(selector);
-        if (element) {
-          if (debugMode) console.log('[GFG Debug] Found element with selector:', selector);
-          // Try to extract code line by line
-          const lines = element.querySelectorAll('.ace_line, .CodeMirror-line, .view-line');
-          if (lines.length > 0) {
-            const codeLines = Array.from(lines).map(line => line.textContent || line.innerText).filter(line => line.trim());
-            if (codeLines.length > 0) {
-              code = codeLines.join('\n');
-              if (debugMode) console.log('[GFG Debug] Extracted', codeLines.length, 'lines of code');
-              if (code.trim().length > 10) {
-                if (debugMode) console.log('[GFG Debug] Successfully extracted from DOM lines');
-                return code;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    if (debugMode) console.log('[GFG Debug] No code found with any method');
-    return code || '';
-  } catch (error) {
-    if (debugMode) console.log('[GFG Debug] Error during extraction:', error);
-    return '';
-  }
-}
 
 async function handleTestGitHubConnection(request, sender, sendResponse) {
   try {
@@ -386,15 +244,40 @@ async function handleInitializeConfig(request, sender, sendResponse) {
 
 bgLog("Background script loaded successfully");
 
+// Reconcile multi-account storage with direct session on startup
+try {
+  chrome.storage.local.get(['auth_token', 'auth_user', 'auth_active_account_id'], (data) => {
+    if (data && data.auth_user && data.auth_token) {
+      const expectedId = `backend:${data.auth_user.id || data.auth_user.username}`;
+      if (data.auth_active_account_id !== expectedId) {
+        chrome.storage.local.set({
+          auth_accounts: [{
+            id: expectedId,
+            user: data.auth_user,
+            token: data.auth_token,
+            timestamp: Date.now()
+          }],
+          auth_active_account_id: expectedId
+        });
+      }
+    }
+  });
+} catch (e) {
+  bgWarn('[Background] Auth reconciliation failed:', e);
+}
+
 // ── Website → Extension Auth Sync via externally_connectable ──
 // When the user logs in or out on traverses.tech or vercel.app, the website pushes auth state directly here.
 chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
-  const allowedOrigins = [
-    'https://traverses.tech',
-    'https://leet-feedback.vercel.app',
-    'http://localhost:5173',
-    'http://localhost:3000',
-  ];
+  const allowedOrigins =
+    (globalThis.Traverse &&
+      globalThis.Traverse.config &&
+      globalThis.Traverse.config.allowedExternalOrigins) || [
+      'https://traverses.tech',
+      'https://leet-feedback.vercel.app',
+      'http://localhost:5173',
+      'http://localhost:3000',
+    ];
 
   const senderUrl = sender.url || '';
   const isAllowed = allowedOrigins.some((origin) => senderUrl.startsWith(origin));
@@ -407,11 +290,20 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
 
   if (request.type === 'AUTH_SYNC' && request.token && request.user) {
     bgLog('[ExtSync] Received auth sync from website for user:', request.user?.username);
+    const accountId = `backend:${request.user.id || request.user.username}`;
+    const account = {
+      id: accountId,
+      user: request.user,
+      token: request.token,
+      timestamp: Date.now(),
+    };
 
     chrome.storage.local.set({
       auth_token: request.token,
       auth_user: request.user,
       auth_timestamp: Date.now(),
+      auth_accounts: [account],
+      auth_active_account_id: accountId,
     }, () => {
       bgLog('[ExtSync] Auth state stored successfully');
       sendResponse({ success: true });

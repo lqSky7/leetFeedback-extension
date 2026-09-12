@@ -30,6 +30,7 @@ function authDbgWarn(...args) {
 class ExtensionAuth {
   constructor(options = {}) {
     this.apiBaseUrl = options.baseUrl || this.getApiBaseUrl();
+    this.websiteBaseUrl = options.websiteBaseUrl || this.getWebsiteBaseUrl();
     this.user = null;
     this.token = null;
     this.isAuthenticated = false;
@@ -51,7 +52,21 @@ class ExtensionAuth {
   }
 
   getApiBaseUrl() {
-    return 'https://neatness-enlarged-curled.ngrok-free.dev';
+    return (
+      (globalThis.Traverse &&
+        globalThis.Traverse.config &&
+        globalThis.Traverse.config.backendBaseURL) ||
+      'https://neatness-enlarged-curled.ngrok-free.dev'
+    );
+  }
+
+  getWebsiteBaseUrl() {
+    return (
+      (globalThis.Traverse &&
+        globalThis.Traverse.config &&
+        globalThis.Traverse.config.websiteBaseURL) ||
+      'https://traverses.tech'
+    );
   }
 
   async init() {
@@ -562,7 +577,7 @@ class ExtensionAuth {
 
     try {
       await chrome.tabs.create({
-        url: this.apiBaseUrl,
+        url: `${this.websiteBaseUrl}/login`,
         active: true,
       });
     } catch (error) {

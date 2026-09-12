@@ -6,10 +6,19 @@
   function syncToExtension(token, user) {
     if (!token || !user) return;
     try {
+      const accountId = `backend:${user.id || user.username}`;
+      const account = {
+        id: accountId,
+        user: user,
+        token: token,
+        timestamp: Date.now(),
+      };
       chrome.storage.local.set({
         auth_token: token,
         auth_user: user,
         auth_timestamp: Date.now(),
+        auth_accounts: [account],
+        auth_active_account_id: accountId,
       }, () => {
         if (chrome.runtime.lastError) {
           console.warn('[TraverseSync] Error saving auth:', chrome.runtime.lastError);

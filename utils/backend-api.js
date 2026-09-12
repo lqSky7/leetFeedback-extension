@@ -56,10 +56,14 @@ function mapTopicToCategory(topics) {
 
 class BackendAPI {
   constructor() {
-    this.baseURL = 'https://neatness-enlarged-curled.ngrok-free.dev';
+    this.baseURL =
+      (globalThis.Traverse &&
+        globalThis.Traverse.config &&
+        globalThis.Traverse.config.backendBaseURL) ||
+      'https://neatness-enlarged-curled.ngrok-free.dev';
     this.authToken = null;
     this.initialized = false;
-    this._log(`[Backend API] BackendAPI constructor called`);
+    this._log(`[Backend API] BackendAPI constructor called, baseURL:`, this.baseURL);
   }
 
   // Debug-aware logging methods
@@ -119,7 +123,34 @@ class BackendAPI {
     }
   }
 
+  async refreshToken() {
+    try {
+      const result = await chrome.storage.local.get([
+        'auth_token',
+        'auth_user',
+        'auth_accounts',
+        'auth_active_account_id',
+      ]);
+      if (result.auth_token) {
+        this.authToken = result.auth_token;
+        this.initialized = true;
+      } else if (Array.isArray(result.auth_accounts) && result.auth_accounts.length > 0) {
+        const active =
+          result.auth_accounts.find((a) => a.id === result.auth_active_account_id) ||
+          result.auth_accounts[0];
+        if (active?.token) {
+          this.authToken = active.token;
+          this.initialized = true;
+        }
+      }
+      return this.authToken;
+    } catch (e) {
+      return this.authToken;
+    }
+  }
+
   async testConnection() {
+    await this.refreshToken();
     if (!this.initialized) {
       await this.initialize();
     }
@@ -150,6 +181,7 @@ class BackendAPI {
 
   async pushSubmissionData(problemData) {
     try {
+      await this.refreshToken();
       if (!this.initialized) {
         this._log('[Backend API] Not initialized, initializing now...');
         const initialized = await this.initialize();
