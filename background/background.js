@@ -43,6 +43,12 @@ chrome.runtime.onInstalled.addListener((details) => {
   });
 
   markSessionRestarted();
+
+  // Drop the legacy recon token override. Nothing reads it any more — the token
+  // is baked into config.js — and leaving it in storage invites the reader to
+  // believe it is live, which is the confusion that made a stale value look
+  // like a working configuration.
+  chrome.storage.local.remove(T.config.recon.keys.token);
 });
 
 chrome.runtime.onStartup.addListener(markSessionRestarted);
@@ -60,7 +66,6 @@ function markSessionRestarted() {
 const RUNTIME_HANDLERS = {
   BACKEND_API_FETCH: handleBackendAPIFetch,
   RECON_UPLOAD: handleReconUpload,
-  RECON_PING: handleReconPing,
 };
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -147,17 +152,47 @@ async function handleBackendAPIFetch(request, sender, sendResponse) {
  */
 
 /**
- * Resolve the recon ingest token.
+ * The recon ingest token.
  *
- * A stored value (set in the sidepanel) wins; otherwise fall back to the
- * token baked into core/config.js. That fallback is what makes recording work
- * for a user who never opens the sidepanel — without it every upload would be
- * rejected 401 because nothing was ever written to storage.
+ * Always the value baked into core/config.js. A stored override used to take
+ * precedence, from back when the sidepanel had a token field. That override is
+ * actively harmful now the field is gone: a value left behind by an older build
+ * keeps winning, so the extension sends a stale token and every upload comes
+ * back 401 — with no UI left to correct it. There is nothing for a user to
+ * configure here, so there is nothing to override.
  */
-async function resolveReconToken() {
-  const reconKeys = T.config.recon.keys;
-  const stored = await chrome.storage.local.get([reconKeys.token]);
-  return stored[reconKeys.token] || T.config.recon.defaultToken || '';
+function resolveReconToken() {
+  return T.config.recon.defaultToken || '';
+}
+
+/**
+ * Turn an upload rejection into something the operator can act on.
+ *
+ * The sidepanel shows this string verbatim, so it is the whole diagnostic. A
+ * bare "RECON_TOKEN_INVALID" gives no hint that the usual cause is a stale
+ * extension build rather than a broken server.
+ */
+function describeUploadFailure(status, data) {
+  const code = data && data.error ? data.error : '';
+
+  if (status === 401) {
+    return (
+      'Token rejected (401). The backend does not recognise this build\'s token — ' +
+      'reload the extension so it picks up the current config, and check that ' +
+      'RECON_INGEST_TOKEN on the server matches config.recon.defaultToken.'
+    );
+  }
+  if (status === 503) {
+    return 'Ingest is disabled on the server (503) — RECON_INGEST_TOKEN is not set there.';
+  }
+  if (status === 413) {
+    return 'Capture too large for the server (413).';
+  }
+  if (status === 429) {
+    return 'Rate limited (429) — too many uploads from this address in a short window.';
+  }
+
+  return code || `Upload failed (${status})`;
 }
 
 async function handleReconUpload(request, sender, sendResponse) {
@@ -166,7 +201,7 @@ async function handleReconUpload(request, sender, sendResponse) {
 
     const stored = await chrome.storage.local.get([reconKeys.bundle]);
     const bundle = stored[reconKeys.bundle];
-    const token = await resolveReconToken();
+    const token = resolveReconToken();
 
     if (!token) {
       sendResponse({ success: false, error: 'No recon token configured' });
@@ -207,7 +242,7 @@ async function handleReconUpload(request, sender, sendResponse) {
       sendResponse({
         success: false,
         status: response.status,
-        error: data.error || `Upload failed (${response.status})`,
+        error: describeUploadFailure(response.status, data),
         data,
       });
       return;

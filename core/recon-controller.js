@@ -439,9 +439,14 @@
     /* ── lifecycle ── */
 
     async init() {
-      const stored = await chrome.storage.local.get([keys.enabled, keys.token]);
+      const stored = await chrome.storage.local.get([keys.enabled]);
       this.enabled = stored[keys.enabled] !== false; // default on
-      this.token = stored[keys.token] || DEFAULT_TOKEN;
+
+      // Always the baked-in token. A stored override used to win, from when the
+      // sidepanel had a token field; it must not any more, or a stale value left
+      // behind by an older build would keep the recorder pointed at a token the
+      // backend rejects, with no UI left to clear it.
+      this.token = DEFAULT_TOKEN;
 
       // Re-arm only when a *setting* changes.
       //
@@ -454,10 +459,6 @@
         let settingsChanged = false;
         if (changes[keys.enabled]) {
           this.enabled = changes[keys.enabled].newValue !== false;
-          settingsChanged = true;
-        }
-        if (changes[keys.token]) {
-          this.token = changes[keys.token].newValue || DEFAULT_TOKEN;
           settingsChanged = true;
         }
 

@@ -454,16 +454,30 @@ async function doesNotArmWithoutAToken() {
   );
 }
 
-/** A stored override must win over the built-in token. */
-async function storedTokenOverridesTheBuiltInOne() {
-  const env = createEnvironment({ storage: { recon_ingest_token: 'override-tok' } });
+/**
+ * A token left in storage must be ignored.
+ *
+ * The sidepanel used to have a token field that wrote `recon_ingest_token`, and
+ * the recorder preferred that stored value. Once the field was removed, a value
+ * left behind by an older build kept winning — so the extension sent a token the
+ * backend rejected (401) on every upload, with no UI left to correct it. The
+ * built-in token is now the only source.
+ */
+async function storedTokenOverrideIsIgnored() {
+  const env = createEnvironment({ storage: { recon_ingest_token: 'stale-token-from-an-older-build' } });
   standardButtons(env);
   loadReconStack(env);
   await sleep(20);
 
   const controller = globalThis.__traverseRecon;
-  assert.strictEqual(controller.token, 'override-tok', 'the stored token must take precedence');
-  assert.strictEqual(env.localStore.recon_status.armed, true);
+  const builtIn = globalThis.Traverse.config.recon.defaultToken;
+
+  assert.strictEqual(
+    controller.token,
+    builtIn,
+    'a stale stored token must not override the built-in one'
+  );
+  assert.strictEqual(env.localStore.recon_status.armed, true, 'recording still works');
 }
 
 async function doesNotArmOffAProblemPage() {
@@ -558,7 +572,7 @@ const SCENARIOS = [
   ['ignores weak tokens and substring false positives', weakTokensDoNotInventVerdicts],
   ['stays off LeetCode and unmapped hosts', doesNotArmOnExcludedOrUnknownHosts],
   ['arms with the built-in token and no user setup', armsWithBuiltInTokenAndNoSetup],
-  ['a stored token overrides the built-in one', storedTokenOverridesTheBuiltInOne],
+  ['a stale stored token is ignored', storedTokenOverrideIsIgnored],
   ['stays off when no token exists at all', doesNotArmWithoutAToken],
   ['stays off away from problem pages', doesNotArmOffAProblemPage],
   ['auto-uploads a partial capture with no failure', autoUploadsAPartialCapture],

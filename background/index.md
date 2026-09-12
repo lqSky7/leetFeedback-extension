@@ -68,11 +68,16 @@ session.
   and sends an empty message. Inlining the bundle would hit the IPC message-size
   ceiling and silently truncate the capture.
 - `RECON_UPLOAD` is the **only** place the `X-Recon-Token` header is attached,
-  and it goes through `resolveReconToken()`. That helper is load-bearing: it
-  prefers a stored override and otherwise falls back to
-  `config.recon.defaultToken`. Read the token directly from storage instead and
-  every upload from a user who never opened the sidepanel 401s — which is
-  exactly the bug the fallback exists to prevent.
+  and it goes through `resolveReconToken()`. That helper returns
+  `config.recon.defaultToken` and nothing else. It must **not** consult storage:
+  a stored override used to take precedence, and once the sidepanel's token field
+  was removed that left any value from an older build winning forever — every
+  upload 401'd with no UI left to correct it. The legacy key is cleared on
+  install, but the invariant is that the built-in token is the only source.
+- Upload rejections are turned into prose by `describeUploadFailure()`. The
+  sidepanel prints that string verbatim, so a bare error code is a dead end for
+  whoever has to debug it — a 401 names the stale-build cause and the server
+  variable to compare against.
 - Recon upload failures are returned as `{ success: false, error }` rather than
   thrown, because the caller is a UI action and needs a message to render.
 - `AUTH_SYNC` replaces the whole `auth_accounts` array with a single entry —

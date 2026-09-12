@@ -86,10 +86,16 @@ via `window.LeetFeedbackToast` / `window.LeetFeedbackHintPrompt` /
   build shipped with an empty `defaultToken` and no stored override stays idle.
 - **Recording must never require user setup.** The baked-in token exists so that
   someone who installs the extension and just opens a problem page contributes
-  captures without ever opening the sidepanel. A stored override is not a
-  prerequisite either. `tests/recon.test.js` pins this ("arms with the built-in
-  token and no user setup") — a change that reintroduces a mandatory setup step
-  breaks that scenario, and with it the whole point of the feature.
+  captures without ever opening the sidepanel. `tests/recon.test.js` pins this
+  ("arms with the built-in token and no user setup") — a change that reintroduces
+  a mandatory setup step breaks that scenario, and with it the whole point of the
+  feature.
+- **The built-in token is the only source; storage is not consulted.** A stored
+  override used to take precedence, back when the sidepanel had a token field.
+  Removing the field without removing the override is what broke uploads: a value
+  left in `recon_ingest_token` by an older build kept winning, so every upload was
+  rejected 401 with no UI left to clear it. `tests/recon.test.js` pins the
+  ignore ("a stale stored token is ignored").
 - **Delivery must not wait for a complete session.** The four flows describe what
   a *complete* picture looks like, not a precondition. Auto-upload fires once the
   page goes quiet (`scheduleAutoUpload`), with a longer quiet period when there is

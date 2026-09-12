@@ -1532,7 +1532,7 @@ class PopupController {
 
   async renderReconStatus() {
     const keys = this.reconKeys();
-    const stored = await chrome.storage.local.get([keys.status, keys.token]);
+    const stored = await chrome.storage.local.get([keys.status]);
     const status = stored[keys.status] || {};
 
     // Whether recording is possible comes from the controller, which resolves

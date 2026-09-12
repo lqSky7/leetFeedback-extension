@@ -27,7 +27,7 @@ remaining migration phases live in [REFACTOR_PLAN.md](REFACTOR_PLAN.md).
 | `ui/` | Content-script UI: toasts, submission card, hint prompt | [`ui/index.md`](ui/index.md) |
 | `background/` | Service worker: backend request proxy + auth storage owner | [`background/index.md`](background/index.md) |
 | `sidepanel/` | The extension's own UI (HTML/CSS/JS), unchanged visually | [`sidepanel/index.md`](sidepanel/index.md) |
-| `tests/` | Node scripts, no test runner: `smoke.test.js` (platform-adapter stack), `recon.test.js` (recon controller), `auth.test.js`, `g4f-api-test.mjs`. Run them directly with `node` | — |
+| `tests/` | Node scripts, no test runner: `smoke.test.js` (platform-adapter stack), `recon.test.js` (recon controller), `background.test.js` (worker loads + its router is wired), `auth.test.js`, `g4f-api-test.mjs`. Run them directly with `node` | — |
 | `icons/`, `fonts/` | Static assets | — |
 
 ---
@@ -149,6 +149,13 @@ off for LeetCode, TakeUforward, and Traverse's own surfaces. See
     indistinguishable from one that was never taken. The pass/fail pair earns a
     longer wait (it is what lets the backend name the verdict field) but is never
     a precondition.
+14. **The background worker must be loadable.** `node --check` validates syntax
+    only, so a handler deleted from `background.js` while its `RUNTIME_HANDLERS`
+    entry survives passes every lint and then throws `ReferenceError` on worker
+    start — the worker never registers `onMessage`, and every sidepanel
+    `sendMessage` hangs forever with no error. That is a UI freeze, not a crash,
+    so it is invisible unless something loads the worker. `tests/background.test.js`
+    does; run it after touching that file.
 
 ---
 
