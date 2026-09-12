@@ -267,9 +267,23 @@
 
           if (response.success && response.data) {
             const data = response.data;
+            const status = (data.status || '').trim();
+            const statusLower = status.toLowerCase();
+
+            const pendingStatuses = [
+              '', 'null', 'undefined', 'judging', 'running', 'compiling',
+              'pending', 'processing', 'queued', 'in progress', 'in-progress',
+              'testing', 'evaluating', 'executing', 'submitted'
+            ];
+
+            if (!status || pendingStatuses.includes(statusLower)) {
+              log('[Interceptor] TUF submission check pending:', status);
+              return;
+            }
+
             const submissionData = {
-              success: data.status === 'Accepted',
-              status: data.status,
+              success: statusLower === 'accepted',
+              status: status,
               totalTestCases: data.total_test_cases,
               passedTestCases: data.passed_test_cases,
               averageTime: data.time + 's',
@@ -294,9 +308,23 @@
 
           if (response.success && response.data) {
             const data = response.data;
+            const status = (data.status || '').trim();
+            const statusLower = status.toLowerCase();
+
+            const pendingStatuses = [
+              '', 'null', 'undefined', 'judging', 'running', 'compiling',
+              'pending', 'processing', 'queued', 'in progress', 'in-progress',
+              'testing', 'evaluating', 'executing', 'submitted'
+            ];
+
+            if (!status || pendingStatuses.includes(statusLower)) {
+              log('[Interceptor] TUF run check pending:', status);
+              return;
+            }
+
             const runData = {
-              success: data.status === 'Accepted',
-              status: data.status,
+              success: statusLower === 'accepted',
+              status: status,
               totalTestCases: data.total_test_cases,
               passedTestCases: data.passed_test_cases,
             };

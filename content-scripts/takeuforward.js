@@ -128,20 +128,28 @@
             await this.handleRunAttempt(this.publicCode, this.selectedLanguage);
           } else if (data.type === 'SUBMISSION_RESPONSE') {
             const res = data.payload || {};
-            const statusLower = (res.status || '').toLowerCase();
-            const pendingStatuses = ['judging', 'running', 'compiling', 'pending', 'processing', 'queued'];
-            if (pendingStatuses.includes(statusLower)) {
-              this.logger.log(`Submission is pending (${res.status}) — waiting for final verdict...`);
+            const statusLower = (res.status || '').toLowerCase().trim();
+            const pendingStatuses = [
+              '', 'null', 'undefined', 'judging', 'running', 'compiling',
+              'pending', 'processing', 'queued', 'in progress', 'in-progress',
+              'testing', 'evaluating', 'executing', 'submitted'
+            ];
+            if (!res.status || pendingStatuses.includes(statusLower)) {
+              this.logger.log(`Submission is pending (${res.status || 'waiting'}) — waiting for final verdict...`);
               return;
             }
             const isSuccess = Boolean(res.success || statusLower === 'accepted');
             await this.handleSubmissionResult(isSuccess, res);
           } else if (data.type === 'RUN_RESPONSE') {
             const res = data.payload || {};
-            const statusLower = (res.status || '').toLowerCase();
-            const pendingStatuses = ['judging', 'running', 'compiling', 'pending', 'processing', 'queued'];
-            if (pendingStatuses.includes(statusLower)) {
-              this.logger.log(`Run is pending (${res.status}) — waiting for final verdict...`);
+            const statusLower = (res.status || '').toLowerCase().trim();
+            const pendingStatuses = [
+              '', 'null', 'undefined', 'judging', 'running', 'compiling',
+              'pending', 'processing', 'queued', 'in progress', 'in-progress',
+              'testing', 'evaluating', 'executing', 'submitted'
+            ];
+            if (!res.status || pendingStatuses.includes(statusLower)) {
+              this.logger.log(`Run is pending (${res.status || 'waiting'}) — waiting for final verdict...`);
               return;
             }
             const isSuccess = Boolean(res.success || statusLower === 'accepted');

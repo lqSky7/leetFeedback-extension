@@ -189,10 +189,14 @@
     }
 
     async handleSubmissionResult(isAccepted, stats = {}, checkData = null) {
-      const statusLower = (stats.status || checkData?.status_msg || '').toLowerCase();
-      const pendingStatuses = ['judging', 'running', 'compiling', 'pending', 'processing', 'queued'];
-      if (!isAccepted && pendingStatuses.includes(statusLower)) {
-        this.logger.log(`Submission in intermediate state (${statusLower}) — waiting for final verdict...`);
+      const statusLower = (stats.status || checkData?.status_msg || '').toLowerCase().trim();
+      const pendingStatuses = [
+        '', 'null', 'undefined', 'judging', 'running', 'compiling',
+        'pending', 'processing', 'queued', 'in progress', 'in-progress',
+        'testing', 'evaluating', 'executing', 'submitted'
+      ];
+      if (!isAccepted && (!statusLower || pendingStatuses.includes(statusLower))) {
+        this.logger.log(`Submission in intermediate state (${statusLower || 'empty'}) — waiting for final verdict...`);
         return;
       }
 

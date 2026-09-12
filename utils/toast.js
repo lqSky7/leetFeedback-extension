@@ -311,16 +311,18 @@ class SubmissionTracker {
     }
 
     succeed(msg = 'Synced') {
-        this._transitionTo('launching', () => {
-            this._setText(msg);
-            if (this.orbiter) {
-                this.orbiter.className = 'lfb-sync-orbiter lfb-state-success';
-            }
-            setTimeout(() => this.dismiss(), 1800);
-        });
+        this.isDismissed = false;
+        this.state = 'launching';
+        this.timestamps['launching'] = Date.now();
+        this._setText(msg);
+        if (this.orbiter) {
+            this.orbiter.className = 'lfb-sync-orbiter lfb-state-success';
+        }
+        setTimeout(() => this.dismiss(true), 2500);
     }
 
     fail(errorMsg = 'Failed') {
+        if (this.state === 'launching') return; // Do not overwrite successful sync
         this.isDismissed = true;
         this.state = 'failed';
         this._setText(errorMsg);
