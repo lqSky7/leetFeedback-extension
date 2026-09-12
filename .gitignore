@@ -1,2 +1,8 @@
 **/.DS_Store
 testing/
+node_modules/
+dist/
+coverage/
+.vite/
+*.log
+.interview-prep/
