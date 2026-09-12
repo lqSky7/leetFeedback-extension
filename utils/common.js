@@ -15,8 +15,12 @@ let _debugModeCacheInitialized = false;
 // Initialize debug mode cache on load
 (async function initDebugCache() {
   try {
-    const result = await chrome.storage.sync.get(['debug_mode']);
-    _debugModeCache = result.debug_mode || false;
+    if (globalThis.Traverse && globalThis.Traverse.logger) {
+      _debugModeCache = globalThis.Traverse.logger.isDebugMode();
+    } else {
+      const result = await chrome.storage.sync.get(['debug_mode']);
+      _debugModeCache = result.debug_mode || false;
+    }
     _debugModeCacheInitialized = true;
   } catch (e) {
     // Ignore - storage may not be available
@@ -39,7 +43,9 @@ try {
  * @param {...any} args - Arguments to pass to console.log
  */
 function debugLog(...args) {
-  if (_debugModeCache) {
+  if (globalThis.Traverse && globalThis.Traverse.logger) {
+    globalThis.Traverse.logger.log('', ...args);
+  } else if (_debugModeCache) {
     console.log(...args);
   }
 }
@@ -49,7 +55,9 @@ function debugLog(...args) {
  * @param {...any} args - Arguments to pass to console.error
  */
 function debugError(...args) {
-  if (_debugModeCache) {
+  if (globalThis.Traverse && globalThis.Traverse.logger) {
+    globalThis.Traverse.logger.error('', ...args);
+  } else if (_debugModeCache) {
     console.error(...args);
   }
 }
@@ -59,7 +67,9 @@ function debugError(...args) {
  * @param {...any} args - Arguments to pass to console.warn
  */
 function debugWarn(...args) {
-  if (_debugModeCache) {
+  if (globalThis.Traverse && globalThis.Traverse.logger) {
+    globalThis.Traverse.logger.warn('', ...args);
+  } else if (_debugModeCache) {
     console.warn(...args);
   }
 }
@@ -69,6 +79,9 @@ function debugWarn(...args) {
  * @returns {boolean}
  */
 function isDebugMode() {
+  if (globalThis.Traverse && globalThis.Traverse.logger) {
+    return globalThis.Traverse.logger.isDebugMode();
+  }
   return _debugModeCache;
 }
 
@@ -251,8 +264,8 @@ class DSAUtils {
     }
   }
 
-  static async getDebugMode() {
-    return _debugModeCache;
+  static getDebugMode() {
+    return isDebugMode();
   }
 }
 

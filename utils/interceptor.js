@@ -3,15 +3,18 @@
 (function () {
   'use strict';
 
-  // Debug mode will be loaded from storage
-  let DEBUG_MODE = false;
-  
+  // Debug mode will be loaded from storage or window
+  let DEBUG_MODE = Boolean(window.TRAVERSE_DEBUG_MODE);
+
   // Load debug mode from storage
   if (typeof chrome !== 'undefined' && chrome.storage) {
-    chrome.storage.local.get(['tuf_debug_mode', 'leetcode_debug_mode'], (result) => {
-      DEBUG_MODE = result.tuf_debug_mode || result.leetcode_debug_mode || false;
-      log('[Interceptor] Debug mode loaded:', DEBUG_MODE);
-    });
+    const area = chrome.storage.sync || chrome.storage.local;
+    if (area && area.get) {
+      area.get(['debug_mode', 'tuf_debug_mode', 'leetcode_debug_mode'], (result) => {
+        DEBUG_MODE = result.debug_mode || result.tuf_debug_mode || result.leetcode_debug_mode || false;
+        log('[Interceptor] Debug mode loaded:', DEBUG_MODE);
+      });
+    }
   }
   
   function log(...args) {

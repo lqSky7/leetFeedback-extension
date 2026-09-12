@@ -53,6 +53,13 @@
                 "https://*.leetcode.com/*"
             ],
             "js": [
+                "shared/config.js",
+                "shared/logger.js",
+                "shared/events.js",
+                "core/session-store.js",
+                "core/attempt-tracker.js",
+                "core/platform-adapter.js",
+                "core/submission-pipeline.js",
                 "utils/common.js",
                 "utils/github-api.js",
                 "utils/gemini-api.js",
@@ -70,6 +77,13 @@
                 "https://practice.geeksforgeeks.org/*"
             ],
             "js": [
+                "shared/config.js",
+                "shared/logger.js",
+                "shared/events.js",
+                "core/session-store.js",
+                "core/attempt-tracker.js",
+                "core/platform-adapter.js",
+                "core/submission-pipeline.js",
                 "utils/common.js",
                 "utils/github-api.js",
                 "utils/gemini-api.js",
@@ -86,6 +100,13 @@
                 "https://*.takeuforward.org/*"
             ],
             "js": [
+                "shared/config.js",
+                "shared/logger.js",
+                "shared/events.js",
+                "core/session-store.js",
+                "core/attempt-tracker.js",
+                "core/platform-adapter.js",
+                "core/submission-pipeline.js",
                 "utils/common.js",
                 "utils/github-api.js",
                 "utils/gemini-api.js",
@@ -102,6 +123,13 @@
                 "https://*.codechef.com/*"
             ],
             "js": [
+                "shared/config.js",
+                "shared/logger.js",
+                "shared/events.js",
+                "core/session-store.js",
+                "core/attempt-tracker.js",
+                "core/platform-adapter.js",
+                "core/submission-pipeline.js",
                 "utils/common.js",
                 "utils/github-api.js",
                 "utils/gemini-api.js",
@@ -118,6 +146,13 @@
                 "https://*.naukri.com/*"
             ],
             "js": [
+                "shared/config.js",
+                "shared/logger.js",
+                "shared/events.js",
+                "core/session-store.js",
+                "core/attempt-tracker.js",
+                "core/platform-adapter.js",
+                "core/submission-pipeline.js",
                 "utils/common.js",
                 "utils/github-api.js",
                 "utils/gemini-api.js",
@@ -161,7 +196,12 @@
                 "utils/monaco-bridge.js"
             ],
             "matches": [
-                "<all_urls>"
+                "https://*.leetcode.com/*",
+                "https://*.geeksforgeeks.org/*",
+                "https://practice.geeksforgeeks.org/*",
+                "https://*.takeuforward.org/*",
+                "https://*.codechef.com/*",
+                "https://*.naukri.com/*"
             ]
         }
     ]
