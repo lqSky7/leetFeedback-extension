@@ -221,13 +221,10 @@ class ProblemTimer {
       return 0;
     }
 
-    // Hard cap at 2 hours for TakeUforward
-    const isTakeUforward = window.location.href.includes('takeuforward.org');
-    if (isTakeUforward) {
-      const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 7,200,000 milliseconds
-      if (elapsed > TWO_HOURS_MS) {
-        return TWO_HOURS_MS;
-      }
+    // Hard cap at 2 hours for all platforms
+    const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 7,200,000 milliseconds
+    if (elapsed > TWO_HOURS_MS) {
+      return TWO_HOURS_MS;
     }
 
     return elapsed;
@@ -342,36 +339,33 @@ class ProblemTimer {
       const result = await chrome.storage.local.get([storageKey]);
       const problemData = result[storageKey] || {};
 
-      const isTakeUforward = window.location.href.includes('takeuforward.org');
-      if (isTakeUforward) {
-        const isSolved = problemData.solved && problemData.solved.value;
-        const now = Date.now();
-        const lastActiveTime = problemData.lastActiveTime || 0;
-        const lastTimestamp = problemData.timestamp ? new Date(problemData.timestamp).getTime() : 0;
-        const referenceTime = lastActiveTime || lastTimestamp;
+      const isSolved = problemData.solved && problemData.solved.value;
+      const now = Date.now();
+      const lastActiveTime = problemData.lastActiveTime || 0;
+      const lastTimestamp = problemData.timestamp ? new Date(problemData.timestamp).getTime() : 0;
+      const referenceTime = lastActiveTime || lastTimestamp;
 
-        const INACTIVITY_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
+      const INACTIVITY_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
 
-        if (isSolved || (referenceTime && (now - referenceTime > INACTIVITY_TIMEOUT))) {
-          this._log("[ProblemTimer] Solved or inactive for too long. Starting fresh timer.");
-          this.startTime = null;
-          this.pausedTime = 0;
-          this.isPaused = false;
-          this.pausedAt = null;
+      if (isSolved || (referenceTime && (now - referenceTime > INACTIVITY_TIMEOUT))) {
+        this._log("[ProblemTimer] Solved or inactive for too long. Starting fresh timer.");
+        this.startTime = null;
+        this.pausedTime = 0;
+        this.isPaused = false;
+        this.pausedAt = null;
+        return;
+      }
+
+      // If resuming within timeout, adjust pausedTime for offline/closed tab duration
+      if (referenceTime && !problemData.isPaused) {
+        const offlineDuration = now - referenceTime;
+        if (offlineDuration > 0) {
+          this.startTime = problemData.problemStartTime;
+          this.pausedTime = (problemData.pausedTime || 0) + offlineDuration;
+          this.isPaused = !!problemData.isPaused;
+          this.pausedAt = problemData.pausedAt || null;
+          this._log(`[ProblemTimer] Adjusted pausedTime by ${Math.floor(offlineDuration / 1000)}s for offline duration`);
           return;
-        }
-
-        // If resuming within timeout, adjust pausedTime for offline/closed tab duration
-        if (referenceTime && !problemData.isPaused) {
-          const offlineDuration = now - referenceTime;
-          if (offlineDuration > 0) {
-            this.startTime = problemData.problemStartTime;
-            this.pausedTime = (problemData.pausedTime || 0) + offlineDuration;
-            this.isPaused = !!problemData.isPaused;
-            this.pausedAt = problemData.pausedAt || null;
-            this._log(`[ProblemTimer] Adjusted pausedTime by ${Math.floor(offlineDuration / 1000)}s for offline duration`);
-            return;
-          }
         }
       }
 
@@ -495,39 +489,50 @@ class ProblemTimer {
       top: ${this.currentY}px;
       left: ${this.currentX}px;
       z-index: 2147483647;
-      background: rgba(0, 0, 0, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
+      background: rgba(10, 10, 10, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 10px;
       padding: 0 0 0 14px;
-      color: white;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
-      font-size: 14px;
-      font-weight: 500;
+      color: #FFFFFF;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
       display: flex;
       align-items: center;
       height: 38px;
-      opacity: 0.6;
-      transition: opacity 0.2s ease, transform 0.2s ease;
+      opacity: 0.75;
+      transition: opacity 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
       cursor: move;
       user-select: none;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      box-shadow: none;
       overflow: hidden;
     `;
 
     // Timer icon
     const icon = document.createElement("span");
-    icon.style.cssText = `font-size: 16px; opacity: 0.8; margin-right: 8px; flex-shrink: 0;`;
-    icon.textContent = "⏱";
+    icon.style.cssText = `
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #276EF1;
+      margin-right: 10px;
+      flex-shrink: 0;
+    `;
 
     // Time display
     const timeDisplay = document.createElement("span");
     timeDisplay.id = "leetfeedback-timer-time";
     timeDisplay.style.cssText = `
-      min-width: 60px;
+      min-width: 58px;
       font-variant-numeric: tabular-nums;
+      font-family: -apple-system, BlinkMacSystemFont, 'SFMono-Regular', Consolas, monospace;
       letter-spacing: 0.5px;
       margin-right: 12px;
       flex-shrink: 0;
+      color: #FFFFFF;
     `;
     timeDisplay.textContent = "00:00";
 
@@ -537,7 +542,7 @@ class ProblemTimer {
       div.style.cssText = `
         width: 1px;
         height: 100%;
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.12);
         flex-shrink: 0;
       `;
       return div;
@@ -549,7 +554,7 @@ class ProblemTimer {
     pauseBtn.style.cssText = `
       background: transparent;
       border: none;
-      color: rgba(255, 255, 255, 0.6);
+      color: #A6A6A6;
       height: 100%;
       padding: 0 14px;
       cursor: pointer;
@@ -557,7 +562,7 @@ class ProblemTimer {
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
       flex-shrink: 0;
     `;
     pauseBtn.textContent = this.isPaused ? "▶" : "⏸";
@@ -565,11 +570,11 @@ class ProblemTimer {
 
     pauseBtn.addEventListener("mouseover", () => {
       pauseBtn.style.background = "rgba(255, 255, 255, 0.1)";
-      pauseBtn.style.color = "white";
+      pauseBtn.style.color = "#FFFFFF";
     });
     pauseBtn.addEventListener("mouseout", () => {
       pauseBtn.style.background = "transparent";
-      pauseBtn.style.color = "rgba(255, 255, 255, 0.6)";
+      pauseBtn.style.color = "#A6A6A6";
     });
     pauseBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
@@ -585,15 +590,15 @@ class ProblemTimer {
     resetBtn.style.cssText = `
       background: transparent;
       border: none;
-      color: rgba(255, 255, 255, 0.6);
+      color: #A6A6A6;
       height: 100%;
       padding: 0 14px;
       cursor: pointer;
-      font-size: 11px;
+      font-size: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
       flex-shrink: 0;
     `;
     resetBtn.textContent = "↺";
@@ -601,11 +606,11 @@ class ProblemTimer {
 
     resetBtn.addEventListener("mouseover", () => {
       resetBtn.style.background = "rgba(255, 255, 255, 0.1)";
-      resetBtn.style.color = "white";
+      resetBtn.style.color = "#FFFFFF";
     });
     resetBtn.addEventListener("mouseout", () => {
       resetBtn.style.background = "transparent";
-      resetBtn.style.color = "rgba(255, 255, 255, 0.6)";
+      resetBtn.style.color = "#A6A6A6";
     });
     resetBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -617,16 +622,15 @@ class ProblemTimer {
     closeBtn.style.cssText = `
       background: transparent;
       border: none;
-      color: rgba(255, 255, 255, 0.6);
+      color: #8A8A8A;
       height: 100%;
       padding: 0 14px;
-      border-radius: 0 11px 11px 0;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 15px;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
       flex-shrink: 0;
     `;
     closeBtn.textContent = "×";
@@ -634,11 +638,11 @@ class ProblemTimer {
 
     closeBtn.addEventListener("mouseover", () => {
       closeBtn.style.background = "rgba(255, 255, 255, 0.1)";
-      closeBtn.style.color = "white";
+      closeBtn.style.color = "#FFFFFF";
     });
     closeBtn.addEventListener("mouseout", () => {
       closeBtn.style.background = "transparent";
-      closeBtn.style.color = "rgba(255, 255, 255, 0.6)";
+      closeBtn.style.color = "#8A8A8A";
     });
     closeBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -797,13 +801,10 @@ class ProblemTimer {
     timeDisplay.textContent = timeStr;
 
     // Periodically update lastActiveTime in storage (once per minute) to prevent session timeouts
-    const isTakeUforward = window.location.href.includes('takeuforward.org');
-    if (isTakeUforward) {
-      const now = Date.now();
-      if (!this.lastSaveTime || now - this.lastSaveTime > 60000) { // 1 minute
-        this.lastSaveTime = now;
-        this.saveToStorage().catch(err => this._error("[ProblemTimer] Periodical save failed:", err));
-      }
+    const now = Date.now();
+    if (!this.lastSaveTime || now - this.lastSaveTime > 60000) { // 1 minute
+      this.lastSaveTime = now;
+      this.saveToStorage().catch(err => this._error("[ProblemTimer] Periodical save failed:", err));
     }
   }
 }

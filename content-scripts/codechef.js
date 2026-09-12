@@ -24,6 +24,8 @@
       this.shouldAnalyzeWithGemini = false;
       this.aiAnalysis = null;
       this.aiTags = [];
+      this.cognitiveTier = null;
+      this.recallScore = null;
       this.topics = [];
       this.currentProblemUrl = null;
     }
@@ -78,6 +80,8 @@
           this.shouldAnalyzeWithGemini = problemData.shouldAnalyzeWithGemini || false;
           this.aiAnalysis = problemData.aiAnalysis || null;
           this.aiTags = problemData.aiTags || [];
+          this.cognitiveTier = problemData.cognitiveTier ?? null;
+          this.recallScore = problemData.recallScore ?? null;
           this.currentProblemUrl = problemData.currentProblemUrl || currentUrl;
           this.topics = problemData.parent_topic || [];
 
@@ -99,6 +103,9 @@
         const result = await chrome.storage.local.get([`problem_data_${currentUrl}`]);
         let problemData = result[`problem_data_${currentUrl}`] || {};
 
+        // Get time values from ProblemTimer utility
+        const timer = window.ProblemTimer ? window.ProblemTimer.getInstance() : null;
+
         // Merge tracking state into problem data
         problemData = {
           ...problemData,
@@ -110,8 +117,12 @@
           shouldAnalyzeWithGemini: overrides.shouldAnalyzeWithGemini ?? this.shouldAnalyzeWithGemini,
           aiAnalysis: overrides.aiAnalysis ?? this.aiAnalysis,
           aiTags: overrides.aiTags ?? this.aiTags,
+          cognitiveTier: overrides.cognitiveTier ?? this.cognitiveTier,
+          recallScore: overrides.recallScore ?? this.recallScore,
           currentProblemUrl: overrides.currentProblemUrl ?? this.currentProblemUrl,
           parent_topic: overrides.parent_topic ?? this.topics,
+          problemStartTime: timer?.getStartTime() || problemData.problemStartTime || Date.now(),
+          pausedTime: timer?.getPausedTime() || problemData.pausedTime || 0,
           timestamp: overrides.timestamp ?? new Date().toISOString()
         };
 
@@ -153,6 +164,8 @@
           };
         }
 
+        const timer = window.ProblemTimer ? window.ProblemTimer.getInstance() : null;
+
         const problemData = {
           ...existingData,
           name: problemInfo.title || existingData.name || 'Unknown Problem',
@@ -173,6 +186,8 @@
           aiAnalysis: this.aiAnalysis || null,
           aiTags: this.aiTags || [],
           currentProblemUrl: this.currentProblemUrl || currentUrl,
+          problemStartTime: timer?.getStartTime() || existingData.problemStartTime || Date.now(),
+          pausedTime: timer?.getPausedTime() || existingData.pausedTime || 0,
           timestamp: new Date().toISOString()
         };
 
@@ -1064,55 +1079,9 @@
         // Calculate total tries
         const totalTries = totalRunCounter + 1; // +1 for the successful submission
 
-        // Step 0: Run Gemini analysis if flagged (before backend push)
-        // Step 0: Run Gemini analysis if flagged (before backend push)
-        if (this.shouldAnalyzeWithGemini) {
-          DSAUtils.logDebug(PLATFORM, `Step 0: Running Gemini analysis before backend push...`);
-          try {
-            const geminiAPI = new GeminiAPI();
-            const geminiConfigured = await geminiAPI.initialize();
-
-            if (geminiConfigured) {
-              // Send ALL attempts (not just failed) to Gemini for full context
-              const allAttempts = this.attempts.filter(a => a.code && a.code.length > 10);
-              DSAUtils.logDebug(PLATFORM, `Sending ${allAttempts.length} code iterations to Gemini`);
-
-              if (this.submissionTracker) {
-                this.submissionTracker.setAIStarted();
-              }
-
-              const geminiResult = await geminiAPI.analyzeMistakes(allAttempts, this.currentProblem);
-
-              if (geminiResult.success) {
-                this.aiAnalysis = geminiResult.analysis;
-                this.aiTags = geminiResult.tags || [];
-                DSAUtils.logDebug(PLATFORM, `Gemini analysis complete. Tags: ${this.aiTags.join(', ')}`);
-                if (this.submissionTracker) {
-                  this.submissionTracker.setAIComplete();
-                }
-              } else {
-                DSAUtils.logDebug(PLATFORM, `Gemini analysis failed: ${geminiResult.error}`);
-                if (this.submissionTracker) {
-                  this.submissionTracker.setAISkipped();
-                }
-              }
-            } else {
-              DSAUtils.logDebug(PLATFORM, `Gemini API key not configured - skipping analysis`);
-              if (this.submissionTracker) {
-                this.submissionTracker.setAISkipped();
-              }
-            }
-          } catch (error) {
-            DSAUtils.logError(PLATFORM, `Gemini analysis error:`, error);
-            if (this.submissionTracker) {
-              this.submissionTracker.setAISkipped();
-            }
-            // Continue with submission even if Gemini fails
-          }
-        } else {
-          if (this.submissionTracker) {
+        // AI analysis now happens server-side after submission
+        if (this.submissionTracker) {
             this.submissionTracker.setAISkipped();
-          }
         }
 
         // Store problem data with AI analysis (will be picked up by backend push)
@@ -1194,6 +1163,8 @@
         this.shouldAnalyzeWithGemini = false;
         this.aiAnalysis = null;
         this.aiTags = [];
+        this.cognitiveTier = null;
+        this.recallScore = null;
 
         // Persist final state
         await this.savePersistedState({
@@ -1203,7 +1174,9 @@
           hasAnalyzedMistakes: false,
           shouldAnalyzeWithGemini: false,
           aiAnalysis: null,
-          aiTags: []
+          aiTags: [],
+          cognitiveTier: null,
+          recallScore: null
         });
 
       } catch (error) {

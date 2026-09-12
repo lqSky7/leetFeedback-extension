@@ -385,3 +385,57 @@ async function handleInitializeConfig(request, sender, sendResponse) {
 }
 
 bgLog("Background script loaded successfully");
+
+// ── Website → Extension Auth Sync via externally_connectable ──
+// When the user logs in or out on traverses.tech or vercel.app, the website pushes auth state directly here.
+chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
+  const allowedOrigins = [
+    'https://traverses.tech',
+    'https://leet-feedback.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ];
+
+  const senderUrl = sender.url || '';
+  const isAllowed = allowedOrigins.some((origin) => senderUrl.startsWith(origin));
+
+  if (!isAllowed) {
+    bgWarn('[ExtSync] Rejected message from unauthorized origin:', senderUrl);
+    sendResponse({ success: false, error: 'Unauthorized origin' });
+    return false;
+  }
+
+  if (request.type === 'AUTH_SYNC' && request.token && request.user) {
+    bgLog('[ExtSync] Received auth sync from website for user:', request.user?.username);
+
+    chrome.storage.local.set({
+      auth_token: request.token,
+      auth_user: request.user,
+      auth_timestamp: Date.now(),
+    }, () => {
+      bgLog('[ExtSync] Auth state stored successfully');
+      sendResponse({ success: true });
+    });
+    return true; // async sendResponse
+  }
+
+  if (request.type === 'AUTH_LOGOUT') {
+    bgLog('[ExtSync] Received logout from website');
+
+    chrome.storage.local.remove([
+      'auth_token',
+      'auth_user',
+      'auth_timestamp',
+      'auth_accounts',
+      'auth_active_account_id',
+    ], () => {
+      bgLog('[ExtSync] Auth state cleared');
+      sendResponse({ success: true });
+    });
+    return true; // async sendResponse
+  }
+
+  sendResponse({ success: false, error: 'Unknown message type' });
+  return false;
+});
+

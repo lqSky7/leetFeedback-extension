@@ -167,7 +167,6 @@ class PopupController {
     this.updateConnectionStatus();
     this.initializeChromaText();
     this.checkForUpdates();
-    this.updateSessionStatus();
   }
 
   initializeChromaText() {
@@ -948,15 +947,12 @@ class PopupController {
       const avatarUrl = this.config.avatarUrl || `https://robohash.org/${encodeURIComponent(displayName)}?set=set4`;
       const avatarMarkup = `<img id="profile-avatar-img" src="${avatarUrl}" alt="${displayName}" />`;
 
-      // Get session status for badge
-      const sessionBadge = this.getSessionStatusBadge();
-
       // Hide settings tab section since we are presenting this directly on the home tab dashboard
       if (accountSettingsSec) {
         accountSettingsSec.style.display = "none";
       }
 
-      // Render Home tab profile dashboard (large avatar with refresh, displayName, email, badge, actions, and switcher)
+      // Render Home tab profile dashboard (large avatar with refresh, displayName, email and actions)
       authSection.innerHTML = `
         <div class="profile-dashboard">
           <div class="profile-header-card">
@@ -971,48 +967,11 @@ class PopupController {
             <div class="profile-info-center">
               <div class="profile-name-large">${displayName}</div>
               ${email ? `<div class="profile-email-large">${email}</div>` : ""}
-              <div class="status-badge-container" style="margin-top: 4px;">
-                ${sessionBadge}
-              </div>
             </div>
           </div>
 
-          <div class="auth-actions" style="margin-top: 6px;">
-            <button class="btn btn-secondary" id="add-account-btn">Add Account</button>
+          <div class="auth-actions" style="margin-top: 8px;">
             <button class="btn btn-secondary" id="sign-out-btn">Sign Out</button>
-          </div>
-
-          <div class="account-controls" style="margin-top: 4px;">
-            <label for="active-account-select" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.06em; text-transform: uppercase;">Active Account</label>
-            <div class="custom-select" id="active-account-wrapper" data-select-id="active-account-select">
-              <input type="hidden" id="active-account-select" value="" />
-              <button type="button" class="custom-select-trigger" aria-haspopup="listbox">
-                <span class="custom-select-value">Select account</span>
-                <svg class="custom-select-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-              </button>
-              <div class="custom-select-dropdown" role="listbox">
-                <div class="custom-select-search-wrap">
-                  <input type="text" class="custom-select-search" placeholder="Search&hellip;" autocomplete="off" />
-                </div>
-                <div class="custom-select-options"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="add-account-panel" id="add-account-panel" style="display: none;">
-            <h4 class="account-form-title">Add Another Account</h4>
-            <form class="auth-form active" id="auth-add-account-form" data-form="add-account" aria-label="Add another account">
-              <div class="field" style="margin-bottom: 10px;">
-                <label for="auth-add-username">Username</label>
-                <input type="text" id="auth-add-username" name="username" placeholder="johndoe" autocomplete="username" required />
-              </div>
-              <div class="field" style="margin-bottom: 10px;">
-                <label for="auth-add-password">Password</label>
-                <input type="password" id="auth-add-password" name="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password" required />
-              </div>
-              <button type="submit" class="btn btn-primary">Add Account & Switch</button>
-            </form>
-            <div class="auth-form-message" id="auth-form-message"></div>
           </div>
         </div>
       `;
@@ -1020,38 +979,6 @@ class PopupController {
       const signOutBtn = document.getElementById("sign-out-btn");
       if (signOutBtn) {
         signOutBtn.addEventListener("click", () => this.signOut());
-      }
-      // Initialize custom select for account switcher
-      const accountWrapper = document.getElementById("active-account-wrapper");
-      if (accountWrapper) {
-        const cs = new CustomSelect(accountWrapper);
-        const options = accountOptions.map(account => {
-          const accountName =
-            account?.user?.username ||
-            account?.user?.displayName ||
-            account?.user?.name ||
-            account?.user?.email ||
-            "User";
-          return { value: account.id, label: accountName };
-        });
-        cs.setOptions(options, currentAccountId);
-        // Listen for changes on the hidden input
-        const hiddenInput = document.getElementById("active-account-select");
-        if (hiddenInput) {
-          hiddenInput.addEventListener("change", (event) =>
-            this.handleAccountSwitch(event),
-          );
-        }
-      }
-      const addAccountBtn = document.getElementById("add-account-btn");
-      if (addAccountBtn) {
-        addAccountBtn.addEventListener("click", () => this.toggleAddAccountForm());
-      }
-      const addAccountForm = document.getElementById("auth-add-account-form");
-      if (addAccountForm) {
-        addAccountForm.addEventListener("submit", (event) =>
-          this.handleLoginSubmit(event),
-        );
       }
       const refreshBtn = document.getElementById("avatar-refresh-btn");
       if (refreshBtn) {
@@ -1087,55 +1014,17 @@ class PopupController {
             </div>
             <button type="submit" class="btn btn-primary" id="auth-login-submit">Login</button>
           </form>
+          <div style="text-align: center; margin-top: 10px;">
+            <a href="https://traverses.tech/login" target="_blank" style="font-size: 11px; color: var(--text-muted); text-decoration: underline;">
+              Or sign in with Google / Apple / GitHub →
+            </a>
+          </div>
           <div class="auth-form-message" id="auth-form-message"></div>
         </div>
       `;
 
       this.setupAuthForms(authSection);
       this.showAuthFeedback();
-    }
-  }
-
-  // Get session status as a badge element
-  getSessionStatusBadge() {
-    try {
-      // Try to determine session status from stored data
-      const token = this.authStatus?.token;
-      if (!token) {
-        return `<div class="profile-status-badge">Active</div>`;
-      }
-
-      // Try to decode JWT for expiration
-      let expiresAt = null;
-      if (token.includes(".")) {
-        try {
-          const payload = JSON.parse(atob(token.split(".")[1]));
-          if (payload.exp) {
-            expiresAt = payload.exp * 1000;
-          }
-        } catch (e) {
-          // Token might not be JWT
-        }
-      }
-
-      if (expiresAt) {
-        const now = Date.now();
-        const timeLeft = expiresAt - now;
-        const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
-        const daysLeft = Math.floor(hoursLeft / 24);
-
-        if (timeLeft < 0) {
-          return `<div class="profile-status-badge error">Session expired</div>`;
-        } else if (hoursLeft < 24) {
-          return `<div class="profile-status-badge warning">Expires in ${hoursLeft}h</div>`;
-        } else {
-          return `<div class="profile-status-badge">Active (${daysLeft} day${daysLeft !== 1 ? "s" : ""} remaining)</div>`;
-        }
-      }
-
-      return `<div class="profile-status-badge">Active</div>`;
-    } catch (e) {
-      return `<div class="profile-status-badge">Active</div>`;
     }
   }
 
@@ -1405,10 +1294,7 @@ class PopupController {
   }
 
   getBackendBaseUrl() {
-    if (typeof extensionAuth !== "undefined" && typeof extensionAuth.getApiBaseUrl === "function") {
-      return extensionAuth.getApiBaseUrl();
-    }
-    return "https://traverse-backend-api.azurewebsites.net";
+    return extensionAuth.getApiBaseUrl();
   }
 
   openLeetcodeImportModal(pendingImport) {

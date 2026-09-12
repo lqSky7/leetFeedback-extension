@@ -4,7 +4,8 @@ const DSA_PLATFORMS = {
   LEETCODE: 'leetcode',
   GEEKSFORGEEKS: 'geeksforgeeks',
   TAKEUFORWARD: 'takeuforward',
-  CODECHEF: 'codechef'
+  CODECHEF: 'codechef',
+  NAUKRI: 'naukri'
 };
 
 // Global debug mode cache for synchronous access
@@ -100,6 +101,8 @@ class DSAUtils {
       return DSA_PLATFORMS.TAKEUFORWARD;
     } else if (hostname.includes('codechef.com')) {
       return DSA_PLATFORMS.CODECHEF;
+    } else if (hostname.includes('naukri.com')) {
+      return DSA_PLATFORMS.NAUKRI;
     }
 
     return null;

@@ -1,3 +1,11 @@
+# Changes in 1.9.2
+
+## Bug Fixes
+- **Removed Misleading Session Expiry Badge**: The sidepanel Account card displayed "Expires in 0h" (or "Session expired") after signing in via WorkOS. The badge decoded the JWT `exp` claim, and since WorkOS access tokens are short-lived, `Math.floor` rounded the remaining time down to zero. Authentication in the extension is not time-limited — the session is only cleared by an explicit Sign Out or a logout sync from the website — so the badge was purely cosmetic and wrong. Removed the badge, its `getSessionStatusBadge()` renderer, and the unused `updateSessionStatus()` helper (which targeted a `#session-status` element that no longer exists in `sidepanel.html`), along with the orphaned `.profile-status-badge` and `.session-status` CSS.
+- **Version Bump**: Extension version updated to 1.9.2.
+
+---
+
 # Changes in 1.8.0 (since 1.7.3)
 
 ## What's New & Improvements

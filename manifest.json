@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Traverse",
-    "version": "1.8.0",
+    "version": "1.9.2",
     "description": "Chrome extension for Traverse Ecosystem",
     "icons": {
         "16": "icons/16.png",
@@ -21,18 +21,32 @@
         "https://practice.geeksforgeeks.org/*",
         "https://*.takeuforward.org/*",
         "https://*.codechef.com/*",
+        "https://*.naukri.com/*",
         "https://api.github.com/*",
         "https://generativelanguage.googleapis.com/*",
-        "https://155-248-241-153.sslip.io/*",
+        "https://*.ngrok-free.dev/*",
+        "https://traverse-backend.duckdns.org/*",
         "https://alfa-leetcode-api.onrender.com/*",
         "https://leet-feedback.vercel.app/*",
         "https://*.vercel.app/*",
+        "https://traverses.tech/*",
+        "https://*.traverses.tech/*",
         "https://*.netlify.app/*",
         "https://g4f.space/*",
         "https://chromewebstore.google.com/*"
     ],
     "background": {
         "service_worker": "background.js"
+    },
+    "externally_connectable": {
+        "matches": [
+            "https://traverses.tech/*",
+            "https://*.traverses.tech/*",
+            "https://leet-feedback.vercel.app/*",
+            "https://*.vercel.app/*",
+            "http://localhost:5173/*",
+            "http://localhost:3000/*"
+        ]
     },
     "content_scripts": [
         {
@@ -93,6 +107,34 @@
                 "utils/problem-timer.js",
                 "utils/toast.js",
                 "content-scripts/codechef.js"
+            ],
+            "run_at": "document_end"
+        },
+        {
+            "matches": [
+                "https://*.naukri.com/*"
+            ],
+            "js": [
+                "utils/common.js",
+                "utils/github-api.js",
+                "utils/gemini-api.js",
+                "utils/backend-api.js",
+                "utils/problem-timer.js",
+                "utils/toast.js",
+                "content-scripts/naukri.js"
+            ],
+            "run_at": "document_end"
+        },
+        {
+            "matches": [
+                "https://traverses.tech/*",
+                "https://*.traverses.tech/*",
+                "https://leet-feedback.vercel.app/*",
+                "http://localhost:5173/*",
+                "http://localhost:3000/*"
+            ],
+            "js": [
+                "content-scripts/website-sync.js"
             ],
             "run_at": "document_end"
         }
