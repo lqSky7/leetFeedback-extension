@@ -58,7 +58,7 @@ global.chrome = {
   },
 };
 
-const authModule = require('../utils/auth.js');
+const authModule = require('../core/auth.js');
 const { ExtensionAuth } = authModule;
 
 function createMockFetch() {

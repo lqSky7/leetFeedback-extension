@@ -1,165 +1,131 @@
-// Traverse — Unified Submission Pipeline.
+// Traverse — unified submission pipeline.
 //
-// Coordinates post-solve pipeline:
-// 1. Hint Prompt (self-reported assistance level: none / hint / solution)
-// 2. Traverse Backend push (via BackendAPI with attempt diffs & retry preservation)
-// 3. GitHub repository push (via GitHubAPI if enabled by user)
-// 4. Local DSA stats increment & success toast
-// 5. Clean reset of attempt counters and problem timer
+// The post-accept flow that used to be copy-pasted into all five platform
+// scripts. Contract: the adapter has ALREADY stored the solved problem data
+// (storeProblemData(problemInfo, solved=true, tries)) before calling
+// execute() — the backend push reads that record from storage.
+//
+// Flow: toast state -> hint prompt -> backend push -> optional GitHub push
+// -> reset tracking state. On backend failure nothing is reset, so the next
+// accepted solve retries the push.
 
 (function () {
   'use strict';
 
   const T = (globalThis.Traverse = globalThis.Traverse || {});
-  const logger = T.createLogger ? T.createLogger('SubmissionPipeline') : console;
+  const logger = T.createLogger ? T.createLogger('pipeline') : console;
 
   class SubmissionPipeline {
     constructor() {
-      this.githubAPI = null;
-      this.backendAPI = null;
+      this._backendAPI = null;
+      this._githubAPI = null;
     }
 
-    async getBackendAPI() {
-      if (!this.backendAPI && typeof BackendAPI !== 'undefined') {
-        this.backendAPI = new BackendAPI();
+    async _getBackendAPI() {
+      if (!this._backendAPI && T.BackendAPI) {
+        this._backendAPI = new T.BackendAPI();
       }
-      if (this.backendAPI && typeof this.backendAPI.refreshToken === 'function') {
-        await this.backendAPI.refreshToken();
-      } else if (this.backendAPI) {
-        await this.backendAPI.initialize();
+      if (this._backendAPI) {
+        await this._backendAPI.initialize();
       }
-      return this.backendAPI;
+      return this._backendAPI;
     }
 
-    async getGitHubAPI() {
-      if (!this.githubAPI && typeof GitHubAPI !== 'undefined') {
-        this.githubAPI = new GitHubAPI();
-        await this.githubAPI.initialize();
+    async _getGitHubAPI() {
+      if (!this._githubAPI && T.GitHubAPI) {
+        this._githubAPI = new T.GitHubAPI();
+        await this._githubAPI.initialize();
       }
-      return this.githubAPI;
+      return this._githubAPI;
     }
 
     /**
-     * Executes the post-submission workflow when a solution is accepted.
      * @param {Object} params
-     * @param {string} params.platform - 'leetcode', 'geeksforgeeks', 'takeuforward', 'codechef', 'naukri'
-     * @param {Object} params.problemInfo - Problem metadata (title, number, difficulty, url, code, language, stats)
-     * @param {string} params.problemKey - Storage key / slug identifying the problem
+     * @param {string} params.platform - platform id ('leetcode', ...)
+     * @param {Object} params.problemInfo - problem metadata (title, difficulty, url, code, language, stats)
+     * @param {string} params.problemKey - storage key suffix for this problem
      * @param {Object} params.tracker - AttemptTracker instance
-     * @param {Object} [params.submissionTracker] - Toast submission tracker
-     * @param {Function} params.onReset - Callback to reset in-memory adapter state
+     * @param {Object|null} [params.submissionTracker] - toast tracker
+     * @param {Function} [params.onReset] - called with the final attempts list after success
+     * @returns {Promise<boolean>} true if the backend push succeeded
      */
-    async execute({
-      platform,
-      problemInfo,
-      problemKey,
-      tracker,
-      submissionTracker = null,
-      onReset = null,
-    }) {
-      logger.log(`Executing submission pipeline for [${platform}] problem: ${problemInfo.title}`);
+    async execute({ platform, problemInfo, problemKey, tracker, submissionTracker = null, onReset = null }) {
+      logger.log(`[${platform}] accepted submission — running pipeline for "${problemInfo.title}"`);
 
-      // Step 0: Ask how much help was used
+      // AI analysis is server-side now; move the toast to the syncing state.
+      if (submissionTracker) submissionTracker.setAISkipped();
+
+      // Step 0: self-reported assistance level — asked before the backend
+      // push so the answer rides along in the same request.
       let assistanceLevel = 'none';
       try {
-        if (typeof LeetFeedbackHintPrompt !== 'undefined' && LeetFeedbackHintPrompt.ask) {
-          assistanceLevel = await LeetFeedbackHintPrompt.ask();
-          logger.log(`Assistance level reported: ${assistanceLevel}`);
+        if (window.LeetFeedbackHintPrompt && window.LeetFeedbackHintPrompt.ask) {
+          assistanceLevel = await window.LeetFeedbackHintPrompt.ask();
+          logger.log(`[${platform}] assistance level: ${assistanceLevel}`);
         }
       } catch (hintError) {
-        logger.warn('Hint prompt failed, defaulting to none:', hintError);
+        logger.warn(`[${platform}] hint prompt failed, defaulting to none:`, hintError);
       }
 
-      // Step 1: Push to Traverse Backend
+      // Step 1: push to the Traverse backend.
+      if (submissionTracker) submissionTracker.setBackendStarted();
+
       let backendPushSucceeded = false;
       try {
-        if (submissionTracker && submissionTracker.setBackendStarted) {
-          submissionTracker.setBackendStarted();
-        }
-
-        const backend = await this.getBackendAPI();
-        if (backend) {
-          const backendResult = await backend.pushCurrentProblemData(problemKey, {
-            assistanceLevel,
-          });
-
-          if (backendResult && backendResult.success) {
+        const backend = await this._getBackendAPI();
+        if (!backend) {
+          logger.warn(`[${platform}] BackendAPI unavailable`);
+        } else {
+          const result = await backend.pushCurrentProblemData(problemKey, { assistanceLevel });
+          if (result && result.success) {
             backendPushSucceeded = true;
-            logger.log('Backend push successful:', backendResult.data);
+            logger.log(`[${platform}] backend push successful`);
             if (submissionTracker) {
-              const msg = backendResult.data?.message || 'Solution synced to Traverse!';
-              submissionTracker.succeed(msg);
+              submissionTracker.succeed(result.data?.message || 'Solution synced to Traverse!');
             }
           } else {
-            const errorMsg = backendResult?.error || 'Unknown backend error';
-            logger.error('Backend push failed:', errorMsg);
-            if (submissionTracker) {
-              submissionTracker.fail(`Sync failed: ${errorMsg}`);
-            }
+            const error = result?.error || 'unknown error';
+            logger.error(`[${platform}] backend push failed: ${error}`);
+            if (submissionTracker) submissionTracker.fail(`Sync failed: ${error}`);
           }
-        } else {
-          logger.warn('BackendAPI not available in current context');
         }
       } catch (error) {
-        logger.error('Backend push error:', error);
-        if (submissionTracker) {
-          submissionTracker.fail(`Sync error: ${error.message}`);
-        }
+        logger.error(`[${platform}] backend push error:`, error);
+        if (submissionTracker) submissionTracker.fail(`Sync error: ${error.message}`);
       }
 
-      // If backend push failed, preserve state for retry on next solve
+      // Preserve all tracking state for a retry on the next accepted solve.
       if (!backendPushSucceeded) {
-        logger.warn('Backend push did not succeed — preserving tracking state for retry');
+        logger.warn(`[${platform}] backend push did not succeed — preserving state for retry`);
         return false;
       }
 
-      // Step 2: Push to GitHub if enabled
+      // Step 2: optional GitHub push (user opt-in via settings).
       try {
-        const ghSettings = await new Promise((resolve) => {
-          chrome.storage.sync.get(['github_push_enabled'], resolve);
-        });
-
-        if (ghSettings && ghSettings.github_push_enabled === true) {
-          logger.log('Pushing solution to GitHub...');
-          const gh = await this.getGitHubAPI();
-          if (gh) {
-            const ghResult = await gh.pushSolution(problemInfo, platform);
-            if (ghResult && ghResult.success) {
-              logger.log('Pushed to GitHub successfully');
+        const settings = await chrome.storage.sync.get([T.config.keys.github.pushEnabled]);
+        if (settings[T.config.keys.github.pushEnabled] === true) {
+          const github = await this._getGitHubAPI();
+          if (github) {
+            const result = await github.pushSolution(problemInfo, platform);
+            if (result && result.success) {
+              logger.log(`[${platform}] GitHub push successful`);
             } else {
-              logger.warn('Failed to push to GitHub:', ghResult?.error);
+              logger.warn(`[${platform}] GitHub push failed: ${result?.error}`);
             }
           }
+        } else {
+          logger.log(`[${platform}] GitHub push disabled by user — skipping`);
         }
-      } catch (ghError) {
-        logger.warn('GitHub push error:', ghError);
+      } catch (githubError) {
+        logger.warn(`[${platform}] GitHub push error:`, githubError);
       }
 
-      // Step 3: Update local DSA solve statistics
-      try {
-        if (typeof DSAUtils !== 'undefined' && DSAUtils.updateStats) {
-          await DSAUtils.updateStats(platform, 'increment');
-        }
-      } catch (statsError) {
-        logger.warn('Failed to update stats:', statsError);
-      }
+      // Step 3: reset tracking state, persisting the final attempt history.
+      const attemptsToPersist = tracker ? [...tracker.attempts] : [];
+      if (tracker) tracker.reset();
+      if (typeof onReset === 'function') onReset(attemptsToPersist);
 
-      // Step 4: Clean reset
-      if (tracker) {
-        tracker.reset();
-      }
-      if (typeof onReset === 'function') {
-        onReset();
-      }
-
-      // Reset problem timer
-      if (window.ProblemTimer) {
-        try {
-          window.ProblemTimer.getInstance().reset();
-        } catch (_) {}
-      }
-
-      logger.log(`Pipeline completed successfully for [${platform}]`);
+      logger.log(`[${platform}] pipeline completed`);
       return true;
     }
   }

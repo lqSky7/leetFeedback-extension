@@ -230,10 +230,23 @@ To help contributors navigate the roadmap effectively, we use a structured label
 
 ### File Organization
 
-- Place utility functions in the `utils/` directory
-- Content scripts go in `content-scripts/` directory
-- UI components belong in the `popup/` directory
-- Keep related functionality together
+Read [`index.md`](index.md) first — it is the architecture map, and every
+directory has its own `index.md` describing what belongs there.
+
+- Framework code (config, storage, tracking, pipeline, API clients) → `core/`
+- MAIN-world page scripts (network interceptor, editor bridge) → `page/`
+- Per-site adapters and the website auth bridge → `platforms/`
+- Injected UI (toasts, hint prompt) → `ui/`
+- Service worker → `background/`
+- Extension UI → `sidepanel/`
+
+There is **no build step**: plain JS loaded by `<script>` order in
+`manifest.json` and by `importScripts`. No bundler, no TypeScript, no ES
+modules. Modules attach to `globalThis.Traverse` and may only use entries loaded
+before them, so script order in the manifest is a dependency graph.
+
+Keep related functionality together, and put shared behaviour in `core/` rather
+than copying it into a second platform adapter.
 
 ### Commit Messages
 
@@ -349,33 +362,42 @@ Add screenshots here.
 ### Current Structure
 ```
 leetFeedback-extension/
-├── content-scripts/          # Platform-specific content scripts
-│   ├── leetcode.js          # LeetCode integration
-│   ├── geeksforgeeks.js     # GeeksforGeeks integration
-│   ├── takeuforward.js      # TUF integration
-│   └── website-auth.js      # Authentication handling
-├── utils/                   # Shared utility functions
-│   ├── common.js           # Common utilities
-│   ├── github-api.js       # GitHub API integration
-│   ├── gemini-api.js       # AI analysis utilities
-│   ├── time-tracker.js     # Time tracking functionality
-│   └── interceptor.js      # Request interception
-├── popup/                   # Extension popup UI
-│   ├── popup.html          # Popup interface
-│   ├── popup.js            # Popup logic
-│   └── popup.css           # Popup styling
-├── icons/                   # Extension icons
-├── background.js            # Background service worker
-├── manifest.json           # Extension manifest
-└── README.md               # Project documentation
+├── index.md                  # Architecture map — start here
+├── manifest.json             # MV3 manifest (content-script order is a dependency graph)
+├── core/                     # Framework: config, logger, storage, tracker, pipeline, adapter base
+│   ├── config.js             #   single source of truth for URLs + storage keys
+│   ├── platform-adapter.js   #   base class every platform extends
+│   ├── submission-pipeline.js#   post-accept flow
+│   ├── backend-api.js        #   /api/submissions payload
+│   └── problem-timer.js      #   active-time tracking + overlay
+├── page/                     # MAIN-world scripts (no chrome.* available)
+│   ├── net-interceptor.js    #   generic fetch/XHR patch, rule-driven
+│   └── monaco-bridge.js      #   reads the LeetCode editor
+├── platforms/                # One thin adapter per tracked site
+│   ├── leetcode.js  takeuforward.js  geeksforgeeks.js  codechef.js  naukri.js
+│   └── website-sync.js       #   website → extension auth handshake
+├── ui/                       # Injected UI
+│   ├── toast.js              #   toasts + submission status card
+│   └── hint-prompt.js        #   "Did you use any Hint?" dialog
+├── background/               # Service worker: backend proxy + auth storage owner
+├── sidepanel/                # Extension UI (HTML/CSS/JS)
+├── tests/                    # Node scripts (auth.test.js has a runner)
+├── icons/  fonts/            # Static assets
+└── REFACTOR_PLAN.md          # Migration history and remaining phases
 ```
 
 ### Planned Structure (Roadmap Features)
+> **Note:** `platforms/` already exists and means *"one adapter per tracked
+> site"* (see [`platforms/index.md`](platforms/index.md)). The `platforms/` in
+> the Phase 6 roadmap below is a different, older idea — new site integrations
+> belong in the existing `platforms/` directory, not in a new tree.
+
 ```
 leetFeedback-extension/
-├── content-scripts/          # Current platform integrations
-├── utils/                   # Current shared utilities
-├── popup/                   # Current popup UI
+├── core/                    # Current framework
+├── platforms/               # Current site adapters
+├── ui/                      # Current injected UI
+├── sidepanel/               # Current extension UI
 ├── analytics/               # Phase 4: Analytics & Insights
 │   ├── dashboard/          # Advanced analytics dashboard
 │   ├── visualizations/     # Performance metrics charts

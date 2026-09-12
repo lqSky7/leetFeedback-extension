@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Traverse",
-    "version": "1.9.2",
+    "version": "2.0.0",
     "description": "Chrome extension for Traverse Ecosystem",
     "icons": {
         "16": "icons/16.png",
@@ -35,7 +35,7 @@
         "https://chromewebstore.google.com/*"
     ],
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "background/background.js"
     },
     "externally_connectable": {
         "matches": [
@@ -53,21 +53,33 @@
                 "https://*.leetcode.com/*"
             ],
             "js": [
-                "shared/config.js",
-                "shared/logger.js",
-                "shared/events.js",
+                "page/net-interceptor.js",
+                "page/monaco-bridge.js"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://*.leetcode.com/*"
+            ],
+            "js": [
+                "core/config.js",
+                "core/logger.js",
+                "core/util.js",
+                "core/net-protocol.js",
+                "core/net-bridge.js",
+                "core/ai-config.js",
                 "core/session-store.js",
                 "core/attempt-tracker.js",
-                "core/platform-adapter.js",
+                "core/backend-api.js",
+                "core/github-api.js",
                 "core/submission-pipeline.js",
-                "utils/common.js",
-                "utils/github-api.js",
-                "utils/gemini-api.js",
-                "utils/backend-api.js",
-                "utils/problem-timer.js",
-                "utils/toast.js",
-                "utils/hint-prompt.js",
-                "content-scripts/leetcode.js"
+                "core/problem-timer.js",
+                "ui/toast.js",
+                "ui/hint-prompt.js",
+                "core/platform-adapter.js",
+                "platforms/leetcode.js"
             ],
             "run_at": "document_end"
         },
@@ -77,21 +89,33 @@
                 "https://practice.geeksforgeeks.org/*"
             ],
             "js": [
-                "shared/config.js",
-                "shared/logger.js",
-                "shared/events.js",
+                "page/net-interceptor.js"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://*.geeksforgeeks.org/*",
+                "https://practice.geeksforgeeks.org/*"
+            ],
+            "js": [
+                "core/config.js",
+                "core/logger.js",
+                "core/util.js",
+                "core/net-protocol.js",
+                "core/net-bridge.js",
+                "core/ai-config.js",
                 "core/session-store.js",
                 "core/attempt-tracker.js",
-                "core/platform-adapter.js",
+                "core/backend-api.js",
+                "core/github-api.js",
                 "core/submission-pipeline.js",
-                "utils/common.js",
-                "utils/github-api.js",
-                "utils/gemini-api.js",
-                "utils/backend-api.js",
-                "utils/problem-timer.js",
-                "utils/toast.js",
-                "utils/hint-prompt.js",
-                "content-scripts/geeksforgeeks.js"
+                "core/problem-timer.js",
+                "ui/toast.js",
+                "ui/hint-prompt.js",
+                "core/platform-adapter.js",
+                "platforms/geeksforgeeks.js"
             ],
             "run_at": "document_end"
         },
@@ -100,21 +124,32 @@
                 "https://*.takeuforward.org/*"
             ],
             "js": [
-                "shared/config.js",
-                "shared/logger.js",
-                "shared/events.js",
+                "page/net-interceptor.js"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://*.takeuforward.org/*"
+            ],
+            "js": [
+                "core/config.js",
+                "core/logger.js",
+                "core/util.js",
+                "core/net-protocol.js",
+                "core/net-bridge.js",
+                "core/ai-config.js",
                 "core/session-store.js",
                 "core/attempt-tracker.js",
-                "core/platform-adapter.js",
+                "core/backend-api.js",
+                "core/github-api.js",
                 "core/submission-pipeline.js",
-                "utils/common.js",
-                "utils/github-api.js",
-                "utils/gemini-api.js",
-                "utils/backend-api.js",
-                "utils/problem-timer.js",
-                "utils/toast.js",
-                "utils/hint-prompt.js",
-                "content-scripts/takeuforward.js"
+                "core/problem-timer.js",
+                "ui/toast.js",
+                "ui/hint-prompt.js",
+                "core/platform-adapter.js",
+                "platforms/takeuforward.js"
             ],
             "run_at": "document_end"
         },
@@ -123,21 +158,32 @@
                 "https://*.codechef.com/*"
             ],
             "js": [
-                "shared/config.js",
-                "shared/logger.js",
-                "shared/events.js",
+                "page/net-interceptor.js"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://*.codechef.com/*"
+            ],
+            "js": [
+                "core/config.js",
+                "core/logger.js",
+                "core/util.js",
+                "core/net-protocol.js",
+                "core/net-bridge.js",
+                "core/ai-config.js",
                 "core/session-store.js",
                 "core/attempt-tracker.js",
-                "core/platform-adapter.js",
+                "core/backend-api.js",
+                "core/github-api.js",
                 "core/submission-pipeline.js",
-                "utils/common.js",
-                "utils/github-api.js",
-                "utils/gemini-api.js",
-                "utils/backend-api.js",
-                "utils/problem-timer.js",
-                "utils/toast.js",
-                "utils/hint-prompt.js",
-                "content-scripts/codechef.js"
+                "core/problem-timer.js",
+                "ui/toast.js",
+                "ui/hint-prompt.js",
+                "core/platform-adapter.js",
+                "platforms/codechef.js"
             ],
             "run_at": "document_end"
         },
@@ -146,21 +192,32 @@
                 "https://*.naukri.com/*"
             ],
             "js": [
-                "shared/config.js",
-                "shared/logger.js",
-                "shared/events.js",
+                "page/net-interceptor.js"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://*.naukri.com/*"
+            ],
+            "js": [
+                "core/config.js",
+                "core/logger.js",
+                "core/util.js",
+                "core/net-protocol.js",
+                "core/net-bridge.js",
+                "core/ai-config.js",
                 "core/session-store.js",
                 "core/attempt-tracker.js",
-                "core/platform-adapter.js",
+                "core/backend-api.js",
+                "core/github-api.js",
                 "core/submission-pipeline.js",
-                "utils/common.js",
-                "utils/github-api.js",
-                "utils/gemini-api.js",
-                "utils/backend-api.js",
-                "utils/problem-timer.js",
-                "utils/toast.js",
-                "utils/hint-prompt.js",
-                "content-scripts/naukri.js"
+                "core/problem-timer.js",
+                "ui/toast.js",
+                "ui/hint-prompt.js",
+                "core/platform-adapter.js",
+                "platforms/naukri.js"
             ],
             "run_at": "document_end"
         },
@@ -173,7 +230,9 @@
                 "http://localhost:3000/*"
             ],
             "js": [
-                "content-scripts/website-sync.js"
+                "core/config.js",
+                "core/logger.js",
+                "platforms/website-sync.js"
             ],
             "run_at": "document_end"
         }
@@ -188,21 +247,5 @@
     },
     "side_panel": {
         "default_path": "sidepanel/sidepanel.html"
-    },
-    "web_accessible_resources": [
-        {
-            "resources": [
-                "utils/interceptor.js",
-                "utils/monaco-bridge.js"
-            ],
-            "matches": [
-                "https://*.leetcode.com/*",
-                "https://*.geeksforgeeks.org/*",
-                "https://practice.geeksforgeeks.org/*",
-                "https://*.takeuforward.org/*",
-                "https://*.codechef.com/*",
-                "https://*.naukri.com/*"
-            ]
-        }
-    ]
+    }
 }

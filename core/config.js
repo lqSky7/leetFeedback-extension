@@ -69,10 +69,12 @@
     // pre-refactor code used 2 in most paths and 3 in a few).
     failedRunsBeforeAnalysis: 2,
 
-    // DOM-verdict fallbacks for platforms whose network intercept rules are
-    // not yet verified against a real submit. Flip to false per platform once
-    // the network rules are confirmed working, then delete the fallback code
-    // (see platforms/index.md — "Verifying network rules").
+    // Per-platform switch for the DOM capture path, read by
+    // PlatformAdapter.captureFromDom(). `true` (or absent) keeps the site's
+    // button-click + page-polling capture active as a safety net; `false` makes
+    // the network interceptor authoritative and retires the DOM path without
+    // deleting it. Flip a platform to false only after its intercept rules are
+    // verified against a real submit — see platforms/index.md.
     domVerdictFallback: {
       geeksforgeeks: true,
       codechef: true,

@@ -1,18 +1,37 @@
-// Toast notification utility for Traverse (leetFeedback-extension)
-// High contrast floating toast notifications
+// Traverse — toast notifications + the submission status card.
+//
+// Two pieces of content-script UI:
+//   * ToastNotification  — small stacked messages (bottom-right).
+//   * SubmissionTracker  — the square "JUDGING → SYNCING → synced/failed" card
+//                          shown while a submission is judged and pushed.
+//
+// Exposed as `window.LeetFeedbackToast` and `T.LeetFeedbackToast` (the adapters
+// and the submission pipeline look the global up by that name).
 
-class ToastNotification {
+(function () {
+  'use strict';
+
+  const T = (globalThis.Traverse = globalThis.Traverse || {});
+  const logger = T.createLogger ? T.createLogger('toast') : { log() {} };
+
+  const TOAST_COLORS = {
+    success: { bg: '#0A0A0A', border: 'rgba(14, 131, 69, 0.4)', indicator: '#0E8345', text: '#FFFFFF' },
+    error: { bg: '#0A0A0A', border: 'rgba(225, 25, 0, 0.4)', indicator: '#E11900', text: '#FFFFFF' },
+    info: { bg: '#0A0A0A', border: 'rgba(39, 110, 241, 0.4)', indicator: '#276EF1', text: '#FFFFFF' },
+  };
+
+  class ToastNotification {
     constructor() {
-        this.container = null;
-        this.toasts = [];
-        this.init();
+      this.container = null;
+      this.toasts = [];
+      this.init();
     }
 
     init() {
-        if (!this.container) {
-            this.container = document.createElement('div');
-            this.container.id = 'leetfeedback-toast-container';
-            this.container.style.cssText = `
+      if (this.container) return;
+      this.container = document.createElement('div');
+      this.container.id = 'leetfeedback-toast-container';
+      this.container.style.cssText = `
                 position: fixed;
                 bottom: 24px;
                 right: 24px;
@@ -23,24 +42,16 @@ class ToastNotification {
                 pointer-events: none;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             `;
-            document.body.appendChild(this.container);
-        }
+      document.body.appendChild(this.container);
     }
 
     show(message, type = 'info', duration = 5000) {
-        this.init();
-        const toast = document.createElement('div');
-        toast.className = `leetfeedback-toast leetfeedback-toast-${type}`;
+      this.init();
+      const theme = TOAST_COLORS[type] || TOAST_COLORS.info;
 
-        // Semantic colors
-        const colors = {
-            success: { bg: '#0A0A0A', border: 'rgba(14, 131, 69, 0.4)', indicator: '#0E8345', text: '#FFFFFF' },
-            error: { bg: '#0A0A0A', border: 'rgba(225, 25, 0, 0.4)', indicator: '#E11900', text: '#FFFFFF' },
-            info: { bg: '#0A0A0A', border: 'rgba(39, 110, 241, 0.4)', indicator: '#276EF1', text: '#FFFFFF' }
-        };
-        const theme = colors[type] || colors.info;
-
-        toast.style.cssText = `
+      const toast = document.createElement('div');
+      toast.className = `leetfeedback-toast leetfeedback-toast-${type}`;
+      toast.style.cssText = `
             display: flex;
             align-items: center;
             gap: 12px;
@@ -63,8 +74,8 @@ class ToastNotification {
             -webkit-backdrop-filter: blur(12px);
         `;
 
-        const dotSpan = document.createElement('span');
-        dotSpan.style.cssText = `
+      const dotSpan = document.createElement('span');
+      dotSpan.style.cssText = `
             flex-shrink: 0;
             width: 8px;
             height: 8px;
@@ -73,18 +84,18 @@ class ToastNotification {
             box-shadow: 0 0 8px ${theme.indicator};
         `;
 
-        const textSpan = document.createElement('div');
-        textSpan.style.cssText = `
+      const textSpan = document.createElement('div');
+      textSpan.style.cssText = `
             flex: 1;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             letter-spacing: 0.01em;
         `;
-        textSpan.textContent = message;
+      textSpan.textContent = message;
 
-        const closeBtn = document.createElement('button');
-        closeBtn.style.cssText = `
+      const closeBtn = document.createElement('button');
+      closeBtn.style.cssText = `
             flex-shrink: 0;
             background: transparent;
             border: none;
@@ -95,105 +106,92 @@ class ToastNotification {
             padding: 0 2px;
             transition: color 0.15s ease;
         `;
-        closeBtn.textContent = '×';
-        closeBtn.onmouseover = () => { closeBtn.style.color = '#FFFFFF'; };
-        closeBtn.onmouseout = () => { closeBtn.style.color = '#8A8A8A'; };
-        closeBtn.onclick = () => this.dismiss(toast);
+      closeBtn.textContent = '×';
+      closeBtn.onmouseover = () => {
+        closeBtn.style.color = '#FFFFFF';
+      };
+      closeBtn.onmouseout = () => {
+        closeBtn.style.color = '#8A8A8A';
+      };
+      closeBtn.onclick = () => this.dismiss(toast);
 
-        toast.appendChild(dotSpan);
-        toast.appendChild(textSpan);
-        toast.appendChild(closeBtn);
-        this.container.appendChild(toast);
-        this.toasts.push(toast);
+      toast.appendChild(dotSpan);
+      toast.appendChild(textSpan);
+      toast.appendChild(closeBtn);
+      this.container.appendChild(toast);
+      this.toasts.push(toast);
 
+      requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                toast.style.transform = 'translateX(0)';
-                toast.style.opacity = '1';
-            });
+          toast.style.transform = 'translateX(0)';
+          toast.style.opacity = '1';
         });
+      });
 
-        if (duration > 0) {
-            toast._autoDismissTimeout = setTimeout(() => this.dismiss(toast), duration);
-        }
-        return toast;
-    }
-
-    update(toast, message, type = 'info', duration = 5000) {
-        if (!toast || !toast.parentNode) return;
-        if (toast._autoDismissTimeout) {
-            clearTimeout(toast._autoDismissTimeout);
-        }
-        const textSpan = toast.querySelector('div');
-        if (textSpan) {
-            textSpan.textContent = message;
-        }
-        if (duration > 0) {
-            toast._autoDismissTimeout = setTimeout(() => this.dismiss(toast), duration);
-        }
+      if (duration > 0) {
+        toast._autoDismissTimeout = setTimeout(() => this.dismiss(toast), duration);
+      }
+      return toast;
     }
 
     dismiss(toast) {
-        if (!toast || !toast.parentNode) return;
-        toast.style.transform = 'translateX(120%)';
-        toast.style.opacity = '0';
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-            const index = this.toasts.indexOf(toast);
-            if (index > -1) {
-                this.toasts.splice(index, 1);
-            }
-        }, 250);
+      if (!toast || !toast.parentNode) return;
+
+      if (toast._autoDismissTimeout) clearTimeout(toast._autoDismissTimeout);
+      toast.style.transform = 'translateX(120%)';
+      toast.style.opacity = '0';
+
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+        const index = this.toasts.indexOf(toast);
+        if (index > -1) this.toasts.splice(index, 1);
+      }, 250);
     }
 
-    success(message, duration = 5000) { return this.show(message, 'success', duration); }
-    error(message, duration = 6000) { return this.show(message, 'error', duration); }
-    info(message, duration = 5000) { return this.show(message, 'info', duration); }
+    success(message, duration = 5000) {
+      return this.show(message, 'success', duration);
+    }
 
+    error(message, duration = 6000) {
+      return this.show(message, 'error', duration);
+    }
+
+    info(message, duration = 5000) {
+      return this.show(message, 'info', duration);
+    }
+
+    /** Replace any existing submission card and return a fresh tracker. */
     createSubmission() {
-        const existing = document.querySelector('.leetfeedback-submission-card');
-        if (existing) {
-            existing.remove();
-        }
-        return new SubmissionTracker();
+      const existing = document.querySelector('.leetfeedback-submission-card');
+      if (existing) existing.remove();
+      return new SubmissionTracker();
     }
-}
+  }
 
-class SubmissionTracker {
+  class SubmissionTracker {
     constructor() {
-        this.card = null;
-        this.orbiter = null;
-        this.statusText = null;
-        this.isDismissed = false;
+      this.card = null;
+      this.orbiter = null;
+      this.statusText = null;
+      this.isDismissed = false;
 
-        this.state = 'judging';
-        this.startTime = Date.now();
+      this.state = 'judging';
+      this.startTime = Date.now();
 
-        this.timestamps = {
-            judging: Date.now(),
-            analyzing: null,
-            'slow-rise': null,
-            launching: null,
-            failed: null
-        };
+      this.timestamps = { judging: Date.now(), analyzing: null, 'slow-rise': null, launching: null, failed: null };
+      // Minimum dwell per state so the animation does not flicker through a
+      // fast backend response.
+      this.minDurations = { judging: 1500, analyzing: 1500, 'slow-rise': 2000 };
 
-        this.minDurations = {
-            judging: 1500,
-            analyzing: 1500,
-            'slow-rise': 2000
-        };
-
-        this.init();
+      this.init();
     }
 
     init() {
-        SubmissionTracker.injectStyles();
+      SubmissionTracker.injectStyles();
 
-        this.card = document.createElement('div');
-        this.card.className = 'leetfeedback-submission-card';
-        this.card.innerHTML = `
+      this.card = document.createElement('div');
+      this.card.className = 'leetfeedback-submission-card';
+      this.card.innerHTML = `
             <button class="lfb-close-btn">&times;</button>
             <div class="lfb-sync-orbiter lfb-state-judging">
                 <svg class="lfb-svg-anim" viewBox="0 0 100 100" width="84" height="84">
@@ -201,7 +199,7 @@ class SubmissionTracker {
                     <circle class="lfb-radar-grid-1" cx="50" cy="50" r="42" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" fill="none" />
                     <circle class="lfb-radar-grid-2" cx="50" cy="50" r="28" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" fill="none" />
                     <circle class="lfb-radar-grid-3" cx="50" cy="50" r="14" stroke="rgba(255, 255, 255, 0.15)" stroke-width="1" fill="none" />
-                    
+
                     <!-- Radar Crosshairs -->
                     <line x1="50" y1="8" x2="50" y2="92" stroke="rgba(255, 255, 255, 0.06)" stroke-width="1" stroke-dasharray="2 4" />
                     <line x1="8" y1="50" x2="92" y2="50" stroke="rgba(255, 255, 255, 0.06)" stroke-width="1" stroke-dasharray="2 4" />
@@ -209,15 +207,15 @@ class SubmissionTracker {
                     <!-- Radar Telemetry Sweep Beam in Cobalt Blue -->
                     <circle class="lfb-ring lfb-ring-outer" cx="50" cy="50" r="38" stroke="#276EF1" stroke-width="2" stroke-dasharray="24 60" stroke-linecap="round" fill="none" />
                     <circle class="lfb-ring lfb-ring-inner" cx="50" cy="50" r="24" stroke="rgba(255, 255, 255, 0.4)" stroke-width="1.5" stroke-dasharray="16 40" stroke-linecap="round" fill="none" />
-                    
+
                     <!-- Orbiting Dispatch Beacons -->
                     <circle class="lfb-dot lfb-dot-outer" cx="88" cy="50" r="3" fill="#276EF1" />
                     <circle class="lfb-dot lfb-dot-inner" cx="74" cy="50" r="2" fill="#FFFFFF" />
-                    
+
                     <!-- Center Pulse Node (Dispatch Core) -->
                     <circle class="lfb-radar-pulse-ring" cx="50" cy="50" r="6" stroke="#276EF1" stroke-width="1.5" fill="none" />
                     <circle class="lfb-center-orb" cx="50" cy="50" r="5" fill="#FFFFFF" />
-                    
+
                     <!-- Celebration Star/Ball Particles -->
                     <g class="lfb-celebration-particles">
                         <circle class="lfb-part lfb-part-1" cx="50" cy="50" r="3.5" fill="#276EF1" />
@@ -238,122 +236,104 @@ class SubmissionTracker {
             <div class="lfb-status-text">JUDGING</div>
         `;
 
-        document.body.appendChild(this.card);
+      document.body.appendChild(this.card);
 
-        this.orbiter = this.card.querySelector('.lfb-sync-orbiter');
-        this.statusText = this.card.querySelector('.lfb-status-text');
+      this.orbiter = this.card.querySelector('.lfb-sync-orbiter');
+      this.statusText = this.card.querySelector('.lfb-status-text');
+      this.card.querySelector('.lfb-close-btn').onclick = () => this.dismiss();
 
-        const closeBtn = this.card.querySelector('.lfb-close-btn');
-        closeBtn.onclick = () => this.dismiss();
-
+      requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                if (this.card) {
-                    this.card.classList.add('lfb-visible');
-                }
-            });
+          if (this.card) this.card.classList.add('lfb-visible');
         });
+      });
     }
 
-    _setText(msg) {
-        if (this.statusText) {
-            this.statusText.textContent = msg;
-        }
+    _setText(message) {
+      if (this.statusText) this.statusText.textContent = message;
     }
 
+    /** Switch state, honouring the current state's minimum dwell time. */
     _transitionTo(nextState, callback) {
+      if (this.isDismissed) return;
+
+      const run = () => {
         if (this.isDismissed) return;
+        this.state = nextState;
+        this.timestamps[nextState] = Date.now();
+        callback();
+      };
 
-        const runTransition = () => {
-            if (this.isDismissed) return;
-            this.state = nextState;
-            this.timestamps[nextState] = Date.now();
-            callback();
-        };
-
-        const current = this.state;
-        const elapsed = Date.now() - (this.timestamps[current] || this.startTime);
-        const minDur = this.minDurations[current] || 0;
-
-        if (elapsed < minDur) {
-            const delay = minDur - elapsed;
-            setTimeout(() => {
-                runTransition();
-            }, delay);
-        } else {
-            runTransition();
-        }
+      const elapsed = Date.now() - (this.timestamps[this.state] || this.startTime);
+      const minDuration = this.minDurations[this.state] || 0;
+      if (elapsed < minDuration) {
+        setTimeout(run, minDuration - elapsed);
+      } else {
+        run();
+      }
     }
 
+    // AI analysis runs server-side, so there is no separate "analyzing" phase
+    // to show; all three entry points move the card to the syncing state.
     setAIStarted() {
-        this.setAISkipped();
+      this.setAISkipped();
     }
 
     setAIComplete() {
-        this.setAISkipped();
+      this.setAISkipped();
     }
 
     setAISkipped() {
-        this._transitionTo('slow-rise', () => {
-            this._setText('Syncing...');
-            if (this.orbiter) {
-                this.orbiter.className = 'lfb-sync-orbiter lfb-state-syncing';
-            }
-        });
+      this._transitionTo('slow-rise', () => {
+        this._setText('Syncing...');
+        if (this.orbiter) this.orbiter.className = 'lfb-sync-orbiter lfb-state-syncing';
+      });
     }
 
     setBackendStarted() {
-        if (this.state === 'judging' || this.state === 'analyzing') {
-            this.setAISkipped();
-        } else if (this.state === 'slow-rise') {
-            this._setText('Syncing...');
-        }
+      if (this.state === 'judging' || this.state === 'analyzing') {
+        this.setAISkipped();
+      } else if (this.state === 'slow-rise') {
+        this._setText('Syncing...');
+      }
     }
 
-    succeed(msg = 'Synced') {
-        this.isDismissed = false;
-        this.state = 'launching';
-        this.timestamps['launching'] = Date.now();
-        this._setText(msg);
-        if (this.orbiter) {
-            this.orbiter.className = 'lfb-sync-orbiter lfb-state-success';
-        }
-        setTimeout(() => this.dismiss(true), 2500);
+    succeed(message = 'Synced') {
+      this.isDismissed = false;
+      this.state = 'launching';
+      this.timestamps.launching = Date.now();
+      this._setText(message);
+      if (this.orbiter) this.orbiter.className = 'lfb-sync-orbiter lfb-state-success';
+      setTimeout(() => this.dismiss(true), 2500);
     }
 
-    fail(errorMsg = 'Failed') {
-        if (this.state === 'launching') return; // Do not overwrite successful sync
-        this.isDismissed = true;
-        this.state = 'failed';
-        this._setText(errorMsg);
-        
-        if (this.orbiter) {
-            this.orbiter.className = 'lfb-sync-orbiter lfb-state-failure';
-        }
-        
-        setTimeout(() => this.dismiss(true), 4000);
+    fail(errorMessage = 'Failed') {
+      if (this.state === 'launching') return; // never overwrite a successful sync
+      this.isDismissed = true;
+      this.state = 'failed';
+      this._setText(errorMessage);
+      if (this.orbiter) this.orbiter.className = 'lfb-sync-orbiter lfb-state-failure';
+      setTimeout(() => this.dismiss(true), 4000);
     }
 
     dismiss(force = false) {
-        if (this.isDismissed && !force) return;
-        this.isDismissed = true;
-        
-        if (this.card) {
-            this.card.classList.remove('lfb-visible');
-            setTimeout(() => {
-                if (this.card && this.card.parentNode) {
-                    this.card.parentNode.removeChild(this.card);
-                }
-                this.card = null;
-            }, 300);
-        }
+      if (this.isDismissed && !force) return;
+      this.isDismissed = true;
+
+      if (!this.card) return;
+      this.card.classList.remove('lfb-visible');
+      setTimeout(() => {
+        if (this.card && this.card.parentNode) this.card.parentNode.removeChild(this.card);
+        this.card = null;
+      }, 300);
     }
 
     static injectStyles() {
-        if (document.getElementById('leetfeedback-submission-styles')) return;
-        const style = document.createElement('style');
-        style.id = 'leetfeedback-submission-styles';
-        style.textContent = `
+      if (document.getElementById('leetfeedback-submission-styles')) return;
+
+      const style = document.createElement('style');
+      style.id = 'leetfeedback-submission-styles';
+      style.textContent = `
             .leetfeedback-submission-card {
                 position: fixed !important;
                 bottom: 24px !important;
@@ -458,7 +438,7 @@ class SubmissionTracker {
                 opacity: 0 !important;
                 transition: opacity 0.2s;
             }
-            
+
             /* State: Syncing */
             .lfb-state-syncing .lfb-ring-outer {
                 animation-duration: 1.2s !important;
@@ -476,7 +456,7 @@ class SubmissionTracker {
             .lfb-state-syncing .lfb-radar-pulse-ring {
                 animation-duration: 0.9s !important;
             }
-            
+
             /* State: Success */
             .lfb-state-success .lfb-ring,
             .lfb-state-success .lfb-dot,
@@ -496,7 +476,7 @@ class SubmissionTracker {
                 stroke-dashoffset: 40 !important;
                 animation: lfb-draw-stroke 0.4s ease-out 0.15s forwards !important;
             }
-            
+
             /* Celebrate particles */
             .lfb-state-success .lfb-part {
                 opacity: 1 !important;
@@ -509,7 +489,7 @@ class SubmissionTracker {
             .lfb-state-success .lfb-part-6 { animation: lfb-shoot-6 1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards !important; }
             .lfb-state-success .lfb-part-7 { animation: lfb-shoot-7 1.1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards !important; }
             .lfb-state-success .lfb-part-8 { animation: lfb-shoot-8 0.9s cubic-bezier(0.1, 0.8, 0.3, 1) forwards !important; }
-            
+
             /* State: Failure */
             .lfb-state-failure .lfb-ring,
             .lfb-state-failure .lfb-dot,
@@ -529,7 +509,7 @@ class SubmissionTracker {
                 stroke-dashoffset: 40 !important;
                 animation: lfb-draw-stroke 0.35s ease-out forwards !important;
             }
-            
+
             @keyframes lfb-rotate-clockwise {
                 from { transform: rotate(0deg); }
                 to { transform: rotate(360deg); }
@@ -553,7 +533,7 @@ class SubmissionTracker {
             @keyframes lfb-draw-stroke {
                 to { stroke-dashoffset: 0; }
             }
-            
+
             @keyframes lfb-shoot-1 {
                 0% { transform: translate(0, 0) scale(1); opacity: 1; }
                 100% { transform: translate(-32px, -32px) scale(0.3); opacity: 0; }
@@ -586,19 +566,21 @@ class SubmissionTracker {
                 0% { transform: translate(0, 0) scale(1); opacity: 1; }
                 100% { transform: translate(0, 36px) scale(0.3); opacity: 0; }
             }
-            
+
             .lfb-part {
                 opacity: 0 !important;
                 transform-origin: 50px 50px !important;
             }
         `;
-        document.head.appendChild(style);
+      document.head.appendChild(style);
     }
-}
+  }
 
-window.LeetFeedbackToast = new ToastNotification();
-if (typeof debugLog === 'function') {
-    debugLog('[Toast] Toast notification utility loaded');
-} else if (typeof window !== 'undefined' && typeof window.isDebugMode === 'function' && window.isDebugMode()) {
-    console.log('[Toast] Toast notification utility loaded');
-}
+  const toast = new ToastNotification();
+  T.ToastNotification = ToastNotification;
+  T.SubmissionTracker = SubmissionTracker;
+  T.LeetFeedbackToast = toast;
+  window.LeetFeedbackToast = toast;
+
+  logger.log('toast utility loaded');
+})();
