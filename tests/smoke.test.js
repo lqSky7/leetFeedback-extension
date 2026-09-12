@@ -436,6 +436,97 @@ async function leetcodeRun() {
   return 'LeetCode run -> counted, not a failure';
 }
 
+/**
+ * Regression: LeetCode polls the check endpoint while the judge is still
+ * running, and those payloads carry no verdict at all. A pending poll used to
+ * be read as a rejection — producing a false failure and consuming the pending
+ * submission id, so the real verdict that arrived next was discarded.
+ */
+async function leetcodePendingPollThenAccepted() {
+  const env = createEnvironment();
+  // Point at the problem from the bug report rather than the two-sum fixture,
+  // so the storage key under test is the one the report used.
+  env.location.href = 'https://leetcode.com/problems/gcd-of-odd-and-even-sums/';
+  env.location.pathname = '/problems/gcd-of-odd-and-even-sums/';
+  const T = loadStack(env, 'platforms/leetcode.js');
+
+  const adapter = makeAdapter(T, T.LeetCodeAdapter);
+  await adapter.init();
+
+  await adapter.onNetEvent({
+    phase: 'request',
+    url: 'https://leetcode.com/problems/gcd-of-odd-and-even-sums/submit/',
+    method: 'POST',
+    requestBody: { lang: 'cpp', typed_code: 'class Solution { public: int g; };' },
+  });
+  await adapter.onNetEvent({
+    phase: 'response',
+    url: 'https://leetcode.com/problems/gcd-of-odd-and-even-sums/submit/',
+    method: 'POST',
+    response: { submission_id: 99 },
+  });
+
+  // Poll #1 — judge has not finished, so there is no verdict to read.
+  await adapter.onNetEvent({
+    phase: 'response',
+    url: 'https://leetcode.com/submissions/detail/99/v2/check/',
+    method: 'GET',
+    response: { state: 'PENDING' },
+  });
+
+  assert.strictEqual(
+    adapter.tracker.incorrectRunCounter,
+    0,
+    'leetcode: pending poll must not count as a failure'
+  );
+  assert.strictEqual(
+    adapter.currentSubmissionId,
+    99,
+    'leetcode: pending poll must not consume the submission id'
+  );
+  assert.strictEqual(
+    adapter.tracker.submissionInProgress,
+    true,
+    'leetcode: submission still pending after a non-final poll'
+  );
+  assert.strictEqual(
+    env.sentMessages.filter((m) => m.type === 'BACKEND_API_FETCH').length,
+    0,
+    'leetcode: pending poll must not push'
+  );
+
+  // Poll #2 — the judge finished and the submission was actually accepted.
+  await adapter.onNetEvent({
+    phase: 'response',
+    url: 'https://leetcode.com/submissions/detail/99/v2/check/',
+    method: 'GET',
+    response: {
+      state: 'SUCCESS',
+      status_code: 10,
+      status_msg: 'Accepted',
+      run_success: true,
+      total_correct: 5,
+      total_testcases: 5,
+    },
+  });
+
+  await sleep(2600); // completeSubmission waits 2s for stats to render
+
+  const record = await T.sessionStore.getProblemData('gcd-of-odd-and-even-sums');
+  assert.ok(record, 'leetcode: problem record written');
+  assert.strictEqual(record.solved.value, true, 'leetcode: accepted after pending poll');
+
+  const push = env.sentMessages.find((m) => m.type === 'BACKEND_API_FETCH');
+  assert.ok(push, 'leetcode: accepted verdict still pushes after a pending poll');
+  assert.strictEqual(
+    JSON.parse(push.options.body).outcome,
+    'accepted',
+    'leetcode: pushed as accepted'
+  );
+
+  return 'LeetCode pending poll -> ignored, real verdict still accepted';
+}
+
 async function takeuforwardVerdict() {
   const env = createEnvironment();
   const T = loadStack(env, 'platforms/takeuforward.js');
@@ -572,6 +663,7 @@ const SCENARIOS = [
   leetcodeAccepted,
   leetcodeRejectedThenFlag,
   leetcodeRun,
+  leetcodePendingPollThenAccepted,
   takeuforwardVerdict,
   geeksforgeeksDomPath,
   pipelineRetriesOnBackendFailure,

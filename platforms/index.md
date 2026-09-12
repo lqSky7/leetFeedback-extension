@@ -85,9 +85,12 @@ Inherited helpers you should use instead of reimplementing:
 - A request emits two events. Branch on `phase` before reading `requestBody`
   (request phase) or `response` (response phase).
 - Judge endpoints are **polled by the site**, so the same rule fires many times
-  and statuses like `judging`/`running`/`queued` mean "not decided yet". Filter
-  them out (see `PENDING_STATUSES` in `takeuforward.js`) or you will record a
-  verdict for an unfinished submission.
+  and the early payloads carry no verdict at all. Filter them out or you will
+  record a verdict for an unfinished submission — and, because a pending poll
+  also consumes the pending id, the real verdict that arrives next is dropped.
+  Each network platform guards this differently: TakeUforward matches a status
+  string (`PENDING_STATUSES` in `takeuforward.js`), LeetCode waits for the
+  judge to finish (`isFinalCheck` in `leetcode.js`).
 - **Do not add DOM verdict scraping to LeetCode or TakeUforward.** Their network
   capture is verified; a selector fallback there is a regression, not a safety
   net.

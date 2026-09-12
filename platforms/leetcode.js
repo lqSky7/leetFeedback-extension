@@ -11,6 +11,10 @@
 //   POST /problems/{slug}/interpret_solution/ -> request carries typed_code + lang
 //                                            -> response carries interpret_id
 //   GET  /submissions/detail/{id}/check/     -> response carries the verdict
+//
+// The check endpoint is polled by the site while the judge runs, so the same
+// rule fires repeatedly and the early payloads carry no verdict at all. Only a
+// finished run may produce a verdict — see isFinalCheck().
 
 (function () {
   'use strict';
@@ -24,6 +28,22 @@
   const CHECK_URL = /\/detail\/([^/]+)\/(?:v2\/)?check\/?$/;
 
   const pathOf = (url) => String(url || '').split('?')[0];
+
+  /**
+   * The site polls the check endpoint while the judge is still running, and
+   * those intermediate payloads carry no verdict at all (`{"state":"PENDING"}`,
+   * `{"state":"STARTED"}`). `state` flips to `SUCCESS` once the run finishes —
+   * including for compile errors, so `SUCCESS` means "judged", not "accepted".
+   *
+   * Reading a pending poll as a rejection is what recorded solved problems as
+   * failures: it produced a verdict with no status (`REJECTED (unknown)`) and
+   * consumed the pending submission id, so the real verdict that arrived on the
+   * next poll was discarded.
+   */
+  const isFinalCheck = (data) =>
+    String(data.state || '').toUpperCase() === 'SUCCESS' ||
+    // Defensive: older/other payload shapes omit `state` but carry the verdict.
+    (!data.state && (data.status_code !== undefined || data.status_msg !== undefined));
 
   class LeetCodeAdapter extends T.PlatformAdapter {
     static platform = 'leetcode';
@@ -104,6 +124,14 @@
 
     async handleCheckResponse(id, data) {
       if (!id || !data) return;
+
+      // A pending poll must not be turned into a verdict, and must not consume
+      // the pending id — the real verdict arrives on a later poll.
+      if (!isFinalCheck(data)) {
+        this.logger.log(`check ${id} still judging (${data.state || 'no state'})`);
+        return;
+      }
+
       const runSuccess = Boolean(data.run_success);
 
       if (this.currentSubmissionId && String(id) === String(this.currentSubmissionId)) {
