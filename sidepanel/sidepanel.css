@@ -639,6 +639,9 @@ input {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
   color: #FFFFFF;
+  /* .token-link lifts on hover; this variant is a primary action sitting in a
+     form field, so it stays put and only changes colour. */
+  transform: none;
 }
 
 /* ── Buttons (Base Web Ergonomics) ─────────────────────────────────────── */
