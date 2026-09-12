@@ -597,4 +597,9 @@ const SCENARIOS = [
     process.exit(1);
   }
   console.log(`All ${SCENARIOS.length} smoke scenarios passed.`);
+
+  // The loaded content-script stack installs polling timers and observers that
+  // never get torn down, so the event loop would stay alive forever. Exit
+  // explicitly instead of hanging.
+  process.exit(0);
 })();
