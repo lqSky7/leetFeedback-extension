@@ -157,18 +157,54 @@
     /* ── editor access ── */
 
     getCurrentCode() {
+      // ⚠️  This file runs in the isolated content-script world, so window.ace
+      // is NOT the page's ACE instance.  Only DOM elements are visible across
+      // the boundary.  Strategies that touch JS globals (ace, monaco) are
+      // unreachable here; they are kept as last-resort fallbacks in case GFG
+      // ever switches to a MAIN-world injection like LeetCode's monaco-bridge.
+
+      // Strategy 1 — ACE hidden text-input.  ACE renders a textarea for
+      // clipboard integration; its value mirrors the editor content and is
+      // reachable from the isolated world because it is a DOM element.
+      const textInput = document.querySelector('.ace_text-input');
+      if (textInput && textInput.value && textInput.value.length > 10) {
+        return T.util.sanitizeCode(textInput.value);
+      }
+
+      // Strategy 2 — read rendered ACE lines from the DOM.  Each line is a
+      // .ace_line div; concatenating them recovers the full source.
+      const lines = document.querySelectorAll('.ace_line');
+      if (lines.length > 0) {
+        const code = Array.from(lines)
+          .map((line) => line.textContent)
+          .join('\n');
+        if (code.length > 10) return T.util.sanitizeCode(code);
+      }
+
+      // Strategy 3 — plain textarea fallback (some sites keep a hidden textarea
+      // that is updated on every keystroke).
+      const textarea = document.querySelector('textarea');
+      if (textarea && textarea.value && textarea.value.length > 10) {
+        return T.util.sanitizeCode(textarea.value);
+      }
+
+      // Strategy 4 — ACE API.  Only works if this adapter is ever moved to the
+      // MAIN world or if a bridge script (like page/monaco-bridge.js) is added
+      // for GFG.  In the isolated world window.ace is undefined.
       if (window.ace && window.ace.edit) {
-        const editors = document.querySelectorAll('.ace_editor');
-        if (editors.length > 0) {
+        const candidates = document.querySelectorAll('.ace_editor');
+        for (const el of candidates) {
           try {
-            const value = window.ace.edit(editors[0]).getValue();
+            const editor = window.ace.edit(el);
+            const value = editor && editor.getValue ? editor.getValue() : '';
             if (value && value.length > 10) return T.util.sanitizeCode(value);
           } catch (_) {
-            /* editor not ready */
+            /* editor not ready on this element */
           }
         }
       }
 
+      // Strategy 5 — Monaco (unlikely on GFG, but harmless).
       if (window.monaco && window.monaco.editor) {
         const models = window.monaco.editor.getModels();
         if (models.length > 0) {
@@ -177,10 +213,6 @@
         }
       }
 
-      const textarea = document.querySelector('textarea');
-      if (textarea && textarea.value && textarea.value.length > 10) {
-        return T.util.sanitizeCode(textarea.value);
-      }
       return '';
     }
 
