@@ -4,6 +4,10 @@ MV3 extension that tracks DSA practice on LeetCode, GeeksforGeeks, TakeUforward,
 CodeChef and Naukri Code360, and syncs each solved problem to the Traverse
 backend (optionally mirroring it to GitHub).
 
+It also carries a **platform recon** mode: on 18 DSA platforms that have no
+verified adapter yet, it records a real session and reports the judge API back,
+so a new adapter is written from evidence instead of guesswork. See §2a.
+
 **Start here.** This file is the map. Every directory below has its own
 `index.md` written for agents; if you can't work out where a change belongs from
 this chain, the docs are wrong — fix them in the same commit.
@@ -23,7 +27,7 @@ remaining migration phases live in [REFACTOR_PLAN.md](REFACTOR_PLAN.md).
 | `ui/` | Content-script UI: toasts, submission card, hint prompt | [`ui/index.md`](ui/index.md) |
 | `background/` | Service worker: backend request proxy + auth storage owner | [`background/index.md`](background/index.md) |
 | `sidepanel/` | The extension's own UI (HTML/CSS/JS), unchanged visually | [`sidepanel/index.md`](sidepanel/index.md) |
-| `tests/` | Node scripts; `auth.test.js` is the only one with a runner | — |
+| `tests/` | Node scripts, no test runner: `smoke.test.js` (platform-adapter stack), `recon.test.js` (recon controller), `auth.test.js`, `g4f-api-test.mjs`. Run them directly with `node` | — |
 | `icons/`, `fonts/` | Static assets | — |
 
 ---
@@ -68,6 +72,38 @@ Two more entry points exist:
 
 ---
 
+## 2a. How a *new* platform gets discovered
+
+LeetCode and TakeUforward have verified judge APIs. Every other DSA platform is
+discovered rather than hand-written, by a separate capture path that never
+touches the tracking stack above:
+
+```
+page world (MAIN)                        isolated world                extension        backend
+─────────────────                        ──────────────                ─────────        ───────
+net-interceptor.js  ── TRV_RECON_EVENT ──► core/recon-controller.js
+  capture-all mode                          arms on problem pages
+  (headers, bodies,                         labels run/submit flows
+   timing, initiator)                       infers pass/fail verdicts
+                                            scrapes button + editor selectors
+                                                  │
+                                            chrome.storage.local
+                                              (recon_bundle, staged)
+                                                  │ RECON_UPLOAD
+                                                  └─────────────► background worker
+                                                                    POST /api/recon/ingest
+                                                                          │
+                                                              recon-dumps/<platform>/*.json
+                                                                      + digest email
+```
+
+The point is to automate the "record a HAR and work out the endpoints" step in
+`platforms/index.md` §6. It runs on **18 mapped platforms** and is explicitly
+off for LeetCode, TakeUforward, and Traverse's own surfaces. See
+`core/index.md` for the invariants.
+
+---
+
 ## 3. Invariants — do not break these
 
 1. **`core/config.js` is the only place URLs and storage key names are defined.**
@@ -87,12 +123,20 @@ Two more entry points exist:
    type strings from `core/net-protocol.js`.
 6. **Storage keys are a data contract with the backend and with existing user
    data.** Renaming one silently orphans every user's history.
-7. **UI freeze.** The sidepanel, timer overlay, toasts and hint prompt must stay
+7. **Recon never runs on LeetCode or TakeUforward.** Their network capture is
+   verified; a capture-all recorder on top of it is noise, and a selector
+   fallback there is a regression. The exclusion lives in
+   `config.js` → `recon.excludedHosts`.
+8. **Recon redacts credentials before they leave the page.** Anything added to
+   `SENSITIVE_HEADERS` in `page/net-interceptor.js` is a privacy decision;
+   captures are emailed and written to disk.
+9. **UI freeze.** The sidepanel, timer overlay, toasts and hint prompt must stay
    pixel- and behaviour-identical. Refactors change the code behind them, never
-   their appearance or copy.
-8. **Background handlers must `return true`** when responding asynchronously.
-9. **The service worker holds no problem state.** MV3 terminates it when idle;
-   everything must be rehydrated from `chrome.storage`.
+   their appearance or copy. (The recon settings card is the single sanctioned
+   addition; it extends the existing Settings tab rather than restyling it.)
+10. **Background handlers must `return true`** when responding asynchronously.
+11. **The service worker holds no problem state.** MV3 terminates it when idle;
+    everything must be rehydrated from `chrome.storage`.
 
 ---
 
@@ -105,6 +149,8 @@ Base URL: `T.config.backendBaseURL` (currently the ngrok dev tunnel).
 | `/api/auth/login` | POST | `{ username, password }` → `{ token, user }` (token shape is loose; see `ExtensionAuth.pickToken`) |
 | `/api/auth/verify` | GET | `Authorization: Bearer <token>` |
 | `/api/submissions` | POST | The push target — see the payload below |
+| `/api/recon/ingest` | POST | Raw capture sink. Headers `X-Recon-Token`, `X-Platform`, `X-Capture-Id`. **No body-size limit**; the backend streams it to disk and emails a digest. Responds `202` |
+| `/api/recon/ping` | GET | Token check for the sidepanel's *Verify* button. `200` = token accepted |
 
 Payload for `/api/submissions`, built by `core/backend-api.js`:
 
@@ -141,6 +187,15 @@ Payload for `/api/submissions`, built by `core/backend-api.js`:
 | `hint_prompt_enabled`, `hint_prompt_default_option`, `hint_prompt_duration` | sync | sidepanel | Hint prompt behaviour |
 | `browser_session_restarted`, `session_start_time` | local | background | Set on startup so stale timers are discarded |
 | `tuf_code_data` | local | `platforms/takeuforward.js` | Cross-page cache of the last submitted TUF code |
+| `recon_enabled` | sync | sidepanel | Recon on/off switch. Defaults to on |
+| `recon_status` | local | `core/recon-controller.js` | Live arm state, captured flows, selector scrape — the sidepanel renders this |
+| `recon_bundle` | local | `core/recon-controller.js` | The staged capture, read by the background worker on `RECON_UPLOAD` |
+| `recon_flow_labels` | local | `core/recon-controller.js` | Which of the four flows (run/submit × pass/fail) have been seen |
+| `recon_ingest_token` | local | *(nothing)* | Legacy override, no longer written — the token comes from `config.recon.defaultToken` |
+| `recon_enabled`, `recon_ingest_token` | sync | sidepanel | Recon opt-in and the ingest shared secret (see `core/index.md`) |
+| `recon_status` | local | `core/recon-controller.js` | Live arm state, captured flows, selector scrape — the sidepanel renders this |
+| `recon_bundle` | local | `core/recon-controller.js` | The staged capture, read by the background worker on `RECON_UPLOAD` |
+| `recon_flow_labels` | local | `core/recon-controller.js` | Which of the four flows (run/submit × pass/fail) have been seen |
 
 ## 6. Where to make common changes
 
@@ -154,4 +209,7 @@ Payload for `/api/submissions`, built by `core/backend-api.js`:
 | Change the `problem_data` record shape | `core/platform-adapter.js` (`storeProblemData`) |
 | Add a network rule for a site | `platforms/<site>.js` (`netFilters` + `onNetEvent`) |
 | Add a background message handler | `background/background.js` (`RUNTIME_HANDLERS`) |
-| Change a toast / the timer / the hint prompt's look | `ui/`, `core/problem-timer.js` — but read invariant 7 first |
+| Change a toast / the timer / the hint prompt's look | `ui/`, `core/problem-timer.js` — but read invariant 9 first |
+| Add a platform to recon coverage | `core/config.js` → `recon.platforms` **and** the recon `content_scripts` `matches` in `manifest.json` |
+| Change what recon records, or how it judges a verdict | `core/recon-controller.js` — but read invariants 7 and 8 first |
+| Change the emailed digest's shape | backend `src/lib/reconDigest.ts` |

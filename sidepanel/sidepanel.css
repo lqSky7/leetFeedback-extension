@@ -627,6 +627,20 @@ input {
   transform: translateY(-1px);
 }
 
+/* Accent variant — same shape as .token-link, but filled with the accent blue so
+   it reads as the primary action next to a field, matching .btn-accent. */
+.token-link--accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #FFFFFF;
+}
+
+.token-link--accent:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: #FFFFFF;
+}
+
 /* ── Buttons (Base Web Ergonomics) ─────────────────────────────────────── */
 .btn {
   display: inline-flex;
@@ -1624,4 +1638,107 @@ input {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   PLATFORM RECON
+   Status panel for the capture-all recorder that runs on DSA platforms which
+   don't have a verified network adapter yet.
+   ========================================================================== */
+
+.recon-hint {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 4px 0 14px;
+}
+
+.recon-status-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 4px 0 14px;
+}
+
+.recon-status-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.recon-status-key {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 0 0 auto;
+}
+
+.recon-status-value {
+  color: var(--text);
+  font-family: var(--font-family-mono);
+  text-align: right;
+  word-break: break-all;
+}
+
+.recon-flows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.recon-flow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.recon-flow-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  flex: 0 0 auto;
+}
+
+.recon-flow.done {
+  color: var(--text-secondary);
+}
+
+.recon-flow.done .recon-flow-dot {
+  background: var(--success);
+}
+
+.recon-flow.uncertain .recon-flow-dot {
+  background: var(--warning);
+}
+
+.recon-flow-status {
+  margin-left: auto;
+  font-family: var(--font-family-mono);
+  color: var(--text-tertiary);
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recon-feedback {
+  font-size: 11px;
+  line-height: 1.5;
+  min-height: 16px;
+  margin-top: 10px;
+  color: var(--text-muted);
+}
+
+.recon-feedback.ok {
+  color: var(--success);
+}
+
+.recon-feedback.error {
+  color: var(--error);
 }

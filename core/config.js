@@ -80,5 +80,110 @@
       codechef: true,
       naukri: true,
     },
+
+    // Platform reconnaissance.
+    //
+    // On any platform that does NOT already have a verified network adapter,
+    // a capture-all recorder arms itself on problem pages, records every
+    // request/response (headers, bodies, timing, initiator stack) plus the
+    // run/submit button selectors and editor shape, and uploads the bundle so
+    // the judge API can be reverse-engineered into a real adapter.
+    //
+    // Nothing here runs on LeetCode or TakeUforward: their network capture is
+    // already verified, and a recorder on top of it is pure noise.
+    recon: {
+      // Platforms with verified network interception — recon must never run.
+      excludedHosts: ['leetcode.com', 'takeuforward.org'],
+
+      // Never record on Traverse's own surfaces, or the recorder would capture
+      // its own upload traffic and the website's auth handshake.
+      excludedHostsExtra: [
+        'traverses.tech',
+        'leet-feedback.vercel.app',
+        'localhost',
+        'netlify.app',
+        'g4f.space',
+        'generativelanguage.googleapis.com',
+        'api.github.com',
+      ],
+
+      // hostname suffix -> platform id. Longest suffix wins (see
+      // resolvePlatformId in core/recon-controller.js).
+      platforms: {
+        'geeksforgeeks.org': 'geeksforgeeks',
+        'codechef.com': 'codechef',
+        'naukri.com': 'naukri',
+        'hackerrank.com': 'hackerrank',
+        'codeforces.com': 'codeforces',
+        'codingninjas.com': 'codingninjas',
+        'hackerearth.com': 'hackerearth',
+        'atcoder.jp': 'atcoder',
+        'interviewbit.com': 'interviewbit',
+        'spoj.com': 'spoj',
+        'topcoder.com': 'topcoder',
+        'kattis.com': 'kattis',
+        'cses.fi': 'cses',
+        'codewars.com': 'codewars',
+        'neetcode.io': 'neetcode',
+        'exercism.org': 'exercism',
+        'lintcode.com': 'lintcode',
+        'edabit.com': 'edabit',
+      },
+
+      // Only arm on URLs that look like a problem/editor page. Without this the
+      // recorder would capture a job board's entire browsing session, which is
+      // both useless and a privacy problem.
+      problemUrlPatterns: [
+        '/problems/',
+        '/problem/',
+        '/challenges/',
+        '/challenge/',
+        '/practice/',
+        '/code/',
+        '/ide/',
+        '/playground/',
+        '/exercises/',
+        '/kata/',
+        '/tasks/',
+        '/submit/',
+      ],
+
+      // Capture budget. A four-flow session on a heavy SPA produces thousands
+      // of requests; these caps keep the bundle (and chrome.storage) bounded.
+      maxEvents: 2500,
+      maxBodyChars: 120000,
+      maxBundleChars: 12000000,
+
+      // Idle time after the last captured event before an auto-upload is
+      // considered "finished" (used by the sidepanel status line).
+      idleMs: 20000,
+
+      // Upload automatically once all four flows are observed. Off means the
+      // capture is staged and only sent when Send now is pressed.
+      autoUpload: true,
+
+      // Shared secret for POST /api/recon/ingest, baked in so that recording
+      // needs zero setup: a user who never opens the sidepanel still
+      // contributes captures.
+      //
+      // This is a *client* credential, not a per-user secret. Its only job is
+      // to stop someone who guesses the URL from mailing the operator or
+      // filling the server's disk. It must match RECON_INGEST_TOKEN on the
+      // backend; the two are changed together.
+      //
+      // The sidepanel's Ingest Token field overrides this value, so the token
+      // can be rotated for one machine without shipping a new build. An empty
+      // string here plus an empty field means recording is off.
+      defaultToken: 'c0b104a316f7da704977783483803d6c0c63e522e40d09a0f8ecaae2f7ee7b6a',
+
+      // Storage keys.
+      keys: {
+        enabled: 'recon_enabled',
+        token: 'recon_ingest_token',
+        status: 'recon_status',
+        bundle: 'recon_bundle',
+        flowLabels: 'recon_flow_labels',
+      },
+    },
   };
 })();

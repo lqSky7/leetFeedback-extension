@@ -117,6 +117,14 @@ Inherited helpers you should use instead of reimplementing:
    add the URLs to `netFilters` and handle them in `onNetEvent`. Until then, use
    the DOM path (`watchButton` + `awaitSubmitVerdict`) and set
    `netFilters: []`.
+
+   **You usually don't have to do this by hand.** The recon recorder
+   (`core/recon-controller.js`) automates exactly this step: it arms on the new
+   platform's problem pages, captures all four judge flows, infers the verdict
+   field by diffing a pass against a fail, scrapes the button/editor selectors,
+   and emails a digest with a draft of the `netFilters` + `onNetEvent` code
+   below. Add the platform to `config.js` → `recon.platforms` and to the recon
+   `matches` arrays in `manifest.json` first, then work from the digest.
 4. **`core/config.js`** — if the platform needs a DOM-verdict fallback switch,
    add it to `domVerdictFallback`.
 5. **`manifest.json`** — add the site to `host_permissions`.

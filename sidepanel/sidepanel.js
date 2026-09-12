@@ -167,6 +167,7 @@ class PopupController {
   async initialize() {
     await this.loadStoredData();
     await this.initializeAuth();
+    await this.initializeRecon();
     this.initializeCustomSelects();
     this.setupEventListeners();
     this.updateUI();
@@ -1448,6 +1449,184 @@ class PopupController {
       if (numA < numB) return -1;
     }
     return 0;
+  }
+
+  /* ── Platform recon ──
+   *
+   * The recorder itself lives in the content script (core/recon-controller.js)
+   * and reports through chrome.storage.local. This panel only owns the two
+   * settings (enabled + ingest token) and the status readout.
+   */
+
+  reconKeys() {
+    const traverse = globalThis.Traverse;
+    const recon = traverse && traverse.config ? traverse.config.recon : null;
+    return (recon && recon.keys) || {
+      enabled: "recon_enabled",
+      token: "recon_ingest_token",
+      status: "recon_status",
+      bundle: "recon_bundle",
+    };
+  }
+
+  async initializeRecon() {
+    await this.loadReconSettings();
+    this.setupReconListeners();
+    await this.renderReconStatus();
+
+    // The content script rewrites the status record as it captures; re-render
+    // whenever that happens so the panel tracks a live session.
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== "local") return;
+      if (changes[this.reconKeys().status]) this.renderReconStatus();
+    });
+  }
+
+  async loadReconSettings() {
+    const keys = this.reconKeys();
+    const stored = await chrome.storage.local.get([keys.enabled]);
+
+    const enabledEl = document.getElementById("recon-enabled");
+    if (enabledEl) enabledEl.checked = stored[keys.enabled] !== false; // default on
+  }
+
+  setupReconListeners() {
+    const keys = this.reconKeys();
+
+    const enabledEl = document.getElementById("recon-enabled");
+    if (enabledEl) {
+      enabledEl.addEventListener("change", async (e) => {
+        await chrome.storage.local.set({ [keys.enabled]: e.target.checked });
+        this.setReconFeedback(e.target.checked ? "Recorder enabled" : "Recorder disabled", "ok");
+        await this.renderReconStatus();
+      });
+    }
+
+    const sendBtn = document.getElementById("recon-send");
+    if (sendBtn) sendBtn.addEventListener("click", () => this.sendReconCapture());
+  }
+
+  async sendReconCapture() {
+    const keys = this.reconKeys();
+    const stored = await chrome.storage.local.get([keys.bundle]);
+    const bundle = stored[keys.bundle];
+
+    if (!bundle) {
+      this.setReconFeedback("Nothing captured yet — open a problem page first", "error");
+      return;
+    }
+
+    const events = Array.isArray(bundle.network) ? bundle.network.length : 0;
+    this.setReconFeedback(`Sending ${events} event(s)…`, "");
+
+    const result = await this.sendMessageToBackground({ type: "RECON_UPLOAD" });
+
+    if (result && result.success) {
+      this.setReconFeedback(`Capture sent — ${events} event(s) from ${bundle.platform}`, "ok");
+    } else {
+      this.setReconFeedback(`Send failed: ${(result && result.error) || "unknown error"}`, "error");
+    }
+
+    await this.renderReconStatus();
+  }
+
+  async renderReconStatus() {
+    const keys = this.reconKeys();
+    const stored = await chrome.storage.local.get([keys.status, keys.token]);
+    const status = stored[keys.status] || {};
+    const hasToken = Boolean(stored[keys.token]);
+
+    const setText = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    };
+
+    setText("recon-st-platform", status.platform || status.host || "no tracked site");
+
+    let recorderState;
+    if (!hasToken) recorderState = "no token";
+    else if (status.excluded) recorderState = "excluded site";
+    else if (status.armed) recorderState = "recording";
+    else if (status.onProblemPage) recorderState = "idle";
+    else recorderState = "not on a problem page";
+    setText("recon-st-armed", recorderState);
+
+    setText(
+      "recon-st-events",
+      typeof status.eventCount === "number"
+        ? `${status.eventCount}${status.overflowed ? " (capped)" : ""}`
+        : "—"
+    );
+    setText("recon-st-uploaded", status.uploadedAt ? this.formatRelativeTime(status.uploadedAt) : "never");
+
+    this.renderReconFlows(status.flows || {});
+  }
+
+  /**
+   * Rendered with DOM APIs rather than innerHTML: the detail line is a verdict
+   * string scraped from a third-party page, and must never be interpreted as
+   * markup inside the extension's own UI.
+   */
+  renderReconFlows(flows) {
+    const container = document.getElementById("recon-flows");
+    if (!container) return;
+
+    const labels = {
+      "run-pass": "Run — passed",
+      "run-fail": "Run — failed",
+      "submit-pass": "Submit — accepted",
+      "submit-fail": "Submit — rejected",
+    };
+
+    container.textContent = "";
+
+    for (const id of Object.keys(labels)) {
+      const flow = flows[id] || {};
+      const observed = flow.status === "observed";
+      const uncertain = flow.status === "uncertain";
+
+      const row = document.createElement("div");
+      row.className = `recon-flow${observed ? " done" : uncertain ? " uncertain" : ""}`;
+
+      const dot = document.createElement("span");
+      dot.className = "recon-flow-dot";
+
+      const label = document.createElement("span");
+      label.textContent = labels[id];
+
+      const detail = document.createElement("span");
+      detail.className = "recon-flow-status";
+      const detailText = observed
+        ? (flow.verdict && flow.verdict.status) || "captured"
+        : uncertain
+          ? "no verdict"
+          : "waiting";
+      detail.textContent = detailText;
+      detail.title = detailText;
+
+      row.append(dot, label, detail);
+      container.append(row);
+    }
+  }
+
+  formatRelativeTime(iso) {
+    const then = new Date(iso).getTime();
+    if (!Number.isFinite(then)) return "—";
+
+    const seconds = Math.max(0, Math.round((Date.now() - then) / 1000));
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.round(hours / 24)}d ago`;
+  }
+
+  setReconFeedback(message, type = "") {
+    const el = document.getElementById("recon-feedback");
+    if (!el) return;
+    el.textContent = message || "";
+    el.className = `recon-feedback${type ? ` ${type}` : ""}`;
   }
 
   // Check session/cookie expiration status

@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Traverse",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "description": "Chrome extension for Traverse Ecosystem",
     "icons": {
         "16": "icons/16.png",
@@ -10,6 +10,7 @@
     },
     "permissions": [
         "storage",
+        "unlimitedStorage",
         "scripting",
         "activeTab",
         "tabs",
@@ -22,6 +23,21 @@
         "https://*.takeuforward.org/*",
         "https://*.codechef.com/*",
         "https://*.naukri.com/*",
+        "https://*.hackerrank.com/*",
+        "https://*.codeforces.com/*",
+        "https://*.codingninjas.com/*",
+        "https://*.hackerearth.com/*",
+        "https://*.atcoder.jp/*",
+        "https://*.interviewbit.com/*",
+        "https://*.spoj.com/*",
+        "https://*.topcoder.com/*",
+        "https://*.kattis.com/*",
+        "https://*.cses.fi/*",
+        "https://*.codewars.com/*",
+        "https://*.neetcode.io/*",
+        "https://*.exercism.org/*",
+        "https://*.lintcode.com/*",
+        "https://*.edabit.com/*",
         "https://api.github.com/*",
         "https://generativelanguage.googleapis.com/*",
         "https://*.ngrok-free.dev/*",
@@ -218,6 +234,64 @@
                 "ui/hint-prompt.js",
                 "core/platform-adapter.js",
                 "platforms/naukri.js"
+            ],
+            "run_at": "document_end"
+        },
+        {
+            "matches": [
+                "https://*.geeksforgeeks.org/*",
+                "https://practice.geeksforgeeks.org/*",
+                "https://*.codechef.com/*",
+                "https://*.naukri.com/*",
+                "https://*.hackerrank.com/*",
+                "https://*.codeforces.com/*",
+                "https://*.codingninjas.com/*",
+                "https://*.hackerearth.com/*",
+                "https://*.atcoder.jp/*",
+                "https://*.interviewbit.com/*",
+                "https://*.spoj.com/*",
+                "https://*.topcoder.com/*",
+                "https://*.kattis.com/*",
+                "https://*.cses.fi/*",
+                "https://*.codewars.com/*",
+                "https://*.neetcode.io/*",
+                "https://*.exercism.org/*",
+                "https://*.lintcode.com/*",
+                "https://*.edabit.com/*"
+            ],
+            "js": [
+                "page/net-interceptor.js"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://*.geeksforgeeks.org/*",
+                "https://practice.geeksforgeeks.org/*",
+                "https://*.codechef.com/*",
+                "https://*.naukri.com/*",
+                "https://*.hackerrank.com/*",
+                "https://*.codeforces.com/*",
+                "https://*.codingninjas.com/*",
+                "https://*.hackerearth.com/*",
+                "https://*.atcoder.jp/*",
+                "https://*.interviewbit.com/*",
+                "https://*.spoj.com/*",
+                "https://*.topcoder.com/*",
+                "https://*.kattis.com/*",
+                "https://*.cses.fi/*",
+                "https://*.codewars.com/*",
+                "https://*.neetcode.io/*",
+                "https://*.exercism.org/*",
+                "https://*.lintcode.com/*",
+                "https://*.edabit.com/*"
+            ],
+            "js": [
+                "core/config.js",
+                "core/logger.js",
+                "core/net-protocol.js",
+                "core/recon-controller.js"
             ],
             "run_at": "document_end"
         },

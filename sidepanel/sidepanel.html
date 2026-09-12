@@ -156,7 +156,7 @@
                                 Show
                             </button>
                         </div>
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="token-link">Get Gemini
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="token-link token-link--accent">Get Gemini
                             API Key</a>
                     </div>
                     <div class="field" id="gemini-model-field" style="display: none;">
@@ -240,6 +240,55 @@
                         </div>
                     </div>
                     <div class="separator"></div>
+                </div>
+
+                <!-- Platform Recon Section -->
+                <div class="settings-section settings-card" id="recon-section">
+                    <h3>Platform Recon</h3>
+                    <div class="settings-option">
+                        <div class="settings-option-title">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="recon-enabled" checked />
+                                <span class="checkbox-custom"></span>
+                                Record unknown platforms
+                                <span class="info-icon" data-tooltip="Records network traffic on DSA platforms that don't have a verified adapter yet, so their judge API can be mapped. Never runs on LeetCode or TakeUforward.">ⓘ</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="recon-hint">
+                        Recording starts on its own when you open a problem page on a
+                        supported platform — no setup needed. Do a Run and a Submit — one
+                        passing, one failing — so all four verdict paths are captured. The
+                        bundle is mailed to you once it's complete.
+                    </div>
+
+                    <div class="recon-status-grid">
+                        <div class="recon-status-row">
+                            <span class="recon-status-key">Platform</span>
+                            <span class="recon-status-value" id="recon-st-platform">—</span>
+                        </div>
+                        <div class="recon-status-row">
+                            <span class="recon-status-key">Recorder</span>
+                            <span class="recon-status-value" id="recon-st-armed">—</span>
+                        </div>
+                        <div class="recon-status-row">
+                            <span class="recon-status-key">Events</span>
+                            <span class="recon-status-value" id="recon-st-events">—</span>
+                        </div>
+                        <div class="recon-status-row">
+                            <span class="recon-status-key">Last upload</span>
+                            <span class="recon-status-value" id="recon-st-uploaded">—</span>
+                        </div>
+                    </div>
+
+                    <div class="recon-flows" id="recon-flows"></div>
+
+                    <div class="actions">
+                        <button type="button" class="btn btn-accent" id="recon-send">Send capture now</button>
+                    </div>
+
+                    <div class="recon-feedback" id="recon-feedback"></div>
                 </div>
 
                 <div class="settings-section">

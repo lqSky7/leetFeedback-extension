@@ -4,19 +4,21 @@
 
 The extension's own interface, docked beside the problem page. Users sign in,
 switch accounts, configure GitHub mirroring, AI provider, the timer overlay, the
-hint prompt and debug logging here.
+hint prompt, debug logging and **platform recon** here.
 
-**UI freeze applies (root `index.md`, invariant 7).** This directory was *not*
+**UI freeze applies (root `index.md`, invariant 9).** This directory was *not*
 restructured in the refactor — only the script paths in `sidepanel.html` changed,
 because the modules it loads moved from `shared/` and `utils/` into `core/`.
+The recon settings card is the one sanctioned addition: it extends the existing
+Settings tab instead of restyling anything.
 
 ## 2. Modules
 
 | File | Responsibility |
 |---|---|
-| `sidepanel.html` | Markup + tab structure (Home: Account, Timer; Settings: GitHub, AI, Debug, Updates). Loads `../core/config.js`, `../core/logger.js`, `../core/auth.js`, then `sidepanel.js` |
+| `sidepanel.html` | Markup + tab structure (Home: Account, Timer; Settings: GitHub, AI, Recon, Debug, Updates). Loads `../core/config.js`, `../core/logger.js`, `../core/auth.js`, then `sidepanel.js` |
 | `sidepanel.css` | All styling and theme tokens |
-| `sidepanel.js` | The controller: renders tabs, drives the auth forms, manages accounts, reads/writes settings, shows connection and session status |
+| `sidepanel.js` | The controller: renders tabs, drives the auth forms, manages accounts, reads/writes settings, shows connection and session status, renders the recon card |
 
 The `ExtensionAuth` class lives in `../core/auth.js` (exposed as
 `window.extensionAuth`) because it is a self-contained auth client, not markup.
@@ -25,7 +27,8 @@ The `ExtensionAuth` class lives in `../core/auth.js` (exposed as
 
 **In:** `chrome.storage.sync` and `chrome.storage.local` — `auth_*`, `github_*`,
 `gemini_api_key`, `ai_provider`, `gemini_model`, `debug_mode`,
-`timer_overlay_*`, `hint_prompt_*`.
+`timer_overlay_*`, `hint_prompt_*`, and for recon `recon_enabled` plus
+`recon_status` / `recon_flow_labels` (local, written by the content script).
 
 **Out:**
 - Settings written straight to `chrome.storage.sync`.
@@ -34,9 +37,13 @@ The `ExtensionAuth` class lives in `../core/auth.js` (exposed as
   `onAuthStatusChange`, `getAccounts`).
 - Login/logout persist through `core/auth.js` → `chrome.storage.local`; the
   background worker and the content scripts pick the change up from there.
+- **One message to the background worker:** `RECON_UPLOAD` (the *Send now*
+  button — forwards the staged recon bundle). Everything else is direct storage
+  access.
 
-The sidepanel does **not** message the background worker for anything today. It
-reads and writes storage directly.
+The panel **never** reads `recon_bundle` itself. A capture can be several
+megabytes; it is written by the content script and read by the background worker
+at upload time.
 
 ## 4. Invariants & gotchas
 
@@ -53,6 +60,15 @@ reads and writes storage directly.
   directory.
 - GitHub push is opt-in: `github_push_enabled` defaults to `false`
   (`=== true` check on read).
+- **The recon card is read-only apart from its on/off switch.** The ingest token
+  is baked into `core/config.js` (`recon.defaultToken`) and is deliberately
+  **not** exposed here — there is nothing for a user to configure, and a field
+  they are told not to touch is worse than no field. Don't add one back.
+- The recon status grid is a **read-only projection** of `recon_status`, which
+  the content script writes. The panel must never write that key — doing so
+  fights the controller and the last writer wins.
+- Recon flow rows are built with DOM APIs (`createElement` / `textContent`), not
+  `innerHTML`, because the labels derive from scraped page content.
 
 ## 5. Where to make common changes
 
@@ -62,3 +78,5 @@ reads and writes storage directly.
 | Theme tokens or spacing | `sidepanel.css` |
 | Sign-in / account switching | `../core/auth.js` |
 | A new setting | `sidepanel.html` + `sidepanel.js` + a key in `core/config.js` |
+| The recon card's fields, buttons or status grid | `sidepanel.html` + `sidepanel.js` (`initializeRecon`, `renderReconStatus`, `renderReconFlows`) |
+| What recon records | `../core/recon-controller.js` — the panel only displays it |

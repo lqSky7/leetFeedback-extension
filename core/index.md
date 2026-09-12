@@ -20,8 +20,9 @@ Load order matters — the list below is in dependency order.
 | `config.js` | **Single source of truth.** Backend/website/GitHub URLs, allowed external origins, every `chrome.storage` key name, the failure threshold, the DOM-fallback switches. Dependency-free; loads in any context |
 | `logger.js` | Tag-based logger reading one `debug_mode` key. Exposes `T.logger` and `T.createLogger(tag)`. Also sets legacy `window.debugLog/debugError/debugWarn` |
 | `util.js` | Pure helpers: `sleep`, difficulty normalization, filename/commit/directory formatting, GitHub config reading, `sanitizeCode` |
-| `net-protocol.js` | The page↔content message constants (`TRV_NET_CONFIG/ACK/EVENT`) and the request/response phase names |
+| `net-protocol.js` | The page↔content message constants for both channels: `TRV_NET_CONFIG/ACK/EVENT` (platform) and `TRV_RECON_CONFIG/ACK/EVENT` (recon), plus the phase names |
 | `net-bridge.js` | Isolated-world half of the interceptor: sends filters, forwards captured events to the adapter |
+| `recon-controller.js` | Platform reconnaissance. Arms a capture-all recorder on problem pages of platforms with no verified adapter, labels the four judge flows, infers verdicts, scrapes button/editor selectors, stages the bundle for upload |
 | `ai-config.js` | Reads the user's AI provider/key from storage so the backend can analyse on their behalf |
 | `session-store.js` | The only module that touches `problem_data_<key>` storage: key derivation, read, merge-write, remove |
 | `attempt-tracker.js` | Attempts, run/submit counters, the failure threshold, the AI-analysis flag, the `tries` metric |
@@ -68,6 +69,39 @@ via `window.LeetFeedbackToast` / `window.LeetFeedbackHintPrompt` /
 - `submission-pipeline` must stay free of `chrome.storage` writes other than the
   GitHub-push-enabled read; persistence belongs to the adapter.
 - `problem-timer` writes through `T.sessionStore`, not raw `chrome.storage`.
+- **`recon-controller` is not part of the tracking stack.** It never touches
+  `problem_data`, never counts runs, and never runs the pipeline — it is a
+  *discovery* tool. Don't wire it into `platform-adapter.js`.
+- **Recon's storage listener must filter on `enabled`/`token`.** It fires for
+  every `chrome.storage.local` write, including the controller's own
+  `recon_status`. Re-evaluating arming unconditionally is an infinite loop
+  (`evaluateArming` → `publishStatus` → `set` → listener → …). This bug has been
+  written once already; `tests/recon.test.js` guards it.
+- Recon only arms when **all three** hold: the platform is mapped, the host is
+  not excluded (LeetCode / TakeUforward / our own surfaces), the URL looks like a
+  problem page, **and** an ingest token exists. A token is always available —
+  `config.js` → `recon.defaultToken` is baked in — so in practice the third
+  condition is satisfied out of the box. The requirement is deliberate: without
+  any token the extension would accumulate captures it can never deliver, so a
+  build shipped with an empty `defaultToken` and no stored override stays idle.
+- **Recording must never require user setup.** The baked-in token exists so that
+  someone who installs the extension and just opens a problem page contributes
+  captures without ever opening the sidepanel. The sidepanel field is an
+  *override*, not a prerequisite. `tests/recon.test.js` pins this ("arms with the
+  built-in token and no user setup") — a change that reintroduces a mandatory
+  paste breaks that scenario, and with it the whole point of the feature.
+- **The ingest token is a client credential, not a per-user secret.** It ships in
+  the extension bundle; its only job is to stop someone who guesses the endpoint
+  URL from mailing the operator or filling the server's disk. It must match
+  `RECON_INGEST_TOKEN` on the backend, and the two are rotated together. Rotating
+  the server value without updating `defaultToken` silently stops all captures.
+- The bundle is staged in `chrome.storage.local` and read by the *background
+  worker*; it is never sent through `runtime.sendMessage`, which serialises the
+  whole payload across a process boundary and is size-limited. This is why
+  `unlimitedStorage` is in `manifest.json`.
+- `recon-controller.destroy()` exists for teardown (and for tests). Its scan
+  interval and persist timers otherwise outlive a page and write status into
+  whatever storage context exists later.
 
 ## 5. Where to make common changes
 
@@ -79,3 +113,7 @@ via `window.LeetFeedbackToast` / `window.LeetFeedbackHintPrompt` /
 | New step in the post-accept flow | `submission-pipeline.js` → `execute` |
 | New lifecycle hook for all platforms | `platform-adapter.js` |
 | New helper for platform adapters | `platform-adapter.js` (or `util.js` if pure) |
+| Which platforms recon runs on, and its capture caps | `config.js` → `recon` |
+| How a captured verdict is recognised | `recon-controller.js` → `inferVerdict` / the token lists |
+| How button/editor selectors are generated | `recon-controller.js` → `stableSelector`, `describe*` |
+| A new message between page and content script | `net-protocol.js` **and** `page/net-interceptor.js` |
