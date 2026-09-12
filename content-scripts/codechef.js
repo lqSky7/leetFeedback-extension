@@ -1148,7 +1148,7 @@
 
         // Step 2: Check if GitHub push is enabled
         const githubSettings = await chrome.storage.sync.get(['github_push_enabled']);
-        const githubPushEnabled = githubSettings.github_push_enabled !== false; // Default to true
+        const githubPushEnabled = githubSettings.github_push_enabled === true; // Default to false
 
         if (githubPushEnabled) {
           // Step 2: Push to GitHub
