@@ -179,6 +179,54 @@
                     </div>
                 </div>
 
+                <!-- Hint Confirmation Section -->
+                <div class="settings-section settings-card" id="hint-prompt-section">
+                    <h3>Hint Confirmation</h3>
+                    <div class="settings-option">
+                        <div class="settings-option-title">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="hint-prompt-enabled" checked />
+                                <span class="checkbox-custom"></span>
+                                Enable Hint Confirmation
+                                <span class="info-icon" data-tooltip="Show confirmation popup upon accepted solve">ⓘ</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="hint-consequences-warning">This action will have consequences</div>
+
+                    <div class="field" id="hint-default-option-field">
+                        <label for="hint-default-option">
+                            Default Option
+                            <span class="info-icon" data-tooltip="Selected when countdown expires or when hint confirmation is disabled">ⓘ</span>
+                        </label>
+                        <div class="custom-select" id="hint-default-option-wrapper" data-select-id="hint-default-option">
+                            <input type="hidden" id="hint-default-option" value="none" />
+                            <button type="button" class="custom-select-trigger" aria-haspopup="listbox">
+                                <span class="custom-select-value">I solved it myself</span>
+                                <svg class="custom-select-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
+                            <div class="custom-select-dropdown" role="listbox">
+                                <div class="custom-select-search-wrap">
+                                    <input type="text" class="custom-select-search" placeholder="Search…" autocomplete="off" />
+                                </div>
+                                <div class="custom-select-options">
+                                    <div class="custom-select-option selected" data-value="none">I solved it myself</div>
+                                    <div class="custom-select-option" data-value="hint">Minor Hint</div>
+                                    <div class="custom-select-option" data-value="solution">Full solution</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="field" id="hint-duration-field">
+                        <label for="hint-prompt-duration">
+                            Timer Duration (seconds)
+                            <span class="info-icon" data-tooltip="Countdown before automatically submitting the default option">ⓘ</span>
+                        </label>
+                        <input type="number" id="hint-prompt-duration" min="3" max="60" value="10" placeholder="10" />
+                    </div>
+                </div>
+
                 <!-- Options/Debug Section -->
                 <div class="settings-section">
                     <h3>Options</h3>
@@ -214,6 +262,8 @@
         </footer>
     </div>
 
+    <script src="../shared/config.js"></script>
+    <script src="../shared/logger.js"></script>
     <script src="../utils/auth.js"></script>
     <script src="sidepanel.js"></script>
 </body>

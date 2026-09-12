@@ -1,28 +1,36 @@
-// Global debug mode cache for sidepanel
+const _spLogger =
+  globalThis.Traverse && globalThis.Traverse.createLogger
+    ? globalThis.Traverse.createLogger('Sidepanel')
+    : null;
+
 let _spDebugMode = false;
 
-// Initialize debug mode cache
-chrome.storage.sync.get(['debug_mode'], (data) => {
-  _spDebugMode = data.debug_mode || false;
-});
+if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+  chrome.storage.sync.get(['debug_mode'], (data) => {
+    _spDebugMode = data.debug_mode || false;
+  });
 
-// Listen for debug mode changes
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'sync' && changes.debug_mode) {
-    _spDebugMode = changes.debug_mode.newValue || false;
-  }
-});
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'sync' && changes.debug_mode) {
+      _spDebugMode = changes.debug_mode.newValue || false;
+    }
+  });
+}
 
 // Debug-aware logging functions for sidepanel
 function spLog(...args) {
-  if (_spDebugMode) {
-    console.log(...args);
+  if (_spLogger) {
+    _spLogger.log(...args);
+  } else if (_spDebugMode) {
+    console.log('[Sidepanel]', ...args);
   }
 }
 
 function spError(...args) {
-  if (_spDebugMode) {
-    console.error(...args);
+  if (_spLogger) {
+    _spLogger.error(...args);
+  } else if (_spDebugMode) {
+    console.error('[Sidepanel]', ...args);
   }
 }
 
@@ -301,6 +309,44 @@ class PopupController {
         console.log("Debug mode enabled:", e.target.checked);
       });
     }
+
+    // Hint prompt settings
+    const hintPromptCheckbox = document.getElementById("hint-prompt-enabled");
+    if (hintPromptCheckbox) {
+      hintPromptCheckbox.addEventListener("change", (e) => {
+        this.config.hintPromptEnabled = e.target.checked;
+        chrome.storage.sync.set({ hint_prompt_enabled: e.target.checked });
+        this.toggleHintPromptConfig(e.target.checked);
+        spLog("Hint prompt enabled:", e.target.checked);
+      });
+    }
+
+    const hintDefaultOptionInput = document.getElementById("hint-default-option");
+    if (hintDefaultOptionInput) {
+      hintDefaultOptionInput.addEventListener("change", (e) => {
+        this.config.hintPromptDefaultOption = e.target.value;
+        chrome.storage.sync.set({ hint_prompt_default_option: e.target.value });
+        spLog("Hint prompt default option:", e.target.value);
+      });
+    }
+
+    const hintDurationInput = document.getElementById("hint-prompt-duration");
+    if (hintDurationInput) {
+      hintDurationInput.addEventListener("change", (e) => {
+        const val = Math.max(3, Math.min(60, parseInt(e.target.value, 10) || 10));
+        e.target.value = val;
+        this.config.hintPromptDuration = val;
+        chrome.storage.sync.set({ hint_prompt_duration: val });
+        spLog("Hint prompt duration:", val);
+      });
+    }
+  }
+
+  toggleHintPromptConfig(enabled) {
+    const section = document.getElementById("hint-prompt-section");
+    if (section) {
+      section.classList.toggle("disabled-flow", !enabled);
+    }
   }
 
   toggleGeminiKeyField(show) {
@@ -371,37 +417,32 @@ class PopupController {
   }
 
   setupAuthForms(authSection) {
-    const toggleButtons = authSection.querySelectorAll(".auth-toggle-btn");
-    const forms = authSection.querySelectorAll(".auth-form");
+    // Primary CTA — opens the website where credentials are created/synced.
+    const websiteCta = authSection.querySelector("#auth-website-cta");
+    if (websiteCta) {
+      websiteCta.addEventListener("click", () => this.openSignIn());
+    }
 
-    const setActiveForm = (target) => {
-      toggleButtons.forEach((btn) => {
-        if (btn.dataset.target === target) {
-          btn.classList.add("active");
-        } else {
-          btn.classList.remove("active");
+    // "Facing difficulty?" disclosure — reveals the manual credential fallback.
+    const disclosureToggle = authSection.querySelector(
+      "#auth-disclosure-toggle",
+    );
+    const disclosurePanel = authSection.querySelector(
+      "#auth-disclosure-panel",
+    );
+
+    if (disclosureToggle && disclosurePanel) {
+      disclosureToggle.addEventListener("click", () => {
+        const isOpen = disclosurePanel.classList.toggle("open");
+        disclosureToggle.classList.toggle("open", isOpen);
+        disclosureToggle.setAttribute("aria-expanded", String(isOpen));
+
+        if (isOpen) {
+          const firstInput = disclosurePanel.querySelector("input");
+          if (firstInput) firstInput.focus();
         }
       });
-
-      forms.forEach((form) => {
-        form.classList.toggle("active", form.dataset.form === target);
-      });
-    };
-
-    toggleButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        if (button.classList.contains("active")) return;
-
-        // Redirect to web app for registration
-        if (button.dataset.target === "register") {
-          chrome.tabs.create({ url: "https://leet-feedback.vercel.app/login" });
-          return;
-        }
-
-        setActiveForm(button.dataset.target);
-        this.showAuthFeedback();
-      });
-    });
+    }
 
     const loginForm = authSection.querySelector("#auth-login-form");
     if (loginForm) {
@@ -409,25 +450,113 @@ class PopupController {
         this.handleLoginSubmit(event),
       );
     }
+
+    this.initGlowyButtons(authSection);
   }
 
-  activateAuthForm(target) {
-    const authSection = document.getElementById("auth-section");
-    if (!authSection) return;
+  /**
+   * Vanilla port of the website's GlowyButton hover effect.
+   * See website/src/components/ui/GlowyButton.tsx — cursor position is tracked
+   * across the pill and a radial glow + border sheen is lerped toward it.
+   */
+  initGlowyButtons(root = document) {
+    const wrappers = root.querySelectorAll(
+      ".glowy-button-wrapper:not([data-glow-ready])",
+    );
 
-    const toggleButtons = authSection.querySelectorAll(".auth-toggle-btn");
-    const forms = authSection.querySelectorAll(".auth-form");
+    wrappers.forEach((wrapper) => {
+      wrapper.dataset.glowReady = "true";
 
-    toggleButtons.forEach((button) => {
-      if (button.dataset.target === target) {
-        button.classList.add("active");
-      } else {
-        button.classList.remove("active");
-      }
-    });
+      const button = wrapper.querySelector(".glowy-button");
+      const glowContainer = wrapper.querySelector(
+        ".glowy-button-glow-container",
+      );
+      const borderGlow1 = wrapper.querySelector(
+        ".glowy-button-border-glow-blur-1",
+      );
+      const borderGlow2 = wrapper.querySelector(
+        ".glowy-button-border-glow-blur-2",
+      );
 
-    forms.forEach((form) => {
-      form.classList.toggle("active", form.dataset.form === target);
+      if (!button || !glowContainer) return;
+
+      const DEFAULT_OFFSET = 73;
+      const MAX_MOVE = 73;
+      const LEAVE_DELAY = 400;
+      const LERP_FACTOR = 0.35;
+
+      let isHovering = false;
+      let currentX = DEFAULT_OFFSET;
+      let targetX = DEFAULT_OFFSET;
+      let frameId = null;
+      let leaveTimer = null;
+
+      const paint = () => {
+        currentX += (targetX - currentX) * LERP_FACTOR;
+        glowContainer.style.transform = `translate(-50%, -50%) translateX(${currentX}px) translateZ(0)`;
+
+        if (Math.abs(currentX - targetX) > 0.1) {
+          frameId = requestAnimationFrame(paint);
+        } else {
+          frameId = null;
+        }
+      };
+
+      const start = () => {
+        if (!frameId) frameId = requestAnimationFrame(paint);
+      };
+
+      glowContainer.style.transform = `translate(-50%, -50%) translateX(${DEFAULT_OFFSET}px) translateZ(0)`;
+
+      wrapper.addEventListener("mouseenter", () => {
+        isHovering = true;
+        if (leaveTimer) {
+          clearTimeout(leaveTimer);
+          leaveTimer = null;
+        }
+        start();
+      });
+
+      wrapper.addEventListener("mousemove", (event) => {
+        if (!isHovering) return;
+
+        const rect = button.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const offsetRatio = (event.clientX - rect.left - centerX) / centerX;
+        targetX = offsetRatio * MAX_MOVE;
+
+        if (targetX < 0) {
+          const leftRatio = Math.abs(targetX) / MAX_MOVE;
+          const leftGlowOpacity = Math.max(
+            0,
+            Math.pow(leftRatio - 0.4, 2) * 2.5,
+          );
+          if (borderGlow2) {
+            borderGlow2.style.opacity = String(
+              Math.min(1, leftGlowOpacity),
+            );
+          }
+          if (borderGlow1) borderGlow1.style.opacity = "0";
+        } else {
+          if (borderGlow2) borderGlow2.style.opacity = "0";
+          if (borderGlow1) {
+            borderGlow1.style.opacity = String(targetX / MAX_MOVE);
+          }
+        }
+
+        start();
+      });
+
+      wrapper.addEventListener("mouseleave", () => {
+        isHovering = false;
+        leaveTimer = setTimeout(() => {
+          leaveTimer = null;
+          targetX = DEFAULT_OFFSET;
+          if (borderGlow1) borderGlow1.style.opacity = "1";
+          if (borderGlow2) borderGlow2.style.opacity = "0";
+          start();
+        }, LEAVE_DELAY);
+      });
     });
   }
 
@@ -585,6 +714,9 @@ class PopupController {
           "timer_overlay_enabled",
           "gemini_model",
           "avatar_url",
+          "hint_prompt_enabled",
+          "hint_prompt_default_option",
+          "hint_prompt_duration",
         ],
         (data) => {
           this.config = {
@@ -599,6 +731,11 @@ class PopupController {
             timerOverlayEnabled: data.timer_overlay_enabled !== false, // Default true
             geminiModel: data.gemini_model || "gemini-3-flash-preview",
             avatarUrl: data.avatar_url || "",
+            hintPromptEnabled: data.hint_prompt_enabled !== false, // Default true
+            hintPromptDefaultOption: data.hint_prompt_default_option || "none", // Default 'none'
+            hintPromptDuration: typeof data.hint_prompt_duration === 'number' && data.hint_prompt_duration > 0
+              ? data.hint_prompt_duration
+              : 10, // Default 10s
           };
           this.mistakeTags = data.mistake_tags || {};
           resolve();
@@ -648,6 +785,27 @@ class PopupController {
 
     // Set initial GitHub accordion state
     this.toggleGitHubConfig(this.config.githubPushEnabled);
+
+    // Hint prompt settings
+    const hintPromptCheckbox = document.getElementById("hint-prompt-enabled");
+    if (hintPromptCheckbox) {
+      hintPromptCheckbox.checked = this.config.hintPromptEnabled !== false;
+    }
+
+    const hintDefaultOptionInput = document.getElementById("hint-default-option");
+    const hintDefaultOptionCs = this.customSelects?.['hint-default-option'];
+    if (hintDefaultOptionInput) {
+      const val = this.config.hintPromptDefaultOption || "none";
+      hintDefaultOptionInput.value = val;
+      if (hintDefaultOptionCs) hintDefaultOptionCs.setValue(val);
+    }
+
+    const hintDurationInput = document.getElementById("hint-prompt-duration");
+    if (hintDurationInput) {
+      hintDurationInput.value = this.config.hintPromptDuration || 10;
+    }
+
+    this.toggleHintPromptConfig(this.config.hintPromptEnabled !== false);
 
     // Update auth section
     this.updateAuthSection();
@@ -789,7 +947,24 @@ class PopupController {
       const activeAccountCacheAge =
         activeAccountTimestamp !== null ? now - activeAccountTimestamp : maxAge + 1;
 
-      if (
+      // Direct session in auth_user & auth_token takes precedence if present
+      if (result.auth_user && result.auth_token) {
+        const accountId = result.auth_active_account_id || (result.auth_user.id ? `backend:${result.auth_user.id}` : 'primary');
+        const account = {
+          id: accountId,
+          user: result.auth_user,
+          token: result.auth_token,
+          timestamp: result.auth_timestamp || now,
+        };
+        this.authStatus = {
+          isAuthenticated: true,
+          user: result.auth_user,
+          token: result.auth_token,
+          accounts: [account],
+          activeAccountId: accountId,
+        };
+        this.updateAuthSection();
+      } else if (
         activeAccount?.user &&
         activeAccount?.token &&
         activeAccountCacheAge < maxAge
@@ -973,27 +1148,50 @@ class PopupController {
 
       authSection.innerHTML = `
         <div class="auth-login-compact">
-          <div class="auth-toggle">
-            <button class="auth-toggle-btn active" data-target="login">Login</button>
-            <button class="auth-toggle-btn" data-target="register">Register</button>
-          </div>
-          <form class="auth-form active" id="auth-login-form" data-form="login">
-            <div class="field">
-              <label for="auth-login-username">Username</label>
-              <input type="text" id="auth-login-username" name="username" placeholder="johndoe" autocomplete="username" required />
+          <div class="auth-cta">
+            <div class="glowy-button-wrapper">
+              <div class="glowy-button-border-glow-blur glowy-button-border-glow-blur-1">
+                <div class="glowy-button-border-light"></div>
+              </div>
+              <div class="glowy-button-border-glow-blur glowy-button-border-glow-blur-2">
+                <div class="glowy-button-border-light"></div>
+              </div>
+              <button type="button" class="glowy-button" id="auth-website-cta">
+                <span class="glowy-button-glow-container">
+                  <span class="glowy-button-glow-inner"></span>
+                  <span class="glowy-button-glow-outer"></span>
+                </span>
+                <span>Login / Register</span>
+                <svg class="glowy-button-arrow-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 9" aria-hidden="true">
+                  <path fill="currentColor" fill-rule="evenodd" d="m12.495 0 4.495 4.495-4.495 4.495-.99-.99 2.805-2.805H0v-1.4h14.31L11.505.99z" clip-rule="evenodd" />
+                </svg>
+              </button>
             </div>
-            <div class="field">
-              <label for="auth-login-password">Password</label>
-              <input type="password" id="auth-login-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
-            </div>
-            <button type="submit" class="btn btn-primary" id="auth-login-submit">Login</button>
-          </form>
-          <div style="text-align: center; margin-top: 10px;">
-            <a href="https://traverses.tech/login" target="_blank" style="font-size: 11px; color: var(--text-muted); text-decoration: underline;">
-              Or sign in with Google / Apple / GitHub →
-            </a>
           </div>
-          <div class="auth-form-message" id="auth-form-message"></div>
+
+          <div class="auth-disclosure">
+            <button type="button" class="auth-disclosure-toggle" id="auth-disclosure-toggle" aria-expanded="false" aria-controls="auth-disclosure-panel">
+              <span>Facing difficulty?</span>
+              <span class="auth-disclosure-chevron" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+              </span>
+            </button>
+
+            <div class="auth-disclosure-panel" id="auth-disclosure-panel">
+              <form class="auth-form active" id="auth-login-form" data-form="login">
+                <div class="field">
+                  <label for="auth-login-username">Username</label>
+                  <input type="text" id="auth-login-username" name="username" placeholder="johndoe" autocomplete="username" required />
+                </div>
+                <div class="field">
+                  <label for="auth-login-password">Password</label>
+                  <input type="password" id="auth-login-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+                </div>
+                <button type="submit" class="btn btn-primary" id="auth-login-submit">Login</button>
+              </form>
+              <div class="auth-form-message" id="auth-form-message"></div>
+            </div>
+          </div>
         </div>
       `;
 
