@@ -221,42 +221,6 @@ async function handleReconUpload(request, sender, sendResponse) {
   }
 }
 
-/**
- * Verify the recon token before a session starts, so a misconfigured token
- * surfaces immediately instead of after a long capture.
- */
-async function handleReconPing(request, sender, sendResponse) {
-  try {
-    const token = await resolveReconToken();
-
-    if (!token) {
-      sendResponse({ success: false, error: 'No recon token configured' });
-      return;
-    }
-
-    const response = await fetch(`${T.config.backendBaseURL}/api/recon/ping`, {
-      method: 'GET',
-      headers: { 'X-Recon-Token': token },
-      credentials: 'omit',
-    });
-
-    const text = await response.text();
-    let data = {};
-    if (text) {
-      try {
-        data = JSON.parse(text);
-      } catch (_) {
-        data = { raw: text };
-      }
-    }
-
-    sendResponse({ success: response.ok, status: response.status, data, error: response.ok ? undefined : data.error });
-  } catch (error) {
-    logger.error('recon ping failed:', error);
-    sendResponse({ success: false, error: error.message });
-  }
-}
-
 /* ── website → extension auth sync ── */
 
 /**

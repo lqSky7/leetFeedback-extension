@@ -24,17 +24,17 @@ one costs startup time on each wake.
 |---|---|---|
 | `BACKEND_API_FETCH` | `{ url, options, timeoutMs? }` | `{ success, status, data }` or `{ success: false, error }` |
 | `RECON_UPLOAD` | `{ }` | `{ success, status, data }` or `{ success: false, error }` — reads the staged recon bundle and POSTs it to `/api/recon/ingest` |
-| `RECON_PING` | `{ }` | `{ success, status }` — checks the ingest token against `GET /api/recon/ping`. **Diagnostic only:** the sidepanel no longer exposes a token field, so nothing in the UI calls this today. Keep it for manual debugging or delete it with the backend route. |
 
-The recon upload takes **no payload**: it re-reads the bundle from
+The recon upload takes **no payload**. It re-reads the bundle from
 `chrome.storage.local`, because a multi-megabyte capture cannot survive
-`runtime.sendMessage` serialisation.
-| `RECON_PING` | `{ token }` | `{ success, status }` — hits `GET /api/recon/ping` so the sidepanel can verify the ingest token without uploading anything |
-| `RECON_UPLOAD` | `{ platform, captureId }` | `{ success, status, data }` or `{ success: false, error }` — reads the staged bundle and POSTs it to `/api/recon/ingest` |
+`runtime.sendMessage` serialisation. It is the only message the sidepanel sends
+today.
 
-The recon handlers deliberately take **only identifiers**, never the payload.
-`RECON_UPLOAD` re-reads the bundle from `chrome.storage.local` itself, because a
-multi-megabyte capture cannot survive `runtime.sendMessage` serialisation.
+A `RECON_PING` handler existed to let the sidepanel verify the ingest token
+before a long capture. It was removed with the token field: the token is now
+baked into `config.js` and there is nothing for a user to get wrong, so nothing
+called it. The backend keeps `GET /api/recon/ping` for manual `curl` checks
+after a deploy or a rotation.
 
 **`chrome.runtime.onMessageExternal`** (the Traverse website, origin-checked
 against `config.allowedExternalOrigins`):
@@ -64,12 +64,15 @@ session.
 - Origin checks compare against `config.allowedExternalOrigins`, which must stay
   in sync with `externally_connectable.matches` in `manifest.json`.
 - **`RECON_UPLOAD` must never accept the bundle in the message.** The recon
-  controller writes it to `chrome.storage.local` (`config.recon.keys.bundle`)
-  and passes only `{ platform, captureId }`. Inlining the bundle would hit the
-  IPC message-size ceiling and silently truncate the capture.
-- `RECON_UPLOAD` is the **only** place the `X-Recon-Token` header is attached.
-  The token is read from `config.recon.keys.token` at send time, not cached, so
-  rotating it in the sidepanel takes effect on the next upload.
+  controller stages it in `chrome.storage.local` (`config.recon.keys.bundle`)
+  and sends an empty message. Inlining the bundle would hit the IPC message-size
+  ceiling and silently truncate the capture.
+- `RECON_UPLOAD` is the **only** place the `X-Recon-Token` header is attached,
+  and it goes through `resolveReconToken()`. That helper is load-bearing: it
+  prefers a stored override and otherwise falls back to
+  `config.recon.defaultToken`. Read the token directly from storage instead and
+  every upload from a user who never opened the sidepanel 401s — which is
+  exactly the bug the fallback exists to prevent.
 - Recon upload failures are returned as `{ success: false, error }` rather than
   thrown, because the caller is a UI action and needs a message to render.
 - `AUTH_SYNC` replaces the whole `auth_accounts` array with a single entry —
@@ -79,6 +82,7 @@ session.
 - Removed in the refactor: the `getUserSolution` GFG DOM-extraction cascade,
   and the `testGitHubConnection` / `initializeConfig` / `CONTENT_SCRIPT_READY`
   handlers — none had a single call site.
+- Removed with the recon token field: the `RECON_PING` handler. See §3.
 
 ## 5. Where to make common changes
 
@@ -88,3 +92,6 @@ session.
 | A new external origin allowed to sync auth | `core/config.js` → `allowedExternalOrigins` **and** `manifest.json` → `externally_connectable` |
 | Startup / install behaviour | `markSessionRestarted` in `background.js` |
 | A storage key used by the worker | `core/config.js` only |
+| The recon upload target, headers or timeout | the `RECON_UPLOAD` handler in `background.js` |
+| Which token an upload authenticates with | `resolveReconToken()` in `background.js` — do not bypass it |
+| Which hosts may run recon | `core/config.js` → `recon.excludedHosts` / `recon.platforms`, plus the recon `content_scripts` `matches` in `manifest.json` |
