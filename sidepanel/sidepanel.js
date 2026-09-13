@@ -1,33 +1,40 @@
-// Global debug mode cache for sidepanel
+const _spLogger =
+  globalThis.Traverse && globalThis.Traverse.createLogger
+    ? globalThis.Traverse.createLogger('Sidepanel')
+    : null;
+
 let _spDebugMode = false;
 
-// Initialize debug mode cache
-chrome.storage.sync.get(['debug_mode'], (data) => {
-  _spDebugMode = data.debug_mode || false;
-});
+if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+  chrome.storage.sync.get(['debug_mode'], (data) => {
+    _spDebugMode = data.debug_mode || false;
+  });
 
-// Listen for debug mode changes
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'sync' && changes.debug_mode) {
-    _spDebugMode = changes.debug_mode.newValue || false;
-  }
-});
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'sync' && changes.debug_mode) {
+      _spDebugMode = changes.debug_mode.newValue || false;
+    }
+  });
+}
 
 // Debug-aware logging functions for sidepanel
 function spLog(...args) {
-  if (_spDebugMode) {
-    console.log(...args);
+  if (_spLogger) {
+    _spLogger.log(...args);
+  } else if (_spDebugMode) {
+    console.log('[Sidepanel]', ...args);
   }
 }
 
 function spError(...args) {
-  if (_spDebugMode) {
-    console.error(...args);
+  if (_spLogger) {
+    _spLogger.error(...args);
+  } else if (_spDebugMode) {
+    console.error('[Sidepanel]', ...args);
   }
 }
 
 const LEGACY_ACCOUNT_ID = "internal://legacy-account";
-const ALFA_LEETCODE_API_BASE = "https://alfa-leetcode-api.onrender.com";
 
 /* ── Custom Searchable Select Component ── */
 class CustomSelect {
@@ -154,13 +161,13 @@ class PopupController {
       accounts: [],
       activeAccountId: null,
     };
-    this.pendingLeetcodeImport = null;
     this.initialize();
   }
 
   async initialize() {
     await this.loadStoredData();
     await this.initializeAuth();
+    await this.initializeRecon();
     this.initializeCustomSelects();
     this.setupEventListeners();
     this.updateUI();
@@ -170,8 +177,17 @@ class PopupController {
   }
 
   initializeChromaText() {
-    // ChromaText colors are defined in CSS to match website
-    // No JavaScript override needed
+    // ChromaText colors are defined in CSS to match website.
+    // The footer wordmark sweeps once on load; freeze it afterwards so toggling
+    // between the Home and Settings tabs never replays the animation.
+    const wordmark = document.querySelector(".footer-band-wordmark .chroma-text");
+    if (!wordmark) return;
+
+    const settle = () => wordmark.classList.add("chroma-settled");
+    wordmark.addEventListener("animationend", settle, { once: true });
+    // Safety net: hiding the footer mid-sweep cancels the animation, so land on
+    // the final state regardless.
+    window.setTimeout(settle, 2000);
   }
 
   initializeCustomSelects() {
@@ -295,31 +311,42 @@ class PopupController {
       });
     }
 
-    // All event listeners set up
-    const importPreviewBtn = document.getElementById("leetcode-import-preview");
-    if (importPreviewBtn) {
-      importPreviewBtn.addEventListener("click", () => this.previewLeetcodeImport());
-    }
-
-    const importUsernameInput = document.getElementById("leetcode-username");
-    if (importUsernameInput) {
-      importUsernameInput.addEventListener("input", (event) => {
-        chrome.storage.sync.set({
-          leetcode_import_username: event.target.value.trim(),
-        });
+    // Hint prompt settings
+    const hintPromptCheckbox = document.getElementById("hint-prompt-enabled");
+    if (hintPromptCheckbox) {
+      hintPromptCheckbox.addEventListener("change", (e) => {
+        this.config.hintPromptEnabled = e.target.checked;
+        chrome.storage.sync.set({ hint_prompt_enabled: e.target.checked });
+        this.toggleHintPromptConfig(e.target.checked);
+        spLog("Hint prompt enabled:", e.target.checked);
       });
     }
 
-    ["leetcode-import-cancel", "leetcode-import-back"].forEach((id) => {
-      const button = document.getElementById(id);
-      if (button) {
-        button.addEventListener("click", () => this.closeLeetcodeImportModal());
-      }
-    });
+    const hintDefaultOptionInput = document.getElementById("hint-default-option");
+    if (hintDefaultOptionInput) {
+      hintDefaultOptionInput.addEventListener("change", (e) => {
+        this.config.hintPromptDefaultOption = e.target.value;
+        chrome.storage.sync.set({ hint_prompt_default_option: e.target.value });
+        spLog("Hint prompt default option:", e.target.value);
+      });
+    }
 
-    const importConfirmBtn = document.getElementById("leetcode-import-confirm");
-    if (importConfirmBtn) {
-      importConfirmBtn.addEventListener("click", () => this.confirmLeetcodeImport());
+    const hintDurationInput = document.getElementById("hint-prompt-duration");
+    if (hintDurationInput) {
+      hintDurationInput.addEventListener("change", (e) => {
+        const val = Math.max(3, Math.min(60, parseInt(e.target.value, 10) || 10));
+        e.target.value = val;
+        this.config.hintPromptDuration = val;
+        chrome.storage.sync.set({ hint_prompt_duration: val });
+        spLog("Hint prompt duration:", val);
+      });
+    }
+  }
+
+  toggleHintPromptConfig(enabled) {
+    const section = document.getElementById("hint-prompt-section");
+    if (section) {
+      section.classList.toggle("disabled-flow", !enabled);
     }
   }
 
@@ -391,37 +418,32 @@ class PopupController {
   }
 
   setupAuthForms(authSection) {
-    const toggleButtons = authSection.querySelectorAll(".auth-toggle-btn");
-    const forms = authSection.querySelectorAll(".auth-form");
+    // Primary CTA — opens the website where credentials are created/synced.
+    const websiteCta = authSection.querySelector("#auth-website-cta");
+    if (websiteCta) {
+      websiteCta.addEventListener("click", () => this.openSignIn());
+    }
 
-    const setActiveForm = (target) => {
-      toggleButtons.forEach((btn) => {
-        if (btn.dataset.target === target) {
-          btn.classList.add("active");
-        } else {
-          btn.classList.remove("active");
+    // "Facing difficulty?" disclosure — reveals the manual credential fallback.
+    const disclosureToggle = authSection.querySelector(
+      "#auth-disclosure-toggle",
+    );
+    const disclosurePanel = authSection.querySelector(
+      "#auth-disclosure-panel",
+    );
+
+    if (disclosureToggle && disclosurePanel) {
+      disclosureToggle.addEventListener("click", () => {
+        const isOpen = disclosurePanel.classList.toggle("open");
+        disclosureToggle.classList.toggle("open", isOpen);
+        disclosureToggle.setAttribute("aria-expanded", String(isOpen));
+
+        if (isOpen) {
+          const firstInput = disclosurePanel.querySelector("input");
+          if (firstInput) firstInput.focus();
         }
       });
-
-      forms.forEach((form) => {
-        form.classList.toggle("active", form.dataset.form === target);
-      });
-    };
-
-    toggleButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        if (button.classList.contains("active")) return;
-
-        // Redirect to web app for registration
-        if (button.dataset.target === "register") {
-          chrome.tabs.create({ url: "https://leet-feedback.vercel.app/login" });
-          return;
-        }
-
-        setActiveForm(button.dataset.target);
-        this.showAuthFeedback();
-      });
-    });
+    }
 
     const loginForm = authSection.querySelector("#auth-login-form");
     if (loginForm) {
@@ -429,25 +451,113 @@ class PopupController {
         this.handleLoginSubmit(event),
       );
     }
+
+    this.initGlowyButtons(authSection);
   }
 
-  activateAuthForm(target) {
-    const authSection = document.getElementById("auth-section");
-    if (!authSection) return;
+  /**
+   * Vanilla port of the website's GlowyButton hover effect.
+   * See website/src/components/ui/GlowyButton.tsx — cursor position is tracked
+   * across the pill and a radial glow + border sheen is lerped toward it.
+   */
+  initGlowyButtons(root = document) {
+    const wrappers = root.querySelectorAll(
+      ".glowy-button-wrapper:not([data-glow-ready])",
+    );
 
-    const toggleButtons = authSection.querySelectorAll(".auth-toggle-btn");
-    const forms = authSection.querySelectorAll(".auth-form");
+    wrappers.forEach((wrapper) => {
+      wrapper.dataset.glowReady = "true";
 
-    toggleButtons.forEach((button) => {
-      if (button.dataset.target === target) {
-        button.classList.add("active");
-      } else {
-        button.classList.remove("active");
-      }
-    });
+      const button = wrapper.querySelector(".glowy-button");
+      const glowContainer = wrapper.querySelector(
+        ".glowy-button-glow-container",
+      );
+      const borderGlow1 = wrapper.querySelector(
+        ".glowy-button-border-glow-blur-1",
+      );
+      const borderGlow2 = wrapper.querySelector(
+        ".glowy-button-border-glow-blur-2",
+      );
 
-    forms.forEach((form) => {
-      form.classList.toggle("active", form.dataset.form === target);
+      if (!button || !glowContainer) return;
+
+      const DEFAULT_OFFSET = 73;
+      const MAX_MOVE = 73;
+      const LEAVE_DELAY = 400;
+      const LERP_FACTOR = 0.35;
+
+      let isHovering = false;
+      let currentX = DEFAULT_OFFSET;
+      let targetX = DEFAULT_OFFSET;
+      let frameId = null;
+      let leaveTimer = null;
+
+      const paint = () => {
+        currentX += (targetX - currentX) * LERP_FACTOR;
+        glowContainer.style.transform = `translate(-50%, -50%) translateX(${currentX}px) translateZ(0)`;
+
+        if (Math.abs(currentX - targetX) > 0.1) {
+          frameId = requestAnimationFrame(paint);
+        } else {
+          frameId = null;
+        }
+      };
+
+      const start = () => {
+        if (!frameId) frameId = requestAnimationFrame(paint);
+      };
+
+      glowContainer.style.transform = `translate(-50%, -50%) translateX(${DEFAULT_OFFSET}px) translateZ(0)`;
+
+      wrapper.addEventListener("mouseenter", () => {
+        isHovering = true;
+        if (leaveTimer) {
+          clearTimeout(leaveTimer);
+          leaveTimer = null;
+        }
+        start();
+      });
+
+      wrapper.addEventListener("mousemove", (event) => {
+        if (!isHovering) return;
+
+        const rect = button.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const offsetRatio = (event.clientX - rect.left - centerX) / centerX;
+        targetX = offsetRatio * MAX_MOVE;
+
+        if (targetX < 0) {
+          const leftRatio = Math.abs(targetX) / MAX_MOVE;
+          const leftGlowOpacity = Math.max(
+            0,
+            Math.pow(leftRatio - 0.4, 2) * 2.5,
+          );
+          if (borderGlow2) {
+            borderGlow2.style.opacity = String(
+              Math.min(1, leftGlowOpacity),
+            );
+          }
+          if (borderGlow1) borderGlow1.style.opacity = "0";
+        } else {
+          if (borderGlow2) borderGlow2.style.opacity = "0";
+          if (borderGlow1) {
+            borderGlow1.style.opacity = String(targetX / MAX_MOVE);
+          }
+        }
+
+        start();
+      });
+
+      wrapper.addEventListener("mouseleave", () => {
+        isHovering = false;
+        leaveTimer = setTimeout(() => {
+          leaveTimer = null;
+          targetX = DEFAULT_OFFSET;
+          if (borderGlow1) borderGlow1.style.opacity = "1";
+          if (borderGlow2) borderGlow2.style.opacity = "0";
+          start();
+        }, LEAVE_DELAY);
+      });
     });
   }
 
@@ -603,9 +713,11 @@ class PopupController {
           "mistake_tags",
           "github_push_enabled",
           "timer_overlay_enabled",
-          "leetcode_import_username",
           "gemini_model",
           "avatar_url",
+          "hint_prompt_enabled",
+          "hint_prompt_default_option",
+          "hint_prompt_duration",
         ],
         (data) => {
           this.config = {
@@ -616,11 +728,15 @@ class PopupController {
             geminiKey: data.gemini_api_key || "",
             aiProvider: data.ai_provider || "g4f",
             debugMode: data.debug_mode || false,
-            githubPushEnabled: data.github_push_enabled !== false, // Default true
+            githubPushEnabled: data.github_push_enabled === true, // Default false
             timerOverlayEnabled: data.timer_overlay_enabled !== false, // Default true
-            leetcodeImportUsername: data.leetcode_import_username || "",
             geminiModel: data.gemini_model || "gemini-3-flash-preview",
             avatarUrl: data.avatar_url || "",
+            hintPromptEnabled: data.hint_prompt_enabled !== false, // Default true
+            hintPromptDefaultOption: data.hint_prompt_default_option || "none", // Default 'none'
+            hintPromptDuration: typeof data.hint_prompt_duration === 'number' && data.hint_prompt_duration > 0
+              ? data.hint_prompt_duration
+              : 10, // Default 10s
           };
           this.mistakeTags = data.mistake_tags || {};
           resolve();
@@ -644,10 +760,6 @@ class PopupController {
     document.getElementById("branch").value = this.config.branch;
     document.getElementById("gemini-key").value = this.config.geminiKey;
     document.getElementById("debug-mode").checked = this.config.debugMode;
-    const leetcodeUsernameEl = document.getElementById("leetcode-username");
-    if (leetcodeUsernameEl) {
-      leetcodeUsernameEl.value = this.config.leetcodeImportUsername || "";
-    }
 
     const aiProviderInput = document.getElementById("ai-provider");
     const aiProviderCs = this.customSelects?.['ai-provider'];
@@ -674,6 +786,27 @@ class PopupController {
 
     // Set initial GitHub accordion state
     this.toggleGitHubConfig(this.config.githubPushEnabled);
+
+    // Hint prompt settings
+    const hintPromptCheckbox = document.getElementById("hint-prompt-enabled");
+    if (hintPromptCheckbox) {
+      hintPromptCheckbox.checked = this.config.hintPromptEnabled !== false;
+    }
+
+    const hintDefaultOptionInput = document.getElementById("hint-default-option");
+    const hintDefaultOptionCs = this.customSelects?.['hint-default-option'];
+    if (hintDefaultOptionInput) {
+      const val = this.config.hintPromptDefaultOption || "none";
+      hintDefaultOptionInput.value = val;
+      if (hintDefaultOptionCs) hintDefaultOptionCs.setValue(val);
+    }
+
+    const hintDurationInput = document.getElementById("hint-prompt-duration");
+    if (hintDurationInput) {
+      hintDurationInput.value = this.config.hintPromptDuration || 10;
+    }
+
+    this.toggleHintPromptConfig(this.config.hintPromptEnabled !== false);
 
     // Update auth section
     this.updateAuthSection();
@@ -815,7 +948,24 @@ class PopupController {
       const activeAccountCacheAge =
         activeAccountTimestamp !== null ? now - activeAccountTimestamp : maxAge + 1;
 
-      if (
+      // Direct session in auth_user & auth_token takes precedence if present
+      if (result.auth_user && result.auth_token) {
+        const accountId = result.auth_active_account_id || (result.auth_user.id ? `backend:${result.auth_user.id}` : 'primary');
+        const account = {
+          id: accountId,
+          user: result.auth_user,
+          token: result.auth_token,
+          timestamp: result.auth_timestamp || now,
+        };
+        this.authStatus = {
+          isAuthenticated: true,
+          user: result.auth_user,
+          token: result.auth_token,
+          accounts: [account],
+          activeAccountId: accountId,
+        };
+        this.updateAuthSection();
+      } else if (
         activeAccount?.user &&
         activeAccount?.token &&
         activeAccountCacheAge < maxAge
@@ -999,27 +1149,50 @@ class PopupController {
 
       authSection.innerHTML = `
         <div class="auth-login-compact">
-          <div class="auth-toggle">
-            <button class="auth-toggle-btn active" data-target="login">Login</button>
-            <button class="auth-toggle-btn" data-target="register">Register</button>
-          </div>
-          <form class="auth-form active" id="auth-login-form" data-form="login">
-            <div class="field">
-              <label for="auth-login-username">Username</label>
-              <input type="text" id="auth-login-username" name="username" placeholder="johndoe" autocomplete="username" required />
+          <div class="auth-cta">
+            <div class="glowy-button-wrapper">
+              <div class="glowy-button-border-glow-blur glowy-button-border-glow-blur-1">
+                <div class="glowy-button-border-light"></div>
+              </div>
+              <div class="glowy-button-border-glow-blur glowy-button-border-glow-blur-2">
+                <div class="glowy-button-border-light"></div>
+              </div>
+              <button type="button" class="glowy-button" id="auth-website-cta">
+                <span class="glowy-button-glow-container">
+                  <span class="glowy-button-glow-inner"></span>
+                  <span class="glowy-button-glow-outer"></span>
+                </span>
+                <span>Login / Register</span>
+                <svg class="glowy-button-arrow-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 9" aria-hidden="true">
+                  <path fill="currentColor" fill-rule="evenodd" d="m12.495 0 4.495 4.495-4.495 4.495-.99-.99 2.805-2.805H0v-1.4h14.31L11.505.99z" clip-rule="evenodd" />
+                </svg>
+              </button>
             </div>
-            <div class="field">
-              <label for="auth-login-password">Password</label>
-              <input type="password" id="auth-login-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
-            </div>
-            <button type="submit" class="btn btn-primary" id="auth-login-submit">Login</button>
-          </form>
-          <div style="text-align: center; margin-top: 10px;">
-            <a href="https://traverses.tech/login" target="_blank" style="font-size: 11px; color: var(--text-muted); text-decoration: underline;">
-              Or sign in with Google / Apple / GitHub →
-            </a>
           </div>
-          <div class="auth-form-message" id="auth-form-message"></div>
+
+          <div class="auth-disclosure">
+            <button type="button" class="auth-disclosure-toggle" id="auth-disclosure-toggle" aria-expanded="false" aria-controls="auth-disclosure-panel">
+              <span>Facing difficulty?</span>
+              <span class="auth-disclosure-chevron" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+              </span>
+            </button>
+
+            <div class="auth-disclosure-panel" id="auth-disclosure-panel">
+              <form class="auth-form active" id="auth-login-form" data-form="login">
+                <div class="field">
+                  <label for="auth-login-username">Username</label>
+                  <input type="text" id="auth-login-username" name="username" placeholder="johndoe" autocomplete="username" required />
+                </div>
+                <div class="field">
+                  <label for="auth-login-password">Password</label>
+                  <input type="password" id="auth-login-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+                </div>
+                <button type="submit" class="btn btn-primary" id="auth-login-submit">Login</button>
+              </form>
+              <div class="auth-form-message" id="auth-form-message"></div>
+            </div>
+          </div>
         </div>
       `;
 
@@ -1155,513 +1328,6 @@ class PopupController {
     }
   }
 
-  setLeetcodeImportStatus(type = "", message = "") {
-    const status = document.getElementById("leetcode-import-status");
-    if (!status) return;
-
-    status.textContent = message || "";
-    status.className = "leetcode-import-status";
-    if (type && message) {
-      status.classList.add("active", type);
-    }
-  }
-
-  setButtonLoading(button, isLoading, loadingText = "Working...") {
-    this.toggleAuthLoading(button, isLoading, loadingText);
-  }
-
-  async previewLeetcodeImport() {
-    const usernameInput = document.getElementById("leetcode-username");
-    const previewButton = document.getElementById("leetcode-import-preview");
-    const username = usernameInput?.value.trim();
-
-    if (!this.authStatus?.isAuthenticated || !this.authStatus?.token) {
-      this.setLeetcodeImportStatus("error", "Login to Traverse before importing LeetCode data.");
-      return;
-    }
-
-    if (!username) {
-      this.setLeetcodeImportStatus("error", "Enter your LeetCode username.");
-      usernameInput?.focus();
-      return;
-    }
-
-    if (!/^[a-zA-Z0-9_-]{1,40}$/.test(username)) {
-      this.setLeetcodeImportStatus("error", "Use a valid LeetCode username.");
-      usernameInput?.focus();
-      return;
-    }
-
-    try {
-      await chrome.storage.sync.set({ leetcode_import_username: username });
-      this.pendingLeetcodeImport = null;
-      this.setButtonLoading(previewButton, true, "Reading LeetCode...");
-      this.setLeetcodeImportStatus("info", "Fetching accepted submissions from LeetCode.");
-
-      const bundle = await this.fetchLeetcodeImportBundle(username, (message) => {
-        this.setLeetcodeImportStatus("info", message);
-      });
-
-      if (bundle.submissions.length === 0) {
-        this.setLeetcodeImportStatus("warning", "No solved LeetCode questions were found for this username.");
-        return;
-      }
-
-      const payload = this.buildLeetcodeImportPayload(username, bundle);
-      const existingSolveSlugs = await this.fetchExistingLeetcodeSolveSlugs();
-      const originalImportCount = payload.submissions.length;
-      payload.submissions = payload.submissions.filter(
-        (submission) => !existingSolveSlugs.has(submission.problemSlug)
-      );
-      const existingInTraverse = originalImportCount - payload.submissions.length;
-
-      if (payload.submissions.length === 0) {
-        this.setLeetcodeImportStatus(
-          "warning",
-          `All ${originalImportCount} solved LeetCode questions are already in Traverse for this account.`
-        );
-        return;
-      }
-
-      this.pendingLeetcodeImport = {
-        username,
-        payload,
-        stats: {
-          ...bundle.stats,
-          existingInTraverse,
-          originalImportCount,
-        },
-      };
-      this.openLeetcodeImportModal(this.pendingLeetcodeImport);
-      this.setLeetcodeImportStatus(
-        "success",
-        `Ready to import ${payload.submissions.length} new solved questions. ${existingInTraverse} already exist in Traverse.`
-      );
-    } catch (error) {
-      spError("[LeetCode Import] Preview failed:", error);
-      this.setLeetcodeImportStatus(
-        "error",
-        error?.message || "Unable to prepare the LeetCode import."
-      );
-    } finally {
-      this.setButtonLoading(previewButton, false);
-    }
-  }
-
-  async confirmLeetcodeImport() {
-    const pendingImport = this.pendingLeetcodeImport;
-    const confirmButton = document.getElementById("leetcode-import-confirm");
-
-    if (!pendingImport) {
-      this.closeLeetcodeImportModal();
-      this.setLeetcodeImportStatus("error", "Import preview expired. Run preview again.");
-      return;
-    }
-
-    try {
-      this.setButtonLoading(confirmButton, true, "Importing...");
-      const response = await this.fetchViaBackground(
-        `${this.getBackendBaseUrl()}/api/submissions/bulk-import`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${this.authStatus.token}`,
-          },
-          body: JSON.stringify(pendingImport.payload),
-        },
-        60000
-      );
-
-      if (!response.success) {
-        const errorText = response.data?.error || response.error || `Backend returned ${response.status}`;
-        throw new Error(errorText);
-      }
-
-      const imported = response.data?.import || {};
-      this.closeLeetcodeImportModal();
-      this.pendingLeetcodeImport = null;
-      this.setLeetcodeImportStatus(
-        "success",
-        `Imported ${imported.importedSolves || 0} new solves. ${pendingImport.stats.existingInTraverse || 0} were already in Traverse before posting; backend skipped ${imported.skippedExistingSolves || 0} more.`
-      );
-    } catch (error) {
-      spError("[LeetCode Import] Confirm failed:", error);
-      this.setLeetcodeImportStatus("error", error?.message || "Import failed.");
-    } finally {
-      this.setButtonLoading(confirmButton, false);
-    }
-  }
-
-  getBackendBaseUrl() {
-    return extensionAuth.getApiBaseUrl();
-  }
-
-  openLeetcodeImportModal(pendingImport) {
-    const modal = document.getElementById("leetcode-import-modal");
-    const summary = document.getElementById("leetcode-import-summary");
-    const grid = document.getElementById("leetcode-import-summary-grid");
-    if (!modal || !summary || !grid) return;
-
-    const stats = pendingImport.stats;
-    summary.textContent = `Import solved LeetCode data for ${pendingImport.username}?`;
-    grid.innerHTML = [
-      ["New to import", pendingImport.payload.submissions.length],
-      ["Already in Traverse", stats.existingInTraverse || 0],
-      ["Duplicates removed", stats.duplicatesRemoved],
-      ["Details fetched", stats.detailsFetched],
-    ]
-      .map(([label, value]) => `
-        <div class="import-summary-item">
-          <span class="import-summary-value">${value}</span>
-          <span class="import-summary-label">${label}</span>
-        </div>
-      `)
-      .join("");
-
-    modal.classList.add("active");
-    modal.setAttribute("aria-hidden", "false");
-    document.getElementById("leetcode-import-confirm")?.focus();
-  }
-
-  closeLeetcodeImportModal() {
-    const modal = document.getElementById("leetcode-import-modal");
-    if (!modal) return;
-    modal.classList.remove("active");
-    modal.setAttribute("aria-hidden", "true");
-  }
-
-  async fetchLeetcodeImportBundle(username, onProgress) {
-    const encodedUsername = encodeURIComponent(username);
-    const [profile, solved, languageStats, skillStats, calendar, acceptedRaw] = await Promise.all([
-      this.fetchAlfaLeetcode(`${encodedUsername}/profile`, 30000).catch((error) => ({ error: error.message })),
-      this.fetchAlfaLeetcode(`${encodedUsername}/solved`, 30000).catch((error) => ({ error: error.message })),
-      this.fetchAlfaLeetcode(`${encodedUsername}/language`, 30000).catch((error) => ({ error: error.message })),
-      this.fetchAlfaLeetcode(`${encodedUsername}/skill`, 30000).catch((error) => ({ error: error.message })),
-      this.fetchAlfaLeetcode(`${encodedUsername}/calendar`, 30000).catch((error) => ({ error: error.message })),
-      this.fetchAlfaLeetcode(`${encodedUsername}/acSubmission?limit=5000`, 45000),
-    ]);
-
-    const accepted = this.extractSolvedSubmissionCandidates(acceptedRaw);
-    const progressCandidates = accepted.length > 0
-      ? []
-      : this.extractSolvedSubmissionCandidates(
-        await this.fetchAlfaLeetcode(`${encodedUsername}/progress`, 30000).catch(() => ({}))
-      );
-    const baseCandidates = accepted.length > 0 ? accepted : progressCandidates;
-    const deduped = this.dedupeLeetcodeSolvedItems(baseCandidates);
-
-    onProgress?.(`Found ${deduped.items.length} unique solved questions. Fetching problem metadata.`);
-
-    const detailResult = await this.fetchLeetcodeQuestionDetails(deduped.items, onProgress);
-
-    return {
-      submissions: detailResult.items,
-      metadata: {
-        profile,
-        solved,
-        languageStats,
-        skillStats,
-        calendar,
-      },
-      stats: {
-        duplicatesRemoved: deduped.duplicates,
-        detailsFetched: detailResult.detailsFetched,
-        detailsFailed: detailResult.detailsFailed,
-      },
-    };
-  }
-
-  async fetchExistingLeetcodeSolveSlugs() {
-    const slugs = new Set();
-    const limit = 100;
-    let offset = 0;
-
-    while (true) {
-      const response = await this.fetchViaBackground(
-        `${this.getBackendBaseUrl()}/api/solves?platform=leetcode&limit=${limit}&offset=${offset}`,
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${this.authStatus.token}`,
-          },
-        },
-        30000
-      );
-
-      if (!response.success) {
-        const errorText = response.data?.error || response.error || `Backend returned ${response.status}`;
-        throw new Error(`Could not check existing Traverse solves: ${errorText}`);
-      }
-
-      const solves = Array.isArray(response.data?.solves) ? response.data.solves : [];
-      solves.forEach((solve) => {
-        const slug = solve?.problem?.slug;
-        if (slug) slugs.add(this.slugify(slug));
-      });
-
-      const total = response.data?.pagination?.total;
-      offset += solves.length;
-
-      if (solves.length < limit || (typeof total === "number" && offset >= total)) {
-        break;
-      }
-    }
-
-    return slugs;
-  }
-
-  async fetchAlfaLeetcode(path, timeoutMs = 30000) {
-    const cleanPath = path.replace(/^\/+/, "");
-    const response = await this.fetchViaBackground(
-      `${ALFA_LEETCODE_API_BASE}/${cleanPath}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-      },
-      timeoutMs
-    );
-
-    if (!response.success) {
-      const errorText = response.data?.error || response.error || `alfa LeetCode API returned ${response.status}`;
-      throw new Error(errorText);
-    }
-
-    return response.data || {};
-  }
-
-  async fetchViaBackground(url, options, timeoutMs = 30000) {
-    return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage(
-        {
-          type: "BACKEND_API_FETCH",
-          url,
-          options,
-          timeoutMs,
-        },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-            return;
-          }
-
-          if (!response) {
-            reject(new Error("No response from background worker."));
-            return;
-          }
-
-          resolve(response);
-        }
-      );
-    });
-  }
-
-  extractSolvedSubmissionCandidates(payload) {
-    const candidates = [];
-    const seenArrays = new Set();
-
-    const visit = (value) => {
-      if (!value || typeof value !== "object") return;
-
-      if (Array.isArray(value)) {
-        if (seenArrays.has(value)) return;
-        seenArrays.add(value);
-
-        const arrayLooksRelevant = value.some((item) =>
-          item &&
-          typeof item === "object" &&
-          (item.titleSlug || item.slug || item.title || item.problemTitle)
-        );
-
-        if (arrayLooksRelevant) {
-          value.forEach((item) => {
-            const normalized = this.normalizeLeetcodeCandidate(item);
-            if (normalized) candidates.push(normalized);
-          });
-        }
-        return;
-      }
-
-      Object.values(value).forEach(visit);
-    };
-
-    visit(payload);
-    return candidates;
-  }
-
-  normalizeLeetcodeCandidate(item) {
-    if (!item || typeof item !== "object") return null;
-
-    const rawSlug = item.titleSlug || item.problemSlug || item.slug || item.questionSlug;
-    const title = item.title || item.problemTitle || item.questionTitle || rawSlug;
-    const slug = rawSlug || this.slugify(title);
-    if (!slug) return null;
-
-    const status = (item.statusDisplay || item.status || item.result || "").toString().toLowerCase();
-    if (status && !["accepted", "ac", "solved"].some((accepted) => status.includes(accepted))) {
-      return null;
-    }
-
-    return {
-      problemSlug: this.slugify(slug),
-      problemTitle: title?.toString() || slug,
-      difficulty: this.normalizeLeetcodeDifficulty(item.difficulty),
-      language: item.lang || item.language || "unknown",
-      timestamp: item.timestamp || item.submittedAt || item.date || null,
-      topicTags: Array.isArray(item.topicTags) ? item.topicTags : [],
-      questionId: item.questionId || item.id || null,
-      frontendQuestionId: item.frontendQuestionId || item.questionFrontendId || null,
-    };
-  }
-
-  dedupeLeetcodeSolvedItems(items) {
-    const bySlug = new Map();
-    let duplicates = 0;
-
-    items.forEach((item) => {
-      if (!item.problemSlug) return;
-      const existing = bySlug.get(item.problemSlug);
-      if (!existing) {
-        bySlug.set(item.problemSlug, item);
-        return;
-      }
-
-      duplicates += 1;
-      const existingTime = this.timestampToMillis(existing.timestamp);
-      const itemTime = this.timestampToMillis(item.timestamp);
-      if (itemTime && (!existingTime || itemTime < existingTime)) {
-        bySlug.set(item.problemSlug, item);
-      }
-    });
-
-    return {
-      items: Array.from(bySlug.values()),
-      duplicates,
-    };
-  }
-
-  async fetchLeetcodeQuestionDetails(items, onProgress) {
-    const enriched = new Array(items.length);
-    let cursor = 0;
-    let detailsFetched = 0;
-    let detailsFailed = 0;
-    const concurrency = 3;
-
-    const worker = async () => {
-      while (cursor < items.length) {
-        const index = cursor;
-        cursor += 1;
-        const item = items[index];
-
-        try {
-          const detailPayload = await this.fetchAlfaLeetcode(`select?titleSlug=${encodeURIComponent(item.problemSlug)}`, 15000);
-          const detail = this.extractQuestionDetail(detailPayload);
-          enriched[index] = this.mergeLeetcodeDetail(item, detail);
-          detailsFetched += detail ? 1 : 0;
-          detailsFailed += detail ? 0 : 1;
-        } catch (error) {
-          enriched[index] = item;
-          detailsFailed += 1;
-        }
-
-        if ((index + 1) % 10 === 0 || index === items.length - 1) {
-          onProgress?.(`Fetched metadata for ${index + 1}/${items.length} solved questions.`);
-        }
-      }
-    };
-
-    await Promise.all(
-      Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
-    );
-
-    return {
-      items: enriched.filter(Boolean),
-      detailsFetched,
-      detailsFailed,
-    };
-  }
-
-  extractQuestionDetail(payload) {
-    if (!payload || typeof payload !== "object") return null;
-    return payload.question || payload.data?.question || payload.data || payload;
-  }
-
-  mergeLeetcodeDetail(item, detail) {
-    if (!detail || typeof detail !== "object") return item;
-
-    return {
-      ...item,
-      problemSlug: this.slugify(detail.titleSlug || detail.slug || item.problemSlug),
-      problemTitle: detail.title || detail.problemTitle || item.problemTitle,
-      difficulty: this.normalizeLeetcodeDifficulty(detail.difficulty || item.difficulty),
-      topicTags: Array.isArray(detail.topicTags) ? detail.topicTags : item.topicTags,
-      questionId: detail.questionId || item.questionId,
-      frontendQuestionId: detail.questionFrontendId || detail.frontendQuestionId || item.frontendQuestionId,
-    };
-  }
-
-  buildLeetcodeImportPayload(username, bundle) {
-    return {
-      source: "leetcode",
-      username,
-      submissions: bundle.submissions.map((item) => {
-        const happenedAt = this.timestampToIso(item.timestamp);
-        return {
-          problemSlug: item.problemSlug,
-          problemTitle: item.problemTitle,
-          difficulty: this.normalizeLeetcodeDifficulty(item.difficulty),
-          language: item.language || "unknown",
-          happenedAt,
-          timestamp: item.timestamp || null,
-          idempotencyKey: `leetcode-import:${item.problemSlug}`,
-          topicTags: item.topicTags || [],
-          questionId: item.questionId || null,
-          frontendQuestionId: item.frontendQuestionId || null,
-        };
-      }),
-      metadata: bundle.metadata,
-    };
-  }
-
-  normalizeLeetcodeDifficulty(value) {
-    const normalized = value?.toString().trim().toLowerCase();
-    if (normalized === "easy" || normalized === "medium" || normalized === "hard") {
-      return normalized;
-    }
-    return "medium";
-  }
-
-  slugify(value) {
-    if (!value) return "";
-    return value
-      .toString()
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9-]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-  }
-
-  timestampToMillis(value) {
-    if (value === null || value === undefined || value === "") return null;
-    if (typeof value === "string" && Number.isNaN(Number(value))) {
-      const parsed = Date.parse(value);
-      return Number.isNaN(parsed) ? null : parsed;
-    }
-
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return null;
-    return numeric < 10000000000 ? numeric * 1000 : numeric;
-  }
-
-  timestampToIso(value) {
-    const millis = this.timestampToMillis(value);
-    const date = millis ? new Date(millis) : new Date();
-    return date.toISOString();
-  }
-
   // Check for extension updates from Chrome Web Store
   async checkForUpdates() {
     const updateNotification = document.getElementById("update-notification");
@@ -1783,6 +1449,226 @@ class PopupController {
       if (numA < numB) return -1;
     }
     return 0;
+  }
+
+  /* ── Platform recon ──
+   *
+   * The recorder itself lives in the content script (core/recon-controller.js)
+   * and reports through chrome.storage.local. This panel only owns the two
+   * settings (enabled + ingest token) and the status readout.
+   */
+
+  reconKeys() {
+    const traverse = globalThis.Traverse;
+    const recon = traverse && traverse.config ? traverse.config.recon : null;
+    return (recon && recon.keys) || {
+      enabled: "recon_enabled",
+      token: "recon_ingest_token",
+      status: "recon_status",
+      bundle: "recon_bundle",
+    };
+  }
+
+  async initializeRecon() {
+    await this.loadReconSettings();
+    this.setupReconListeners();
+    await this.renderReconStatus();
+
+    // The content script rewrites the status record as it captures; re-render
+    // whenever that happens so the panel tracks a live session.
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== "local") return;
+      if (changes[this.reconKeys().status]) this.renderReconStatus();
+    });
+  }
+
+  async loadReconSettings() {
+    const keys = this.reconKeys();
+    const stored = await chrome.storage.local.get([keys.enabled]);
+
+    const enabledEl = document.getElementById("recon-enabled");
+    if (enabledEl) enabledEl.checked = stored[keys.enabled] !== false; // default on
+  }
+
+  setupReconListeners() {
+    const keys = this.reconKeys();
+
+    const enabledEl = document.getElementById("recon-enabled");
+    if (enabledEl) {
+      enabledEl.addEventListener("change", async (e) => {
+        await chrome.storage.local.set({ [keys.enabled]: e.target.checked });
+        this.setReconFeedback(e.target.checked ? "Recorder enabled" : "Recorder disabled", "ok");
+        await this.renderReconStatus();
+      });
+    }
+
+    const sendBtn = document.getElementById("recon-send");
+    if (sendBtn) sendBtn.addEventListener("click", () => this.sendReconCapture());
+  }
+
+  async sendReconCapture() {
+    const keys = this.reconKeys();
+    const stored = await chrome.storage.local.get([keys.bundle]);
+    const bundle = stored[keys.bundle];
+
+    if (!bundle) {
+      this.setReconFeedback("Nothing captured yet — open a problem page first", "error");
+      return;
+    }
+
+    const events = Array.isArray(bundle.network) ? bundle.network.length : 0;
+    this.setReconFeedback(`Sending ${events} event(s)…`, "");
+
+    const result = await this.sendMessageToBackground({ type: "RECON_UPLOAD" });
+
+    if (result && result.success) {
+      this.setReconFeedback(`Capture sent — ${events} event(s) from ${bundle.platform}`, "ok");
+    } else {
+      this.setReconFeedback(`Send failed: ${(result && result.error) || "unknown error"}`, "error");
+    }
+
+    await this.renderReconStatus();
+  }
+
+  async renderReconStatus() {
+    const keys = this.reconKeys();
+    const stored = await chrome.storage.local.get([keys.status]);
+    const status = stored[keys.status] || {};
+
+    // Whether recording is possible comes from the controller, which resolves
+    // the stored override *and* the built-in token. Reading the storage key
+    // directly would report "no token" for every user who never set one — i.e.
+    // all of them, now that the field is gone.
+    const hasToken = status.hasToken !== false;
+
+    const setText = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    };
+
+    setText("recon-st-platform", status.platform || status.host || "no tracked site");
+
+    let recorderState;
+    if (!hasToken) recorderState = "no token";
+    else if (status.excluded) recorderState = "excluded site";
+    else if (status.armed) recorderState = "recording";
+    else if (status.onProblemPage) recorderState = "idle";
+    else recorderState = "not on a problem page";
+    setText("recon-st-armed", recorderState);
+
+    setText(
+      "recon-st-events",
+      typeof status.eventCount === "number"
+        ? `${status.eventCount}${status.overflowed ? " (capped)" : ""}`
+        : "—"
+    );
+    setText("recon-st-uploaded", status.uploadedAt ? this.formatRelativeTime(status.uploadedAt) : "never");
+
+    this.renderReconFlows(status.flows || {}, status);
+  }
+
+  /**
+   * Rendered with DOM APIs rather than innerHTML: the detail line is a verdict
+   * string scraped from a third-party page, and must never be interpreted as
+   * markup inside the extension's own UI.
+   */
+  renderReconFlows(flows, status = {}) {
+    const container = document.getElementById("recon-flows");
+    if (!container) return;
+
+    const labels = {
+      "run-pass": "Run — passed",
+      "run-fail": "Run — failed",
+      "submit-pass": "Submit — accepted",
+      "submit-fail": "Submit — rejected",
+    };
+
+    container.textContent = "";
+
+    for (const id of Object.keys(labels)) {
+      const flow = flows[id] || {};
+      const observed = flow.status === "observed";
+      const uncertain = flow.status === "uncertain";
+
+      const row = document.createElement("div");
+      row.className = `recon-flow${observed ? " done" : uncertain ? " uncertain" : ""}`;
+
+      const dot = document.createElement("span");
+      dot.className = "recon-flow-dot";
+
+      const label = document.createElement("span");
+      label.textContent = labels[id];
+
+      const detail = document.createElement("span");
+      detail.className = "recon-flow-status";
+      // "not seen", not "waiting": the four flows describe a complete picture,
+      // not a requirement. Saying "waiting" implied the upload was blocked on
+      // flows that most platforms will never produce.
+      const detailText = observed
+        ? (flow.verdict && flow.verdict.status) || "captured"
+        : uncertain
+          ? "no verdict"
+          : "not seen";
+      detail.textContent = detailText;
+      detail.title = detailText;
+
+      row.append(dot, label, detail);
+      container.append(row);
+    }
+
+    this.renderReconFlowsSummary(status);
+  }
+
+  /**
+   * Say plainly what will happen to what has been captured, because the failure
+   * this replaced was silent: a capture that never uploaded looked identical to
+   * one still in progress.
+   */
+  renderReconFlowsSummary(status) {
+    const el = document.getElementById("recon-flows-summary");
+    if (!el) return;
+
+    const count = typeof status.observedFlowCount === "number"
+      ? status.observedFlowCount
+      : Object.values(status.flows || {}).filter((f) => f && f.status === "observed").length;
+
+    el.classList.remove("is-ready");
+
+    if (!count) {
+      el.textContent = "Nothing captured yet — run or submit on this page.";
+      return;
+    }
+
+    if (status.uploadedAt && !status.uploadPending) {
+      el.textContent = `${count} flow${count === 1 ? "" : "s"} captured · uploaded ${this.formatRelativeTime(status.uploadedAt)}`;
+      return;
+    }
+
+    const timing = status.hasPassFailPair
+      ? "uploads in a few seconds"
+      : "uploads shortly unless another attempt comes in";
+    el.textContent = `${count} flow${count === 1 ? "" : "s"} captured — ${timing}.`;
+    el.classList.add("is-ready");
+  }
+
+  formatRelativeTime(iso) {
+    const then = new Date(iso).getTime();
+    if (!Number.isFinite(then)) return "—";
+
+    const seconds = Math.max(0, Math.round((Date.now() - then) / 1000));
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.round(hours / 24)}d ago`;
+  }
+
+  setReconFeedback(message, type = "") {
+    const el = document.getElementById("recon-feedback");
+    if (!el) return;
+    el.textContent = message || "";
+    el.className = `recon-feedback${type ? ` ${type}` : ""}`;
   }
 
   // Check session/cookie expiration status

@@ -66,6 +66,26 @@ Just login from settings after creating an account in the website.
 If you want to push your solutions to GitHub you can setup the key there as well, We DO NOT collect this data! you can check the code.
 
 
+## Architecture
+
+The extension is plain JavaScript with **no build step** — load the folder
+unpacked and edit files in place. Each tracked site is a thin adapter over a
+shared framework, and verdicts are captured from the site's own network traffic
+rather than by scraping the page.
+
+| Directory | What lives there |
+|---|---|
+| `core/` | Config, logging, storage, attempt tracking, the submission pipeline, the adapter base class, API clients, the timer |
+| `page/` | MAIN-world scripts injected into the tracked sites (network interceptor, editor bridge) |
+| `platforms/` | One adapter per site, plus the website auth bridge |
+| `ui/` | Injected UI: toasts and the hint prompt |
+| `background/` | Service worker: backend request proxy + auth storage owner |
+| `sidepanel/` | The extension's own interface |
+
+Start with [`index.md`](index.md) — it is the architecture map, and every
+directory has its own `index.md`. Migration history and the remaining phases are
+in [`REFACTOR_PLAN.md`](REFACTOR_PLAN.md).
+
 ## Contributing
 
 see CONTRIBUTING.md

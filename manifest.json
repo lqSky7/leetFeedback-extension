@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Traverse",
-    "version": "1.9.2",
+    "version": "2.1.0",
     "description": "Chrome extension for Traverse Ecosystem",
     "icons": {
         "16": "icons/16.png",
@@ -10,6 +10,7 @@
     },
     "permissions": [
         "storage",
+        "unlimitedStorage",
         "scripting",
         "activeTab",
         "tabs",
@@ -22,11 +23,25 @@
         "https://*.takeuforward.org/*",
         "https://*.codechef.com/*",
         "https://*.naukri.com/*",
+        "https://*.hackerrank.com/*",
+        "https://*.codeforces.com/*",
+        "https://*.codingninjas.com/*",
+        "https://*.hackerearth.com/*",
+        "https://*.atcoder.jp/*",
+        "https://*.interviewbit.com/*",
+        "https://*.spoj.com/*",
+        "https://*.topcoder.com/*",
+        "https://*.kattis.com/*",
+        "https://*.cses.fi/*",
+        "https://*.codewars.com/*",
+        "https://*.neetcode.io/*",
+        "https://*.exercism.org/*",
+        "https://*.lintcode.com/*",
+        "https://*.edabit.com/*",
         "https://api.github.com/*",
         "https://generativelanguage.googleapis.com/*",
         "https://*.ngrok-free.dev/*",
         "https://traverse-backend.duckdns.org/*",
-        "https://alfa-leetcode-api.onrender.com/*",
         "https://leet-feedback.vercel.app/*",
         "https://*.vercel.app/*",
         "https://traverses.tech/*",
@@ -36,7 +51,7 @@
         "https://chromewebstore.google.com/*"
     ],
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "background/background.js"
     },
     "externally_connectable": {
         "matches": [
@@ -54,13 +69,33 @@
                 "https://*.leetcode.com/*"
             ],
             "js": [
-                "utils/common.js",
-                "utils/github-api.js",
-                "utils/gemini-api.js",
-                "utils/backend-api.js",
-                "utils/problem-timer.js",
-                "utils/toast.js",
-                "content-scripts/leetcode.js"
+                "page/net-interceptor.js",
+                "page/monaco-bridge.js"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://*.leetcode.com/*"
+            ],
+            "js": [
+                "core/config.js",
+                "core/logger.js",
+                "core/util.js",
+                "core/net-protocol.js",
+                "core/net-bridge.js",
+                "core/ai-config.js",
+                "core/session-store.js",
+                "core/attempt-tracker.js",
+                "core/backend-api.js",
+                "core/github-api.js",
+                "core/submission-pipeline.js",
+                "core/problem-timer.js",
+                "ui/toast.js",
+                "ui/hint-prompt.js",
+                "core/platform-adapter.js",
+                "platforms/leetcode.js"
             ],
             "run_at": "document_end"
         },
@@ -70,13 +105,33 @@
                 "https://practice.geeksforgeeks.org/*"
             ],
             "js": [
-                "utils/common.js",
-                "utils/github-api.js",
-                "utils/gemini-api.js",
-                "utils/backend-api.js",
-                "utils/problem-timer.js",
-                "utils/toast.js",
-                "content-scripts/geeksforgeeks.js"
+                "page/net-interceptor.js"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://*.geeksforgeeks.org/*",
+                "https://practice.geeksforgeeks.org/*"
+            ],
+            "js": [
+                "core/config.js",
+                "core/logger.js",
+                "core/util.js",
+                "core/net-protocol.js",
+                "core/net-bridge.js",
+                "core/ai-config.js",
+                "core/session-store.js",
+                "core/attempt-tracker.js",
+                "core/backend-api.js",
+                "core/github-api.js",
+                "core/submission-pipeline.js",
+                "core/problem-timer.js",
+                "ui/toast.js",
+                "ui/hint-prompt.js",
+                "core/platform-adapter.js",
+                "platforms/geeksforgeeks.js"
             ],
             "run_at": "document_end"
         },
@@ -85,13 +140,32 @@
                 "https://*.takeuforward.org/*"
             ],
             "js": [
-                "utils/common.js",
-                "utils/github-api.js",
-                "utils/gemini-api.js",
-                "utils/backend-api.js",
-                "utils/problem-timer.js",
-                "utils/toast.js",
-                "content-scripts/takeuforward.js"
+                "page/net-interceptor.js"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://*.takeuforward.org/*"
+            ],
+            "js": [
+                "core/config.js",
+                "core/logger.js",
+                "core/util.js",
+                "core/net-protocol.js",
+                "core/net-bridge.js",
+                "core/ai-config.js",
+                "core/session-store.js",
+                "core/attempt-tracker.js",
+                "core/backend-api.js",
+                "core/github-api.js",
+                "core/submission-pipeline.js",
+                "core/problem-timer.js",
+                "ui/toast.js",
+                "ui/hint-prompt.js",
+                "core/platform-adapter.js",
+                "platforms/takeuforward.js"
             ],
             "run_at": "document_end"
         },
@@ -100,13 +174,32 @@
                 "https://*.codechef.com/*"
             ],
             "js": [
-                "utils/common.js",
-                "utils/github-api.js",
-                "utils/gemini-api.js",
-                "utils/backend-api.js",
-                "utils/problem-timer.js",
-                "utils/toast.js",
-                "content-scripts/codechef.js"
+                "page/net-interceptor.js"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://*.codechef.com/*"
+            ],
+            "js": [
+                "core/config.js",
+                "core/logger.js",
+                "core/util.js",
+                "core/net-protocol.js",
+                "core/net-bridge.js",
+                "core/ai-config.js",
+                "core/session-store.js",
+                "core/attempt-tracker.js",
+                "core/backend-api.js",
+                "core/github-api.js",
+                "core/submission-pipeline.js",
+                "core/problem-timer.js",
+                "ui/toast.js",
+                "ui/hint-prompt.js",
+                "core/platform-adapter.js",
+                "platforms/codechef.js"
             ],
             "run_at": "document_end"
         },
@@ -115,13 +208,90 @@
                 "https://*.naukri.com/*"
             ],
             "js": [
-                "utils/common.js",
-                "utils/github-api.js",
-                "utils/gemini-api.js",
-                "utils/backend-api.js",
-                "utils/problem-timer.js",
-                "utils/toast.js",
-                "content-scripts/naukri.js"
+                "page/net-interceptor.js"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://*.naukri.com/*"
+            ],
+            "js": [
+                "core/config.js",
+                "core/logger.js",
+                "core/util.js",
+                "core/net-protocol.js",
+                "core/net-bridge.js",
+                "core/ai-config.js",
+                "core/session-store.js",
+                "core/attempt-tracker.js",
+                "core/backend-api.js",
+                "core/github-api.js",
+                "core/submission-pipeline.js",
+                "core/problem-timer.js",
+                "ui/toast.js",
+                "ui/hint-prompt.js",
+                "core/platform-adapter.js",
+                "platforms/naukri.js"
+            ],
+            "run_at": "document_end"
+        },
+        {
+            "matches": [
+                "https://*.geeksforgeeks.org/*",
+                "https://practice.geeksforgeeks.org/*",
+                "https://*.codechef.com/*",
+                "https://*.naukri.com/*",
+                "https://*.hackerrank.com/*",
+                "https://*.codeforces.com/*",
+                "https://*.codingninjas.com/*",
+                "https://*.hackerearth.com/*",
+                "https://*.atcoder.jp/*",
+                "https://*.interviewbit.com/*",
+                "https://*.spoj.com/*",
+                "https://*.topcoder.com/*",
+                "https://*.kattis.com/*",
+                "https://*.cses.fi/*",
+                "https://*.codewars.com/*",
+                "https://*.neetcode.io/*",
+                "https://*.exercism.org/*",
+                "https://*.lintcode.com/*",
+                "https://*.edabit.com/*"
+            ],
+            "js": [
+                "page/net-interceptor.js"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://*.geeksforgeeks.org/*",
+                "https://practice.geeksforgeeks.org/*",
+                "https://*.codechef.com/*",
+                "https://*.naukri.com/*",
+                "https://*.hackerrank.com/*",
+                "https://*.codeforces.com/*",
+                "https://*.codingninjas.com/*",
+                "https://*.hackerearth.com/*",
+                "https://*.atcoder.jp/*",
+                "https://*.interviewbit.com/*",
+                "https://*.spoj.com/*",
+                "https://*.topcoder.com/*",
+                "https://*.kattis.com/*",
+                "https://*.cses.fi/*",
+                "https://*.codewars.com/*",
+                "https://*.neetcode.io/*",
+                "https://*.exercism.org/*",
+                "https://*.lintcode.com/*",
+                "https://*.edabit.com/*"
+            ],
+            "js": [
+                "core/config.js",
+                "core/logger.js",
+                "core/net-protocol.js",
+                "core/recon-controller.js"
             ],
             "run_at": "document_end"
         },
@@ -134,7 +304,9 @@
                 "http://localhost:3000/*"
             ],
             "js": [
-                "content-scripts/website-sync.js"
+                "core/config.js",
+                "core/logger.js",
+                "platforms/website-sync.js"
             ],
             "run_at": "document_end"
         }
@@ -149,16 +321,5 @@
     },
     "side_panel": {
         "default_path": "sidepanel/sidepanel.html"
-    },
-    "web_accessible_resources": [
-        {
-            "resources": [
-                "utils/interceptor.js",
-                "utils/monaco-bridge.js"
-            ],
-            "matches": [
-                "<all_urls>"
-            ]
-        }
-    ]
+    }
 }

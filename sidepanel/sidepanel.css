@@ -33,10 +33,11 @@
   font-style: normal;
 }
 
-/* ── ChromaText Animation (Traverse Header) ────────────────────────────── */
+/* ── ChromaText Animation (Footer Wordmark) ────────────────────────────── */
 .chroma-text {
   display: inline-flex;
   padding-bottom: 0.1rem;
+  padding-right: 0.15em;
   background-size: 300% 100%;
   background-position: 100% 0;
   will-change: background-position;
@@ -62,10 +63,20 @@
   }
 }
 
-[data-chroma-id="traverse-logo"] {
+/* Once the sweep has played it is frozen at its final frame. Hiding an element
+   (display: none) cancels its animations, so without this the sweep would replay
+   every time the footer is re-shown on a tab switch. The final state has to be
+   re-declared here because `animation: none` drops the `forwards` fill. */
+.chroma-text.chroma-settled {
+  animation: none;
+  background-position: 0 0;
+  filter: blur(0);
+}
+
+[data-chroma-id="footer-traverse"] {
   background-image: linear-gradient(90deg,
-      rgb(255, 255, 255) 0px,
-      rgb(255, 255, 255) 33.33%,
+      rgba(255, 255, 255, 0.1) 0px,
+      rgba(255, 255, 255, 0.1) 33.33%,
       rgb(255, 182, 193) 40%,  /* Baby Pink */
       rgb(240, 40, 50) 45%,   /* Crimson */
       rgb(255, 190, 20) 50%,  /* Amber Gold */
@@ -74,7 +85,7 @@
       transparent 66.67%,
       transparent);
   animation-delay: 0.2s;
-  animation-duration: 0.8s;
+  animation-duration: 1.5s;
 }
 
 /* ── Reset & Base Box Model ────────────────────────────────────────────── */
@@ -457,6 +468,34 @@ input {
   margin-top: 2px;
 }
 
+#hint-prompt-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#hint-prompt-section .settings-option {
+  margin-bottom: 0;
+}
+
+.hint-consequences-warning {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.42);
+  letter-spacing: 0.02em;
+  margin-top: -4px;
+  margin-bottom: 2px;
+}
+
+#hint-prompt-section .field {
+  gap: 6px;
+}
+
+#hint-prompt-section.disabled-flow #hint-duration-field {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 .settings-option {
   padding: 0;
   margin-bottom: 12px;
@@ -586,6 +625,23 @@ input {
   color: #000000;
   border-color: #FFFFFF;
   transform: translateY(-1px);
+}
+
+/* Accent variant — same shape as .token-link, but filled with the accent blue so
+   it reads as the primary action next to a field, matching .btn-accent. */
+.token-link--accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #FFFFFF;
+}
+
+.token-link--accent:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: #FFFFFF;
+  /* .token-link lifts on hover; this variant is a primary action sitting in a
+     form field, so it stays put and only changes colour. */
+  transform: none;
 }
 
 /* ── Buttons (Base Web Ergonomics) ─────────────────────────────────────── */
@@ -1045,41 +1101,249 @@ input {
   padding: 4px 0;
 }
 
-.auth-toggle {
+/* ── Glowy CTA — port of website GlowyButton.tsx ───────────────────────── */
+.auth-cta {
   display: flex;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-input);
-  overflow: hidden;
-  background: var(--bg-surface);
-  margin-bottom: 12px;
-  padding: 2px;
-  gap: 2px;
+  justify-content: center;
+  padding: 6px 0 8px;
 }
 
-.auth-toggle-btn {
-  flex: 1;
-  background: transparent;
+.glowy-button-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  z-index: 10;
+  /* Corner radius shared by the button and every glow layer that traces its outline.
+     Deliberately NOT --radius-pill: the extension's surfaces are rectangular
+     (cards 10px / inputs 8px), so the CTA matches that language. */
+  --glowy-radius: var(--radius-card);
+}
+
+/* Enlarged hover target that stays inside the panel's 18px gutter. */
+.glowy-button-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: -6px -8px;
+  z-index: -1;
+}
+
+.glowy-button {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  max-width: 100%;
+  padding: 0 clamp(20px, 16%, 64px);
+  background: #d1d1d1;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: var(--glowy-radius);
+  color: #5A250A;
+  font-family: var(--font-family-base);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.18px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  overflow: hidden;
+  text-decoration: none;
+  gap: 4px;
+}
+
+.glowy-button-arrow-icon {
+  width: 17px;
+  height: 9px;
+  flex-shrink: 0;
+  color: #5A250A;
+}
+
+.glowy-button-glow-container {
+  position: absolute;
+  z-index: -10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 204px;
+  height: 0;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.glowy-button-glow-inner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 121px;
+  height: 121px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    50% 50% at 50% 50%,
+    #FFFFF5 3.5%,
+    #FFAA81 26.5%,
+    #FFDA9F 37.5%,
+    rgba(255, 170, 129, 0.5) 49%,
+    rgba(210, 106, 58, 0) 92.5%
+  );
+}
+
+.glowy-button-glow-outer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 204px;
+  height: 103px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    43.3% 44.23% at 50% 49.51%,
+    #FFFFF7 29%,
+    #FFFACD 48.5%,
+    #F4D2BF 60.71%,
+    rgba(214, 211, 210, 0) 100%
+  );
+  filter: blur(5px);
+}
+
+.glowy-button-border-glow-blur {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(100% + 9px);
+  height: calc(100% + 9px);
+  transform: translate(-50%, -50%);
+  border-radius: var(--glowy-radius);
+  border: 3px solid transparent;
+  will-change: transform;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.glowy-button-border-glow-blur::before,
+.glowy-button-border-glow-blur::after {
+  content: '';
+  position: absolute;
+  box-sizing: content-box;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--glowy-radius);
+  border-color: transparent;
+}
+
+.glowy-button-border-glow-blur::before {
+  left: -2px;
+  top: -2px;
+  z-index: 10;
+  border-width: 2px;
+  filter: blur(2px);
+  background:
+    linear-gradient(transparent, transparent) padding-box,
+    linear-gradient(97.68deg, rgba(255, 177, 153, 0) 38.1%, rgba(255, 177, 153, 0.2) 82.47%, rgb(255, 121, 80) 93.3%) border-box;
+}
+
+.glowy-button-border-glow-blur::after {
+  left: -3px;
+  top: -3px;
+  z-index: 20;
+  border-width: 3px;
+  filter: blur(15px);
+  background:
+    linear-gradient(transparent, transparent) padding-box,
+    linear-gradient(91.88deg, rgba(255, 137, 100, 0.2) 46.45%, rgb(205, 49, 0) 98.59%) border-box;
+}
+
+.glowy-button-border-glow-blur-2 {
+  transform: translate(-50%, -50%) scaleX(-1);
+}
+
+.glowy-button-border-light {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--glowy-radius);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(transparent, transparent) padding-box,
+    linear-gradient(103.7deg, rgba(188, 155, 143, 0.1) 38.66%, rgba(233, 132, 99, 0.1) 68.55%, rgb(233, 132, 99) 85.01%, rgb(255, 255, 255) 92.12%) border-box;
+}
+
+.glowy-button-border-light::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  z-index: 30;
+  box-sizing: content-box;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--glowy-radius);
+  border: 2px solid transparent;
+  filter: blur(7px);
+  background:
+    linear-gradient(transparent, transparent) padding-box,
+    linear-gradient(91.96deg, rgba(255, 177, 153, 0) 6.11%, rgba(255, 177, 153, 0.2) 53.57%, rgb(255, 121, 80) 93.6%) border-box;
+}
+
+/* ── "Facing difficulty?" disclosure ───────────────────────────────────── */
+.auth-disclosure {
+  margin-top: 2px;
+}
+
+.auth-disclosure-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  margin: 0 auto;
+  padding: 4px 8px;
+  background: none;
   border: none;
   color: var(--text-muted);
   font-family: var(--font-family-base);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 8px 12px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0.5;
   cursor: pointer;
   border-radius: var(--radius-sm);
-  transition: all var(--dur-fast) var(--ease-base);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  transition: opacity var(--dur-fast) var(--ease-base),
+    color var(--dur-fast) var(--ease-base);
 }
 
-.auth-toggle-btn:hover {
+.auth-disclosure-toggle:hover {
+  opacity: 0.9;
   color: var(--text);
-  background: var(--bg-surface-hover);
 }
 
-.auth-toggle-btn.active {
-  background: #FFFFFF;
-  color: #000000;
+.auth-disclosure-chevron {
+  display: inline-flex;
+  width: 11px;
+  height: 11px;
+  transition: transform var(--dur-normal) var(--ease-base);
+}
+
+.auth-disclosure-chevron svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.auth-disclosure-toggle.open .auth-disclosure-chevron {
+  transform: rotate(180deg);
+}
+
+.auth-disclosure-panel {
+  display: none;
+  margin-top: 10px;
+}
+
+.auth-disclosure-panel.open {
+  display: block;
+  animation: baseFadeIn var(--dur-normal) var(--ease-base);
 }
 
 .auth-form {
@@ -1152,55 +1416,6 @@ input {
   max-height: 0;
   opacity: 0;
   padding-top: 0;
-}
-
-/* ── LeetCode Import ───────────────────────────────────────────────────── */
-.leetcode-import {
-  display: grid;
-  gap: 10px;
-  padding: 4px 0;
-}
-
-.leetcode-import .btn {
-  width: 100%;
-}
-
-.leetcode-import-status {
-  display: none;
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  border: 1px solid transparent;
-  border-radius: var(--radius-input);
-  padding: 8px 12px;
-}
-
-.leetcode-import-status.active {
-  display: block;
-}
-
-.leetcode-import-status.info {
-  color: #79A3F7;
-  background: var(--accent-dim);
-  border-color: var(--accent-border);
-}
-
-.leetcode-import-status.success {
-  color: #34D399;
-  background: var(--success-dim);
-  border-color: rgba(14, 131, 69, 0.3);
-}
-
-.leetcode-import-status.warning {
-  color: var(--warning);
-  background: var(--warning-dim);
-  border-color: rgba(255, 192, 67, 0.3);
-}
-
-.leetcode-import-status.error {
-  color: #F87171;
-  background: var(--error-dim);
-  border-color: rgba(225, 25, 0, 0.3);
 }
 
 /* ── Update Notification ───────────────────────────────────────────────── */
@@ -1290,208 +1505,63 @@ input {
   display: none;
 }
 
-.footer-brand {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  padding: 4px 0;
-}
-
-.footer-logo-section {
+/* Brand band — mirrors the website footer: mark watermark + oversized Traverse wordmark.
+   The wordmark is deliberately wider than the panel; .footer-band clips it on both
+   sides (overflow: hidden) so it bleeds off the edges without any horizontal scroll.
+   The band itself is transparent: it used to paint a --bg-surface -> black gradient,
+   which read as a lighter grey slab sitting on the pure-black panel. It now inherits
+   the panel background so the footer matches the rest of the UI. */
+.footer-band {
+  position: relative;
+  width: calc(100% + 36px);
+  margin-left: -18px;
+  margin-right: -18px;
+  height: clamp(92px, 38vw, 228px);
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-
-.footer-tr {
-  font-family: 'Fascinate', sans-serif;
-  font-size: 18px;
-  font-weight: bold;
-  letter-spacing: -1px;
-  color: var(--text);
-}
-
-.footer-checkerboard {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  width: 16px;
-  height: 16px;
-}
-
-.cb-cell {
+  justify-content: center;
+  overflow: hidden;
   background: transparent;
 }
 
-.cb-cell.filled {
-  background: var(--text);
-}
-
-.footer-tagline {
-  display: flex;
-  flex-direction: column;
-  font-family: 'Fascinate', sans-serif;
-  font-size: 7px;
-  line-height: 1.1;
-  text-align: right;
-}
-
-.footer-tagline .muted {
-  color: var(--text-tertiary);
-}
-
-.footer-bottom {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0;
-  font-family: 'Fascinate', sans-serif;
-  font-size: 6px;
-  letter-spacing: 0.5px;
-}
-
-.footer-ecosystem {
-  color: var(--text-tertiary);
-}
-
-.footer-year {
-  color: var(--text-tertiary);
-}
-
-.footer-copyright {
-  color: var(--text-muted);
-  font-size: 7px;
-  margin-top: 2px;
-}
-
-/* ── Modal Dialog (Base Web Modal) ─────────────────────────────────────── */
-.modal-overlay {
-  position: fixed;
+/* Static fade to black over the bottom 30%: fully black at the bottom edge,
+   fully transparent from 30% up. Positioned so it paints above the mark and
+   the wordmark (both are absolutely positioned). */
+.footer-band::after {
+  content: '';
+  position: absolute;
   inset: 0;
-  z-index: 99;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.82);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(to top,
+      rgba(0, 0, 0, 1) 0%,
+      rgba(0, 0, 0, 0.62) 10%,
+      rgba(0, 0, 0, 0.25) 20%,
+      rgba(0, 0, 0, 0) 30%);
 }
 
-.modal-overlay.active {
-  display: flex;
-  animation: baseFadeIn 0.2s var(--ease-base);
+.footer-band-mark {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: invert(1);
+  opacity: 0.05;
+  pointer-events: none;
 }
 
-.confirm-modal {
-  width: min(100%, 360px);
-  max-height: calc(100vh - 32px);
-  overflow: auto;
-  background: #0D0D0D;
-  border: 1px solid var(--border-hover);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-lg);
-}
-
-.confirm-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.confirm-modal-header h2 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.modal-close {
-  width: 26px;
-  height: 26px;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  background: var(--bg-surface-elevated);
-  color: var(--text-secondary);
-  cursor: pointer;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--dur-fast) var(--ease-base);
-}
-
-.modal-close:hover {
-  color: #FFFFFF;
-  border-color: #FFFFFF;
-  background: var(--bg-surface-hover);
-}
-
-.confirm-modal-body {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-}
-
-.confirm-modal-body p {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.import-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.import-summary-item {
-  padding: 10px 12px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-input);
-}
-
-.import-summary-value {
-  display: block;
-  color: #FFFFFF;
-  font-size: 18px;
+.footer-band-wordmark {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 33%);
+  font-family: var(--font-family-base);
+  font-size: clamp(72px, 30vw, 180px);
   font-weight: 700;
   line-height: 1.2;
-}
-
-.import-summary-label {
-  display: block;
-  margin-top: 2px;
-  color: var(--text-muted);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.confirm-warning {
-  padding: 8px 12px;
-  color: var(--warning) !important;
-  background: var(--warning-dim);
-  border: 1px solid rgba(255, 192, 67, 0.25);
-  border-radius: var(--radius-input);
-  font-size: 11px !important;
-}
-
-.confirm-modal-actions {
-  display: grid;
-  grid-template-columns: 1fr 1.3fr;
-  gap: 8px;
-  padding: 0 16px 16px;
-}
-
-.confirm-modal-actions .btn {
-  width: 100%;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 /* ── Tooltips & Info Icons ─────────────────────────────────────────────── */
@@ -1521,10 +1591,13 @@ input {
   background: var(--bg-surface-hover);
 }
 
+/* Tooltip drops below the icon. Rendering it above collides with the tab bar:
+   .content is the scroll container (overflow-y: auto), so anything extending past
+   its top edge is clipped, and the first settings row sits right under the navbar. */
 .info-icon::after {
   content: attr(data-tooltip);
   position: absolute;
-  bottom: 125%;
+  top: calc(100% + 6px);
   left: 50%;
   transform: translateX(-20%);
   width: 190px;
@@ -1550,7 +1623,7 @@ input {
 .info-icon:hover::after {
   visibility: visible;
   opacity: 1;
-  transform: translateX(-20%) translateY(-4px);
+  transform: translateX(-20%) translateY(2px);
 }
 
 /* ── Keyframe Animations ───────────────────────────────────────────────── */
@@ -1568,4 +1641,122 @@ input {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   PLATFORM RECON
+   Status panel for the capture-all recorder that runs on DSA platforms which
+   don't have a verified network adapter yet.
+   ========================================================================== */
+
+.recon-hint {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 4px 0 14px;
+}
+
+/* What will happen to the capture. Deliberately its own line rather than part of
+   the flow list: "no flows yet" and "flows captured but not yet sent" are the
+   two states a user needs told apart. */
+.recon-flows-summary {
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  margin: -6px 0 12px;
+}
+
+.recon-flows-summary.is-ready {
+  color: var(--accent);
+}
+
+.recon-status-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 4px 0 14px;
+}
+
+.recon-status-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.recon-status-key {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 0 0 auto;
+}
+
+.recon-status-value {
+  color: var(--text);
+  font-family: var(--font-family-mono);
+  text-align: right;
+  word-break: break-all;
+}
+
+.recon-flows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.recon-flow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.recon-flow-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  flex: 0 0 auto;
+}
+
+.recon-flow.done {
+  color: var(--text-secondary);
+}
+
+.recon-flow.done .recon-flow-dot {
+  background: var(--success);
+}
+
+.recon-flow.uncertain .recon-flow-dot {
+  background: var(--warning);
+}
+
+.recon-flow-status {
+  margin-left: auto;
+  font-family: var(--font-family-mono);
+  color: var(--text-tertiary);
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recon-feedback {
+  font-size: 11px;
+  line-height: 1.5;
+  min-height: 16px;
+  margin-top: 10px;
+  color: var(--text-muted);
+}
+
+.recon-feedback.ok {
+  color: var(--success);
+}
+
+.recon-feedback.error {
+  color: var(--error);
 }

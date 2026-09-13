@@ -13,7 +13,7 @@
         <header class="header">
             <div class="header-logo">
                 <img src="../icons/48.png" alt="Traverse" class="header-icon" />
-                <h1 class="chroma-text chroma-text-animate" data-chroma-id="traverse-logo">Traverse</h1>
+                <h1>Traverse</h1>
             </div>
             <div class="status" id="status">
                 <span class="status-dot" id="status-dot"></span>
@@ -68,27 +68,13 @@
                     <div class="separator"></div>
                 </div>
 
-                <!-- LeetCode Import -->
-                <div class="settings-section settings-card" id="leetcode-import-section">
-                    <h3>LeetCode Import</h3>
-                    <div class="leetcode-import">
-                        <div class="field">
-                            <input type="text" id="leetcode-username" placeholder="LeetCode Username" autocomplete="off" />
-                        </div>
-                        <button type="button" class="btn btn-secondary" id="leetcode-import-preview">
-                            Preview Import
-                        </button>
-                        <div class="leetcode-import-status" id="leetcode-import-status"></div>
-                    </div>
-                </div>
-
                 <!-- GitHub Section with Progressive Disclosure -->
-                <div class="settings-section" id="github-section">
+                <div class="settings-section settings-card" id="github-section">
                     <h3>GitHub</h3>
                     <div class="settings-option">
                         <div class="settings-option-title">
                             <label class="checkbox-label">
-                                <input type="checkbox" id="github-push-enabled" checked />
+                                <input type="checkbox" id="github-push-enabled" />
                                 <span class="checkbox-custom"></span>
                                 Push to GitHub
                                 <span class="info-icon" data-tooltip="Automatically push solutions to your GitHub repository">ⓘ</span>
@@ -97,7 +83,7 @@
                     </div>
 
                     <!-- GitHub Config Fields (collapsible) -->
-                    <div class="github-config-fields" id="github-config-fields">
+                    <div class="github-config-fields collapsed" id="github-config-fields">
                         <div class="field">
                             <label for="token">GitHub Token (Optional & Stored Locally)</label>
                             <div class="input-group">
@@ -170,7 +156,7 @@
                                 Show
                             </button>
                         </div>
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="token-link">Get Gemini
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="token-link token-link--accent">Get Gemini
                             API Key</a>
                     </div>
                     <div class="field" id="gemini-model-field" style="display: none;">
@@ -193,6 +179,54 @@
                     </div>
                 </div>
 
+                <!-- Hint Confirmation Section -->
+                <div class="settings-section settings-card" id="hint-prompt-section">
+                    <h3>Hint Confirmation</h3>
+                    <div class="settings-option">
+                        <div class="settings-option-title">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="hint-prompt-enabled" checked />
+                                <span class="checkbox-custom"></span>
+                                Enable Hint Confirmation
+                                <span class="info-icon" data-tooltip="Show confirmation popup upon accepted solve">ⓘ</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="hint-consequences-warning">This action will have consequences</div>
+
+                    <div class="field" id="hint-default-option-field">
+                        <label for="hint-default-option">
+                            Default Option
+                            <span class="info-icon" data-tooltip="Selected when countdown expires or when hint confirmation is disabled">ⓘ</span>
+                        </label>
+                        <div class="custom-select" id="hint-default-option-wrapper" data-select-id="hint-default-option">
+                            <input type="hidden" id="hint-default-option" value="none" />
+                            <button type="button" class="custom-select-trigger" aria-haspopup="listbox">
+                                <span class="custom-select-value">I solved it myself</span>
+                                <svg class="custom-select-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
+                            <div class="custom-select-dropdown" role="listbox">
+                                <div class="custom-select-search-wrap">
+                                    <input type="text" class="custom-select-search" placeholder="Search…" autocomplete="off" />
+                                </div>
+                                <div class="custom-select-options">
+                                    <div class="custom-select-option selected" data-value="none">I solved it myself</div>
+                                    <div class="custom-select-option" data-value="hint">Minor Hint</div>
+                                    <div class="custom-select-option" data-value="solution">Full solution</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="field" id="hint-duration-field">
+                        <label for="hint-prompt-duration">
+                            Timer Duration (seconds)
+                            <span class="info-icon" data-tooltip="Countdown before automatically submitting the default option">ⓘ</span>
+                        </label>
+                        <input type="number" id="hint-prompt-duration" min="3" max="60" value="10" placeholder="10" />
+                    </div>
+                </div>
+
                 <!-- Options/Debug Section -->
                 <div class="settings-section">
                     <h3>Options</h3>
@@ -208,6 +242,56 @@
                     <div class="separator"></div>
                 </div>
 
+                <!-- Platform Recon Section -->
+                <div class="settings-section settings-card" id="recon-section">
+                    <h3>Platform Recon</h3>
+                    <div class="settings-option">
+                        <div class="settings-option-title">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="recon-enabled" checked />
+                                <span class="checkbox-custom"></span>
+                                Record unknown platforms
+                                <span class="info-icon" data-tooltip="Records network traffic on DSA platforms that don't have a verified adapter yet, so their judge API can be mapped. Never runs on LeetCode or TakeUforward.">ⓘ</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="recon-hint">
+                        Recording starts on its own when you open a problem page on a
+                        supported platform — no setup needed. Do a Run and a Submit and the
+                        capture uploads by itself. A passing and a failing attempt give the
+                        most conclusive result, but whatever is captured gets sent.
+                    </div>
+
+                    <div class="recon-status-grid">
+                        <div class="recon-status-row">
+                            <span class="recon-status-key">Platform</span>
+                            <span class="recon-status-value" id="recon-st-platform">—</span>
+                        </div>
+                        <div class="recon-status-row">
+                            <span class="recon-status-key">Recorder</span>
+                            <span class="recon-status-value" id="recon-st-armed">—</span>
+                        </div>
+                        <div class="recon-status-row">
+                            <span class="recon-status-key">Events</span>
+                            <span class="recon-status-value" id="recon-st-events">—</span>
+                        </div>
+                        <div class="recon-status-row">
+                            <span class="recon-status-key">Last upload</span>
+                            <span class="recon-status-value" id="recon-st-uploaded">—</span>
+                        </div>
+                    </div>
+
+                    <div class="recon-flows" id="recon-flows"></div>
+                    <div class="recon-flows-summary" id="recon-flows-summary"></div>
+
+                    <div class="actions">
+                        <button type="button" class="btn btn-accent" id="recon-send">Send capture now</button>
+                    </div>
+
+                    <div class="recon-feedback" id="recon-feedback"></div>
+                </div>
+
                 <div class="settings-section">
                     <h3>Updates</h3>
                     <div class="update-notification" id="update-notification">
@@ -219,62 +303,18 @@
 
         <footer class="footer">
             <div class="separator-curve separator-bottom" aria-hidden="true"></div>
-            <div class="footer-brand">
-                <div class="footer-logo-section">
-                    <span class="footer-tr">TR</span>
-                    <div class="footer-checkerboard">
-                        <div class="cb-cell filled"></div>
-                        <div class="cb-cell"></div>
-                        <div class="cb-cell filled"></div>
-                        <div class="cb-cell"></div>
-                        <div class="cb-cell"></div>
-                        <div class="cb-cell filled"></div>
-                        <div class="cb-cell"></div>
-                        <div class="cb-cell filled"></div>
-                        <div class="cb-cell filled"></div>
-                        <div class="cb-cell"></div>
-                        <div class="cb-cell filled"></div>
-                        <div class="cb-cell"></div>
-                        <div class="cb-cell"></div>
-                        <div class="cb-cell filled"></div>
-                        <div class="cb-cell"></div>
-                        <div class="cb-cell filled"></div>
-                    </div>
-                    <div class="footer-tagline">
-                        <span class="muted">BUILT TO</span>
-                        <span>&lt;/&gt; FLEX</span>
-                    </div>
-                </div>
-                <div class="footer-bottom">
-                    <span class="footer-ecosystem">THE COMPLETE DSA ECOSYSTEM</span>
-                    <span class="footer-year">TO LEVEL UP ✳ 24—26</span>
-                    <span class="footer-copyright">©2026 No rights reserved</span>
-                </div>
+            <div class="footer-band">
+                <img src="../icons/logo.svg" alt="Traverse" class="footer-band-mark" aria-hidden="true" />
+                <h2 class="footer-band-wordmark">
+                    <span class="chroma-text chroma-text-animate" data-chroma-id="footer-traverse">Traverse</span>
+                </h2>
             </div>
         </footer>
     </div>
 
-    <div class="modal-overlay" id="leetcode-import-modal" aria-hidden="true">
-        <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="leetcode-import-modal-title">
-            <div class="confirm-modal-header">
-                <h2 id="leetcode-import-modal-title">Confirm LeetCode Import</h2>
-                <button type="button" class="modal-close" id="leetcode-import-cancel" aria-label="Close">×</button>
-            </div>
-            <div class="confirm-modal-body">
-                <p id="leetcode-import-summary"></p>
-                <div class="import-summary-grid" id="leetcode-import-summary-grid"></div>
-                <p class="confirm-warning">
-                    This posts your solved LeetCode problem list and available problem metadata to Traverse.
-                </p>
-            </div>
-            <div class="confirm-modal-actions">
-                <button type="button" class="btn" id="leetcode-import-back">Cancel</button>
-                <button type="button" class="btn btn-primary" id="leetcode-import-confirm">Import to Traverse</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="../utils/auth.js"></script>
+    <script src="../core/config.js"></script>
+    <script src="../core/logger.js"></script>
+    <script src="../core/auth.js"></script>
     <script src="sidepanel.js"></script>
 </body>
 
