@@ -72,11 +72,19 @@ via `window.LeetFeedbackToast` / `window.LeetFeedbackHintPrompt` /
 - **`recon-controller` is not part of the tracking stack.** It never touches
   `problem_data`, never counts runs, and never runs the pipeline — it is a
   *discovery* tool. Don't wire it into `platform-adapter.js`.
-- **Recon's storage listener must filter on `enabled`/`token`.** It fires for
+- **Recon's storage listener must filter on `enabled`.** It fires for
   every `chrome.storage.local` write, including the controller's own
   `recon_status`. Re-evaluating arming unconditionally is an infinite loop
   (`evaluateArming` → `publishStatus` → `set` → listener → …). This bug has been
   written once already; `tests/recon.test.js` guards it.
+- **`pushConfig()` must be idempotent, and `evaluateArming()` runs on every SPA
+  navigation.** The controller pushes its config whenever it re-evaluates arming
+  while already armed, so an unconditional re-push is constant traffic. It is
+  also how the worst bug in this feature happened: the interceptor used to reset
+  its `seq` counter on every push while the controller kept its event map, so a
+  mid-session re-push cross-attributed the whole capture. `pushConfig()` now
+  skips an unchanged config, and the interceptor's `seq` is monotonic regardless.
+  Do not "simplify" either guard away.
 - Recon only arms when **all three** hold: the platform is mapped, the host is
   not excluded (LeetCode / TakeUforward / our own surfaces), the URL looks like a
   problem page, **and** an ingest token exists. A token is always available —

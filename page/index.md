@@ -31,7 +31,7 @@ clobbering each other.
 | What it emits | Only requests matching the supplied filters | **Everything**, until its event budget runs out |
 | Payload | `requestBody` / `response` (parsed) | Raw bodies, request **and** response headers, timing, and the JS initiator stack |
 | Consumer | `core/net-bridge.js` → platform adapter | `core/recon-controller.js` |
-| Used by | Sites with a verified judge API (LeetCode, TakeUforward) | Sites being reverse-engineered |
+| Used by | Sites with a verified judge API (LeetCode, TakeUforward, GeeksforGeeks, CodeChef) | Sites being reverse-engineered |
 
 Recon is off unless a `TRV_RECON_CONFIG` with `enabled: true` arrives, so the
 interceptor costs nothing on a site that never arms it.
@@ -79,8 +79,21 @@ reported separately under the same `seq` so ordering doesn't matter),
 - Capture must never break the page: response bodies are read from a `clone()`,
   and every parse is wrapped. Keep it that way — an exception here breaks the
   site's own editor.
-- Bodies are only parsed when they are strings. `FormData`, `Blob` and
-  `URLSearchParams` bodies are passed through as `undefined`.
+- Bodies are only parsed when they are strings — on the **platform** channel.
+  `FormData`, `Blob` and `URLSearchParams` bodies arrive as `undefined` there, so
+  an adapter cannot read a multipart submission's code out of `requestBody`. The
+  recon channel is different: it serialises those bodies first (`serialiseBody`),
+  which is why a capture of a multipart endpoint still shows the fields.
+- **`reconSeq` must never be reset while a capture is running.** The controller
+  keys its event map by `seq`, so restarting the counter mid-session makes every
+  new event overwrite an unrelated record: one call's URL holding another call's
+  request and response bodies. The resulting bundle looks complete and is wrong.
+  Only an off→on transition resets the event budget, and `seq` itself is
+  monotonic for the life of the page. `tests/platforms.test.js` pins this.
+- The recon event budget (`maxEvents`) resets on a genuine off→on transition
+  only, which is what lets a re-arm after an upload start capturing again. A
+  config re-push while already recording is a no-op: the controller's
+  `pushConfig()` skips an unchanged config, and the interceptor ignores the rest.
 - Non-JSON string bodies under 10 kB are forwarded raw; anything larger is
   dropped rather than shipped over `postMessage`.
 - `monaco-bridge.js` is the only way to read editor code *before* a submission.
@@ -101,15 +114,12 @@ reported separately under the same `seq` so ordering doesn't matter),
 - **Recon must never capture its own upload.** `excludeUrl` carries the backend
   origin, so the `POST` that delivers a bundle is not recorded into the next
   bundle. Keep that exclusion when the backend URL changes.
-- The recon event budget (`maxEvents`) is per session and resets on each
-  `enabled: true` config, which is what lets a re-arm after an upload start
-  capturing again.
 
 ## 5. Where to make common changes
 
 | Change | File |
 |---|---|
-| Intercept `WebSocket` traffic too (planned for CodeChef) | `net-interceptor.js` — add a rule type, keep the patch additive |
+| Intercept `WebSocket` traffic too (a judge that reports over a socket would be invisible to both channels) | `net-interceptor.js` — add a rule type, keep the patch additive |
 | Change how request/response bodies are decoded | `net-interceptor.js` → `parseBody` |
 | Support another editor (CodeMirror, ACE) in the page world | `monaco-bridge.js` |
 | Add a message type | `core/net-protocol.js` **and** the matching constant in `net-interceptor.js` |

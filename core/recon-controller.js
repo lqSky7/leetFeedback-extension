@@ -434,6 +434,7 @@
       this._urlObserver = null;
       this._currentHref = location.href;
       this._booted = false;
+      this._configSignature = null;
     }
 
     /* ── lifecycle ── */
@@ -489,7 +490,9 @@
       } else if (!shouldArm && this.armed) {
         await this.disarm('left problem page');
       } else if (shouldArm && this.armed) {
-        // Same page, but the token may have just appeared.
+        // Already recording this page. pushConfig() is idempotent, so this is
+        // only here to cover a config value having changed underneath us — it
+        // used to re-push unconditionally on every navigation.
         this.pushConfig();
       }
 
@@ -532,18 +535,25 @@
       const protocol = T.netProtocol;
       if (!protocol) return;
 
+      const config = {
+        enabled: this.armed,
+        maxBodyChars: cfg.maxBodyChars,
+        maxEvents: cfg.maxEvents,
+        // Never capture our own upload — it would recurse and pollute the
+        // bundle with the very request that delivers it.
+        excludeUrl: escapeRegex(T.config.backendBaseURL || ''),
+      };
+
+      // Re-sending an identical config is not free: the interceptor rebuilds its
+      // state on every message. Skipping it also keeps evaluateArming() cheap,
+      // since that runs on every SPA navigation.
+      const signature = JSON.stringify(config);
+      if (signature === this._configSignature) return;
+      this._configSignature = signature;
+
       try {
         window.postMessage(
-          {
-            type: protocol.RECON_CONFIG,
-            enabled: this.armed,
-            maxBodyChars: cfg.maxBodyChars,
-            maxEvents: cfg.maxEvents,
-            // Never capture our own upload — it would recurse and pollute the
-            // bundle with the very request that delivers it.
-            excludeUrl: escapeRegex(T.config.backendBaseURL || ''),
-            debug: T.logger ? T.logger.isDebugMode() : false,
-          },
+          { type: protocol.RECON_CONFIG, ...config, debug: T.logger ? T.logger.isDebugMode() : false },
           '*'
         );
       } catch (error) {

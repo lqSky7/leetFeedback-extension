@@ -558,6 +558,7 @@
 
   function applyReconConfig(data) {
     const enabling = data.enabled !== false;
+    const wasCapturing = reconActive();
 
     recon = {
       enabled: enabling,
@@ -574,10 +575,17 @@
       }
     }
 
-    if (enabling) {
-      // A fresh session resets the budget; this is how a re-arm after an
-      // upload starts capturing again.
-      reconSeq = 0;
+    if (enabling && !wasCapturing) {
+      // Only a genuine start of capture resets the budget.
+      //
+      // `reconSeq` is deliberately NOT reset. The controller keys its event map
+      // by `seq`, so if this counter restarted while that map still held records
+      // from the previous generation, every new event would land on an unrelated
+      // record — the request body of one call paired with the response body of
+      // another, which is silent data corruption in the uploaded bundle. The
+      // controller only re-arms via arm(), which clears its map; seq therefore
+      // has to stay monotonic for the lifetime of the page, and the controller's
+      // `sort((a, b) => a.seq - b.seq)` copes with any starting value.
       reconEventCount = 0;
       reconStopped = false;
     }

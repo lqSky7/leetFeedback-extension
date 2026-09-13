@@ -27,7 +27,7 @@ remaining migration phases live in [REFACTOR_PLAN.md](REFACTOR_PLAN.md).
 | `ui/` | Content-script UI: toasts, submission card, hint prompt | [`ui/index.md`](ui/index.md) |
 | `background/` | Service worker: backend request proxy + auth storage owner | [`background/index.md`](background/index.md) |
 | `sidepanel/` | The extension's own UI (HTML/CSS/JS), unchanged visually | [`sidepanel/index.md`](sidepanel/index.md) |
-| `tests/` | Node scripts, no test runner: `smoke.test.js` (platform-adapter stack), `recon.test.js` (recon controller), `background.test.js` (worker loads + its router is wired), `auth.test.js`, `g4f-api-test.mjs`. Run them directly with `node` | — |
+| `tests/` | Node scripts, no test runner: `smoke.test.js` (platform-adapter stack), `recon.test.js` (recon controller), `background.test.js` (worker loads + its router is wired), `platforms.test.js` (the network verdict extractors, the interceptor's `seq` invariant, and the MAIN-world load path), `auth.test.js`, `g4f-api-test.mjs`. Run them directly with `node` | — |
 | `icons/`, `fonts/` | Static assets | — |
 
 ---
@@ -156,6 +156,14 @@ off for LeetCode, TakeUforward, and Traverse's own surfaces. See
     `sendMessage` hangs forever with no error. That is a UI freeze, not a crash,
     so it is invisible unless something loads the worker. `tests/background.test.js`
     does; run it after touching that file.
+15. **The recon `seq` counter is monotonic for the life of the page.**
+    `applyReconConfig()` must not reset it. The controller keys its event map by
+    `seq`, so a reset while that map still holds records makes every new event
+    land on an unrelated one — one call's URL with another call's request and
+    response bodies. The uploaded bundle then looks complete and is silently
+    wrong, which is worse than a capture that fails. Only `arm()` clears the
+    controller's map, so only a genuine off→on transition may reset the budget;
+    `seq` itself never restarts. `tests/platforms.test.js` pins this.
 
 ---
 

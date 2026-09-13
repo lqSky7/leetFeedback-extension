@@ -1,24 +1,65 @@
 // Traverse — GeeksforGeeks adapter.
 //
-// ⚠️ Capture is still DOM-based. GFG's judge endpoints have not been verified
-// against a real submit yet, so `netFilters` is intentionally empty and the
-// verdict is read from the page (button click -> poll the result container).
+// Verdicts now come from the judge API. The endpoints below were read off a
+// real recorded session (recon capture
+// `recon-geeksforgeeks-2026-09-12t21-50-25-253z.json`, 16 requests, run and
+// submit both accepted) rather than guessed, so `netFilters` is no longer
+// empty. The DOM is still used for the problem's title/difficulty/topics and as
+// a fallback for recording an attempt if a filter ever misses.
 //
-// To move GFG onto the network path:
-//   1. Record a HAR of Run + Submit (accepted and rejected) on
-//      practice.geeksforgeeks.org — see REFACTOR_PLAN §3.2 for the procedure.
-//   2. Add the submit/result-poll URLs to `netFilters` and handle them in
-//      `onNetEvent`, mirroring platforms/leetcode.js.
-//   3. Flip `config.domVerdictFallback.geeksforgeeks` to false, confirm nothing
-//      regresses, then delete the DOM code below.
+// Judge flow — host `practiceapiorigin.geeksforgeeks.org`, every request is
+// `multipart/form-data`:
+//
+//   POST /api/latest/problems/{slug}/compile-sub-id/
+//        request  { request_type: 'compileOutput', userCode, language, input }
+//        response { results: { expected_submission_id, testSolution_submission_id } }
+//        -> a RUN has started
+//
+//   POST /api/latest/problems/submission/compile-output          (polled)
+//        request  { sub_id, testSolution_sub_id, sub_type: 'compileOutput', pid, ... }
+//        response { results: { expectedOutput, testSolution } }
+//        -> the RUN verdict — see runVerdictFromCompileOutput()
+//
+//   POST /api/latest/problems/{slug}/submit/compile/
+//        request  { request_type: 'solutionCheck', userCode, language }
+//        response { results: { submission_id } }
+//        -> a SUBMIT has started
+//
+//   POST /api/latest/problems/submission/submit/result/          (polled)
+//        response { status: 'QUEUED', ... }            -> still judging, ignored
+//        response { view_mode: 'correct', ... }        -> the SUBMIT verdict
+//
+// Both result endpoints are polled by the site, so the same rule fires several
+// times and the early payloads carry no verdict at all. A pending poll must not
+// be read as a rejection, and must not consume the attempt — both verdict
+// extractors below return null until the payload is terminal.
+//
+// The attempts themselves are recorded from the *request* phase of the two
+// "start" calls, not from a button click: the click path depended on a hashed
+// CSS class that had gone stale, which is why run attempts stopped being
+// recorded at all. Button watching is kept only as a fallback.
 
 (function () {
   'use strict';
 
   const T = (globalThis.Traverse = globalThis.Traverse || {});
 
-  const SUBMIT_BUTTON = 'button.problems_submit_button__6QoNQ, [class*="problems_submit_button"]';
-  const RUN_BUTTON = 'button.problems_compile_button__Lfluz, [class*="compile_button"]';
+  /* ── judge endpoints ── */
+
+  const RUN_START_URL = /\/problems\/[^/]+\/compile-sub-id\/?$/;
+  const RUN_RESULT_URL = /\/problems\/submission\/compile-output\/?$/;
+  const SUBMIT_START_URL = /\/problems\/[^/]+\/submit\/compile\/?$/;
+  const SUBMIT_RESULT_URL = /\/problems\/submission\/submit\/result\/?$/;
+
+  /* ── DOM fallback ── */
+
+  // `button.ui.mini.button` matched 7 elements on the recorded page, so the
+  // finder below narrows by label instead of trusting the class alone.
+  const RUN_BUTTON_LABELS = ['compile & run', 'compile and run', 'run'];
+  const RUN_BUTTON_HINT = 'button.ui.mini.button, [class*="compile_button"], [class*="compile_btn"]';
+
+  const SUBMIT_BUTTON =
+    'button.submit_btn.btn.green, button.problems_submit_button__6QoNQ, [class*="problems_submit_button"]';
 
   const SUBMIT_RESULT_SELECTORS = [
     '[class*="problems_content"]',
@@ -44,6 +85,20 @@
   const RUN_OK_WORDS = ['correct', 'passed'];
   const RUN_FAIL_WORDS = ['wrong', 'failed', 'error', 'expected:'];
 
+  /**
+   * `view_mode` is the field that actually carries the judge's conclusion —
+   * `results.testSolution.status` reads "SUCCESS" even for a compile error,
+   * because it describes the request envelope, not the verdict.
+   */
+  const VIEW_MODE_LABELS = {
+    correct: 'Accepted',
+    wrong: 'Wrong Answer',
+    compilation: 'Compilation Error',
+    runtime: 'Runtime Error',
+    time_limit: 'Time Limit Exceeded',
+    test_results: 'Failed Test Case',
+  };
+
   /** First non-empty text among `selectors`, or null. */
   function readFirstText(selectors) {
     for (const selector of selectors) {
@@ -55,6 +110,8 @@
 
   const containsAny = (haystack, needles) => needles.some((needle) => haystack.includes(needle));
 
+  const pathOf = (url) => String(url || '').split('?')[0];
+
   class GeeksforGeeksAdapter extends T.PlatformAdapter {
     static platform = 'geeksforgeeks';
 
@@ -65,10 +122,19 @@
         defaultTopics: ['General'],
         defaultLanguage: 'cpp',
         extractDelay: 1500,
-        netFilters: [],
+        netFilters: [
+          { url: '/problems/[^/]+/compile-sub-id/', methods: ['POST'] },
+          { url: '/problems/submission/compile-output', methods: ['POST'] },
+          { url: '/problems/[^/]+/submit/compile/', methods: ['POST'] },
+          { url: '/problems/submission/submit/result', methods: ['POST'] },
+        ],
       });
 
       this.topics = [];
+      // Guards against applying one submission's verdict twice: the site polls
+      // submit/result until the judge finishes, and an accepted verdict runs the
+      // whole storage pipeline.
+      this.submissionSettled = false;
     }
 
     async init() {
@@ -88,7 +154,120 @@
       return match ? match[1] : 'unknown';
     }
 
-    /* ── DOM capture ── */
+    /* ── network events ── */
+
+    async onNetEvent(event) {
+      const { phase, url, method, response } = event;
+      const path = pathOf(url);
+
+      if (phase === 'request') {
+        if (method !== 'POST') return;
+
+        // Record the attempt when the judge flow starts, so it is counted even
+        // if the verdict payload never arrives. captureFromDom() checks
+        // netCapturedRecently() and skips, so the click path cannot double-count.
+        if (RUN_START_URL.test(path)) {
+          await this.captureRun(this.getCurrentCode(), this.getCurrentLanguage());
+          return;
+        }
+        if (SUBMIT_START_URL.test(path)) {
+          await this.captureSubmit(this.getCurrentCode(), this.getCurrentLanguage());
+        }
+        return;
+      }
+
+      if (phase !== 'response') return;
+
+      if (RUN_RESULT_URL.test(path)) {
+        const verdict = GeeksforGeeksAdapter.runVerdictFromCompileOutput(response);
+        if (verdict) {
+          this.logger.log(`run verdict: ${verdict.accepted ? 'SUCCESS' : 'FAILED'} (${verdict.status})`);
+          await this.runVerdict(verdict.accepted);
+        }
+        return;
+      }
+
+      if (SUBMIT_RESULT_URL.test(path)) {
+        await this.handleSubmitResult(response);
+      }
+    }
+
+    /**
+     * The run verdict, read from a `compile-output` poll.
+     *
+     * `results.expectedOutput` is the *reference* solution's side and finishing
+     * says nothing about the user's code — in the recorded session it was
+     * populated while the user's side was still empty. Only
+     * `results.testSolution` (the user's own compile) can decide the run, and it
+     * is absent until that side is done, so it doubles as the "still running"
+     * signal.
+     */
+    static runVerdictFromCompileOutput(body) {
+      const results = body && body.results;
+      if (!results) return null;
+
+      const solution = results.testSolution;
+      if (!solution || !solution.view_mode) return null;
+
+      const message = solution.message || {};
+      const viewMode = String(solution.view_mode);
+      const failed =
+        Boolean(message.error) ||
+        viewMode === 'compilation' ||
+        viewMode === 'runtime' ||
+        viewMode === 'time_limit';
+
+      return {
+        accepted: !failed,
+        status: failed ? VIEW_MODE_LABELS[viewMode] || 'Run Failed' : 'Ran Successfully',
+      };
+    }
+
+    async handleSubmitResult(body) {
+      const verdict = GeeksforGeeksAdapter.submitVerdictFromResult(body);
+      if (!verdict) return;
+
+      // The endpoint is polled; apply the verdict once per submission.
+      if (this.submissionSettled) return;
+      this.submissionSettled = true;
+
+      this.logger.log(
+        `submit verdict: ${verdict.accepted ? 'ACCEPTED' : 'REJECTED'} (${verdict.status})`
+      );
+      await this.submitVerdict(verdict);
+    }
+
+    /**
+     * The submit verdict, read from a `submit/result` poll.
+     *
+     * Every poll before the judge finishes comes back as
+     * `{"message":"Request Queued.","status":"QUEUED"}` with no `view_mode` at
+     * all, so the presence of `view_mode` is what marks the payload as final.
+     */
+    static submitVerdictFromResult(body) {
+      if (!body || typeof body !== 'object') return null;
+
+      const viewMode = String(body.view_mode || '');
+      if (!viewMode) return null;
+
+      const message = body.message || {};
+      const accepted = viewMode === 'correct';
+
+      return {
+        accepted,
+        status: accepted ? 'Accepted' : VIEW_MODE_LABELS[viewMode] || `Failed (${viewMode})`,
+        stats: {
+          runtime: body.time !== undefined ? `${body.time}s` : '',
+          testcases:
+            body.total_test_cases !== undefined
+              ? `${body.test_cases_processed}/${body.total_test_cases}`
+              : '',
+          accuracy: message.accuracy !== undefined ? `${message.accuracy}%` : '',
+        },
+      };
+    }
+
+    /* ── DOM fallback ── */
 
     attachButtons() {
       this.watchButton(
@@ -104,7 +283,7 @@
       );
 
       this.watchButton(
-        () => document.querySelector(RUN_BUTTON),
+        () => this.findRunButton(),
         () => {
           // The site sends the run request after its own handler runs.
           setTimeout(async () => {
@@ -117,6 +296,25 @@
         },
         'data-traverse-run-listener'
       );
+    }
+
+    /**
+     * The recorded page rendered the run control as `button.ui.mini.button`
+     * labelled "Compile & Run" — the class alone matched 7 elements, and the
+     * hashed `problems_compile_button__*` class this adapter used to look for
+     * was no longer present at all.
+     */
+    findRunButton() {
+      const candidates = Array.from(document.querySelectorAll(RUN_BUTTON_HINT));
+      const labelled = candidates.filter((button) =>
+        RUN_BUTTON_LABELS.includes((button.textContent || '').trim().toLowerCase())
+      );
+      if (labelled.length > 0) return labelled;
+
+      const byLabel = Array.from(document.querySelectorAll('button')).find((button) =>
+        RUN_BUTTON_LABELS.includes((button.textContent || '').trim().toLowerCase())
+      );
+      return byLabel || null;
     }
 
     checkSubmitVerdict() {
@@ -217,11 +415,22 @@
     }
 
     getCurrentLanguage() {
+      // The recorded page showed the language in a `div.item` reading
+      // "C (gcc 5.4)". The parenthetical is the compiler build, not part of the
+      // language name, so it is stripped.
       const el =
         document.querySelector('div.problems_language_dropdown__DgjFb .menu [role="option"].active.selected') ||
-        document.querySelector('[class*="language_dropdown"] .selected, [class*="language"]');
-      const text = el && el.textContent ? el.textContent.trim().toLowerCase() : '';
-      return text || this.defaultLanguage;
+        document.querySelector('[class*="language_dropdown"] .selected, [class*="language"]') ||
+        document.querySelector('.ace_editor[data-mode]');
+      if (!el) return this.defaultLanguage;
+
+      const raw =
+        el.tagName === 'SELECT'
+          ? (el.options[el.selectedIndex] && el.options[el.selectedIndex].text) || ''
+          : el.getAttribute('data-mode') || el.textContent || '';
+
+      const language = raw.replace(/\(.*?\)/g, '').trim().toLowerCase();
+      return language || this.defaultLanguage;
     }
 
     /* ── metadata ── */
@@ -268,16 +477,29 @@
       return match ? match[1] : null;
     }
 
+    /**
+     * The recorded page put everything in one header block:
+     * "Difficulty: EasyAccuracy: 32.46%Submissions: 418K+Points: 2Average Time: 20m".
+     * Reading the labelled value is far steadier than the old
+     * `span:first-child` guess, which picked up whatever happened to be first.
+     */
     getDifficulty() {
       const el = document.querySelector(
-        '[class*="problems_header_description"] span:first-child, .difficulty-tag, [class*="difficulty"]'
+        'div.problems_header_description__t_8PB, [class*="problems_header_description"], [class*="difficulty"]'
       );
-      return (el && el.textContent.trim()) || 'Medium';
+      const text = (el && el.textContent) || '';
+      const match = text.match(/Difficulty\s*:\s*(Easy|Medium|Hard|Basic|School)/i);
+      return match ? match[1] : 'Medium';
     }
 
     getTopicTags() {
       const tags = [];
-      const els = document.querySelectorAll('.problems_tag_container__kWANg + .content a, [class*="topic"] a');
+      // `a.ui.label.problems_tag_label__A4Ism` is what the recorded page used
+      // (it held company tags such as "Microsoft"); the older container-based
+      // selector is kept as a fallback.
+      const els = document.querySelectorAll(
+        'a.ui.label.problems_tag_label__A4Ism, [class*="problems_tag_label"], .problems_tag_container__kWANg + .content a, [class*="topic"] a'
+      );
       for (const el of els) {
         const text = el.textContent.trim();
         if (text && !tags.includes(text)) tags.push(text);
