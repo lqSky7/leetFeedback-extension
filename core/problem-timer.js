@@ -393,15 +393,16 @@
     `;
 
       // Status dot. It carries the chroma palette — the same five stops as the
-      // footer wordmark sweep and the toast/hint glyphs — as a fixed gradient.
-      // Nothing here animates: the dot is a permanent colour mark, not a sweep.
+      // footer wordmark sweep and the toast/hint glyphs — as a fixed conic
+      // gradient, so all five read around the 8px circle. Nothing here
+      // animates: the dot is a permanent colour mark, not a sweep.
       const icon = document.createElement('span');
       icon.style.cssText = `
       display: inline-block;
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: linear-gradient(90deg, #FFB6C1 0%, #F02832 25%, #FFBE14 50%, #EBEBFF 75%, #145AE6 100%);
+      background: conic-gradient(from -90deg, #FFB6C1, #F02832, #FFBE14, #EBEBFF, #145AE6, #FFB6C1);
       margin-right: 10px;
       flex-shrink: 0;
     `;
