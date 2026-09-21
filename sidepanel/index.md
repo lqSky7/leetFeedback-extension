@@ -12,6 +12,16 @@ because the modules it loads moved from `shared/` and `utils/` into `core/`.
 The recon settings card is the one sanctioned addition: it extends the existing
 Settings tab instead of restyling anything.
 
+**Second sanctioned exception (2026-09-21): the Glowy CTA's colour.** Requested by
+the owner. `.auth-cta` / `.glowy-button*` in `sidepanel.css` were re-coloured from
+the warm orange palette to the brand chroma band, to match the same change on the
+website's `GlowyButton.tsx`. Geometry, radii, sizes, copy and the cursor-tracking
+behaviour in `sidepanel.js` (`initGlowyButtons`) are **unchanged** — only colour
+values moved, so the freeze holds for everything except hue. The rationale and the
+two rules that produced it (band on the rim, not the bloom; gravitated right at
+rest) are written at the top of that section in `sidepanel.css`. Do not extend
+this to any other surface without the same explicit request.
+
 ## 2. Modules
 
 | File | Responsibility |

@@ -132,8 +132,11 @@ off for LeetCode, TakeUforward, and Traverse's own surfaces. See
    captures are emailed and written to disk.
 9. **UI freeze.** The sidepanel, timer overlay, toasts and hint prompt must stay
    pixel- and behaviour-identical. Refactors change the code behind them, never
-   their appearance or copy. (The recon settings card is the single sanctioned
-   addition; it extends the existing Settings tab rather than restyling it.)
+   their appearance or copy. Two sanctioned exceptions, both owner-requested and
+   both recorded where they live: the recon settings card (an addition that
+   extends the existing Settings tab rather than restyling it), and the Glowy
+   CTA's colour, re-based on the brand chroma band (`sidepanel/index.md` §1). A
+   visual change needs an explicit request; it never rides along with a refactor.
 10. **Background handlers must `return true`** when responding asynchronously.
 11. **The service worker holds no problem state.** MV3 terminates it when idle;
     everything must be rehydrated from `chrome.storage`.

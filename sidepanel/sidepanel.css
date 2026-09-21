@@ -1102,6 +1102,29 @@ input {
 }
 
 /* ── Glowy CTA — port of website GlowyButton.tsx ───────────────────────── */
+/* The website's chroma re-colour (2026-09-21), ported stop for stop. The CTA
+   used to be molten — cream → peach → orange, with a brown label to match — and
+   now runs the brand chroma band:
+
+     #FFB6C1 baby pink · #F02832 crimson · #FFBE14 amber gold
+     #EBEBFF ice white · #145AE6 cobalt blue
+
+   Two rules came out of four failed passes on the website, both of which matter
+   here because this is the same button:
+
+   1. The band lives on the RIM, never on the bloom. `.glowy-button-glow-inner`
+      / `-outer` are the radial wash behind the label and most of the button's
+      visible surface, so any hue put there *becomes* the button's colour (a
+      single cobalt tint read as "a blue button") and five hues there fight.
+      The bloom is neutral light: it makes the pill look lit and nothing else.
+   2. At rest the band is GRAVITATED RIGHT. Each rim gradient is dead for roughly
+      its first third and packs the whole run into the tail, ending at full
+      cobalt on the right tip — the alpha shape the warm version used, which is
+      what made it read as a light at the right end of the pill rather than a
+      tinted outline all the way round.
+
+   This is a sanctioned exception to the UI freeze (root `index.md` invariant 9),
+   recorded in `sidepanel/index.md` §1. Do not extend it to other surfaces. */
 .auth-cta {
   display: flex;
   justify-content: center;
@@ -1139,9 +1162,11 @@ input {
   max-width: 100%;
   padding: 0 clamp(20px, 16%, 64px);
   background: #d1d1d1;
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(235, 235, 255, 0.7);
   border-radius: var(--glowy-radius);
-  color: #5A250A;
+  /* Was the warm brown #5A250A. No single ink survives on top of a five-stop
+     wash, so the label goes near-black and lets the band be the only colour. */
+  color: #131417;
   font-family: var(--font-family-base);
   font-size: 12px;
   font-weight: 700;
@@ -1158,7 +1183,7 @@ input {
   width: 17px;
   height: 9px;
   flex-shrink: 0;
-  color: #5A250A;
+  color: #131417;
 }
 
 .glowy-button-glow-container {
@@ -1182,13 +1207,16 @@ input {
   width: 121px;
   height: 121px;
   transform: translate(-50%, -50%);
+  /* NEUTRAL — no band stop here on purpose, see the note above the section.
+     Same stop rhythm as the warm version, cream and peach swapped for white
+     and ice. */
   background: radial-gradient(
     50% 50% at 50% 50%,
-    #FFFFF5 3.5%,
-    #FFAA81 26.5%,
-    #FFDA9F 37.5%,
-    rgba(255, 170, 129, 0.5) 49%,
-    rgba(210, 106, 58, 0) 92.5%
+    #FFFFFF 3.5%,
+    rgba(255, 255, 255, 0.85) 26.5%,
+    rgba(235, 235, 255, 0.5) 44%,
+    rgba(235, 235, 255, 0.16) 62%,
+    rgba(235, 235, 255, 0) 92.5%
   );
 }
 
@@ -1199,12 +1227,14 @@ input {
   width: 204px;
   height: 103px;
   transform: translate(-50%, -50%);
+  /* Neutral too, and a little wider than the tight layer so the pill's light
+     has some spread to it. */
   background: radial-gradient(
     43.3% 44.23% at 50% 49.51%,
-    #FFFFF7 29%,
-    #FFFACD 48.5%,
-    #F4D2BF 60.71%,
-    rgba(214, 211, 210, 0) 100%
+    #FFFFFF 29%,
+    rgba(255, 255, 255, 0.72) 48.5%,
+    rgba(240, 242, 255, 0.38) 60.71%,
+    rgba(235, 235, 255, 0) 100%
   );
   filter: blur(5px);
 }
@@ -1242,7 +1272,7 @@ input {
   filter: blur(2px);
   background:
     linear-gradient(transparent, transparent) padding-box,
-    linear-gradient(97.68deg, rgba(255, 177, 153, 0) 38.1%, rgba(255, 177, 153, 0.2) 82.47%, rgb(255, 121, 80) 93.3%) border-box;
+    linear-gradient(97.68deg, rgba(255, 182, 193, 0) 32%, rgba(255, 182, 193, 0.28) 58%, rgba(240, 40, 50, 0.5) 71%, rgba(255, 190, 20, 0.72) 81%, rgba(235, 235, 255, 0.95) 88%, #145AE6 93.3%) border-box;
 }
 
 .glowy-button-border-glow-blur::after {
@@ -1253,7 +1283,7 @@ input {
   filter: blur(15px);
   background:
     linear-gradient(transparent, transparent) padding-box,
-    linear-gradient(91.88deg, rgba(255, 137, 100, 0.2) 46.45%, rgb(205, 49, 0) 98.59%) border-box;
+    linear-gradient(91.88deg, rgba(255, 182, 193, 0.08) 38%, rgba(255, 182, 193, 0.32) 60%, rgba(240, 40, 50, 0.48) 73%, rgba(255, 190, 20, 0.65) 83%, rgba(235, 235, 255, 0.85) 91%, rgba(20, 90, 230, 0.95) 98.59%) border-box;
 }
 
 .glowy-button-border-glow-blur-2 {
@@ -1268,7 +1298,7 @@ input {
   border: 1px solid transparent;
   background:
     linear-gradient(transparent, transparent) padding-box,
-    linear-gradient(103.7deg, rgba(188, 155, 143, 0.1) 38.66%, rgba(233, 132, 99, 0.1) 68.55%, rgb(233, 132, 99) 85.01%, rgb(255, 255, 255) 92.12%) border-box;
+    linear-gradient(103.7deg, rgba(255, 182, 193, 0.06) 32%, rgba(255, 182, 193, 0.22) 58%, rgba(240, 40, 50, 0.42) 71%, rgba(255, 190, 20, 0.62) 80%, rgba(235, 235, 255, 0.88) 87%, rgba(20, 90, 230, 0.95) 92.12%) border-box;
 }
 
 .glowy-button-border-light::before {
@@ -1285,7 +1315,7 @@ input {
   filter: blur(7px);
   background:
     linear-gradient(transparent, transparent) padding-box,
-    linear-gradient(91.96deg, rgba(255, 177, 153, 0) 6.11%, rgba(255, 177, 153, 0.2) 53.57%, rgb(255, 121, 80) 93.6%) border-box;
+    linear-gradient(91.96deg, rgba(255, 182, 193, 0) 18%, rgba(255, 182, 193, 0.18) 55%, rgba(240, 40, 50, 0.32) 70%, rgba(255, 190, 20, 0.48) 80%, rgba(235, 235, 255, 0.68) 88%, rgba(20, 90, 230, 0.8) 93.6%) border-box;
 }
 
 /* ── "Facing difficulty?" disclosure ───────────────────────────────────── */
