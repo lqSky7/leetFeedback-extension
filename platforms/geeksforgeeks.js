@@ -157,7 +157,7 @@
     /* ── network events ── */
 
     async onNetEvent(event) {
-      const { phase, url, method, response } = event;
+      const { phase, url, method, requestBody, response } = event;
       const path = pathOf(url);
 
       if (phase === 'request') {
@@ -167,11 +167,18 @@
         // if the verdict payload never arrives. captureFromDom() checks
         // netCapturedRecently() and skips, so the click path cannot double-count.
         if (RUN_START_URL.test(path)) {
-          await this.captureRun(this.getCurrentCode(), this.getCurrentLanguage());
+          await this.captureRun(
+            typeof requestBody?.userCode === 'string' ? requestBody.userCode : this.getCurrentCode(),
+            requestBody?.language || this.getCurrentLanguage()
+          );
           return;
         }
         if (SUBMIT_START_URL.test(path)) {
-          await this.captureSubmit(this.getCurrentCode(), this.getCurrentLanguage());
+          const captured = await this.captureSubmit(
+            typeof requestBody?.userCode === 'string' ? requestBody.userCode : this.getCurrentCode(),
+            requestBody?.language || this.getCurrentLanguage()
+          );
+          if (captured) this.submissionSettled = false;
         }
         return;
       }
@@ -435,7 +442,14 @@
 
     /* ── metadata ── */
 
+    handleProblemChange() {
+      super.handleProblemChange();
+      this.submissionSettled = false;
+      this.topics = [];
+    }
+
     async extractProblemInfo() {
+      const submitted = this.tracker.currentSubmissionAttempt;
       const title = this.getProblemTitle();
       if (!title) return null;
 
@@ -447,8 +461,8 @@
         number: this.getProblemNumber(),
         difficulty: this.getDifficulty(),
         url: window.location.href.split('?')[0],
-        language: this.getCurrentLanguage(),
-        code: this.getCurrentCode(),
+        language: submitted?.language || this.getCurrentLanguage(),
+        code: submitted?.code || this.getCurrentCode(),
         topics: this.topics.length > 0 ? this.topics : ['General'],
       };
     }

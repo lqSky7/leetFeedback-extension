@@ -299,6 +299,21 @@
     return undefined;
   }
 
+  function platformRequestBody(body, contentType = '') {
+    if ((typeof FormData !== 'undefined' && body instanceof FormData) ||
+        (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams)) {
+      const fields = Object.create(null);
+      body.forEach((value, key) => {
+        if (typeof value === 'string') fields[key] = value;
+      });
+      return fields;
+    }
+    if (typeof body === 'string' && contentType.includes('application/x-www-form-urlencoded')) {
+      return platformRequestBody(new URLSearchParams(body));
+    }
+    return parseBody(body);
+  }
+
   function patchFetch() {
     if (typeof window.fetch !== 'function') return;
     const originalFetch = window.fetch;
@@ -390,9 +405,28 @@
         });
       }
 
-      const requestBody = parseBody(init && typeof init.body === 'string' ? init.body : undefined);
+      let requestBody;
+      let bodyReady = Promise.resolve();
+      if (isRequestObject && (!init || init.body === undefined)) {
+        try {
+          const clone = input.clone();
+          const contentType = clone.headers.get('content-type') || '';
+          bodyReady = (contentType.includes('multipart/form-data') ? clone.formData() : clone.text())
+            .then((body) => {
+              requestBody = platformRequestBody(body, contentType);
+              emit(url, method, { phase: PHASE_REQUEST, requestBody });
+            })
+            .catch(() => emit(url, method, { phase: PHASE_REQUEST }));
+        } catch (_) {
+          emit(url, method, { phase: PHASE_REQUEST });
+        }
+      } else {
+        const headers = headersToObject(init && init.headers);
+        const contentTypeKey = Object.keys(headers).find((key) => key.toLowerCase() === 'content-type');
+        requestBody = platformRequestBody(init && init.body, headers[contentTypeKey] || '');
+        emit(url, method, { phase: PHASE_REQUEST, requestBody });
+      }
       log('fetch', method, url);
-      emit(url, method, { phase: PHASE_REQUEST, requestBody });
 
       const pending = originalFetch.apply(this, arguments);
 
@@ -401,14 +435,14 @@
           response
             .clone()
             .text()
-            .then((text) =>
+            .then((text) => bodyReady.then(() =>
               emit(url, method, {
                 phase: PHASE_RESPONSE,
                 requestBody,
                 status: response.status,
                 response: parseBody(text),
               })
-            )
+            ))
             .catch(() => {});
         } catch (_) {
           /* body already consumed or opaque response */
@@ -511,14 +545,16 @@
         return originalSend.apply(this, arguments);
       }
 
-      const requestBody = parseBody(typeof body === 'string' ? body : undefined);
+      const headers = this.__traverseHeaders || {};
+      const contentTypeKey = Object.keys(headers).find((key) => key.toLowerCase() === 'content-type');
+      const requestBody = platformRequestBody(body, headers[contentTypeKey] || '');
       log('xhr', method, url);
       emit(url, method, { phase: PHASE_REQUEST, requestBody });
 
       this.addEventListener('load', () => {
         let response;
         try {
-          response = parseBody(this.responseText);
+          response = this.responseType === 'json' ? this.response : parseBody(this.responseText);
         } catch (_) {
           response = undefined;
         }

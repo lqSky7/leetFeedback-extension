@@ -6,6 +6,12 @@
 // and is capped at 2 hours — the same cap the backend client applies when
 // reporting `timeTaken`.
 //
+// The overlay also hands its box to the submission card: `parkOverlay()` takes
+// the pill off screen (the clock keeps running) and reports where it was, so
+// the card can grow out of that box, and `beginRestore()`/`completeRestore()`
+// put the pill back — including the failure path, where the card shrinks back
+// into it. See the "submission hand-off" section below.
+//
 // Singleton, exposed as `window.ProblemTimer` and `T.ProblemTimer`.
 
 (function () {
@@ -17,6 +23,14 @@
   const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
   const INACTIVITY_TIMEOUT_MS = 2 * 60 * 60 * 1000;
   const PERIODIC_SAVE_MS = 60000;
+
+  // Submission hand-off (see parkOverlay). The pill fades under the status
+  // card's opening frames, and comes back with a short fade of its own.
+  const PARK_FADE_MS = 170;
+  const RESTORE_FADE_MS = 200;
+  // Longest a card may hold a rebuilt-but-invisible pill before the timer
+  // shows it regardless (see beginRestore).
+  const RESTORE_GUARD_MS = 1500;
 
   class ProblemTimer {
     constructor() {
@@ -35,6 +49,12 @@
       this.overlay = null;
       this.displayIntervalId = null;
       this.isEnabled = true;
+
+      // Set while the overlay is handed over to a submission card: detached
+      // from the DOM, still counting (see parkOverlay).
+      this.isParked = false;
+      this._restorePending = false;
+      this._restoreGuard = null;
 
       this.isDragging = false;
       this.dragOffsetX = 0;
@@ -332,12 +352,162 @@
     /* ── overlay ── */
 
     showOverlay() {
+      // Parked means a submission card is holding the corner; give it back
+      // rather than stacking a second pill under the card.
+      if (this.isParked) this.restoreOverlay();
       if (this.overlay) return;
       this.createOverlay();
       this.startDisplayUpdate();
     }
 
+    /* ── submission hand-off ──────────────────────────────────────────────────
+     *
+     * A submission turns this pill into the status card that lands in the same
+     * corner, so the card grows out of the pill's box — and, when the
+     * submission fails, shrinks back into it. The pill is "parked" for the
+     * duration: detached from the DOM, but still counting, because the user is
+     * still on the problem and the clock should not stop while the judge runs.
+     *
+     * Geometry only. Which element morphs, and when, is the card's business
+     * (see SubmissionTracker in ui/toast.js).
+     */
+
+    /**
+     * Detach the overlay and hand its box to the caller.
+     *
+     * @returns {{left:number, top:number, width:number, height:number}|null}
+     *   the box a card should morph out of, or null when there is nothing on
+     *   screen to morph from (overlay hidden or disabled, already parked).
+     */
+    parkOverlay() {
+      if (!this.overlay || this.isParked) return null;
+
+      const overlay = this.overlay;
+      const box = T.util.rectOf(overlay.getBoundingClientRect());
+
+      this.isParked = true;
+
+      // Stay in the DOM while the card's opening frames cover it, so the swap
+      // reads as one shape changing rather than a pop.
+      if (typeof overlay.animate === 'function') {
+        overlay.style.pointerEvents = 'none';
+        overlay.animate([{ opacity: overlay.style.opacity || '0.6' }, { opacity: 0 }], {
+          duration: PARK_FADE_MS,
+          easing: 'ease-out',
+          fill: 'forwards',
+        });
+      }
+
+      // Also runs on a timer, not just on the animation: a cancelled animation
+      // must never leave the pill stranded in the DOM.
+      setTimeout(() => {
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        if (this.overlay === overlay) this.overlay = null;
+      }, PARK_FADE_MS + 40);
+
+      logger.log('overlay parked for submission hand-off');
+      return box;
+    }
+
+    /**
+     * Rebuild the overlay at its resting spot, invisible, and report the box it
+     * settled into so a card can shrink into it. Pair with `completeRestore`.
+     *
+     * @returns {{rect: Object}|null} null when nothing was parked.
+     */
+    beginRestore() {
+      if (!this.isParked) return null;
+
+      this.isParked = false;
+
+      // Drop whatever is left of the parked node before rebuilding.
+      const stale = this.overlay;
+      if (stale) {
+        this.overlay = null;
+        if (stale.parentNode) stale.parentNode.removeChild(stale);
+      }
+
+      this.createOverlay();
+      this.startDisplayUpdate();
+
+      const overlay = this.overlay;
+      if (!overlay) return null;
+
+      // The pill renders invisible from its very first frame: the transition
+      // would otherwise fade it in from the cssText default before the caller
+      // gets a chance to place it.
+      overlay.style.transition = 'none';
+      overlay.style.opacity = '0';
+      overlay.style.pointerEvents = 'none';
+
+      // Safety net. `completeRestore` is always called by the caller, but a
+      // pill left permanently invisible would be a far worse failure than one
+      // shown a beat early.
+      this._restorePending = true;
+      clearTimeout(this._restoreGuard);
+      this._restoreGuard = setTimeout(() => this.completeRestore(), RESTORE_GUARD_MS);
+
+      return { rect: T.util.rectOf(overlay.getBoundingClientRect()) };
+    }
+
+    /** Fade the pill back in. `delayMs` lets a card land on it first. */
+    completeRestore({ delayMs = 0, duration = RESTORE_FADE_MS } = {}) {
+      this._restorePending = false;
+      clearTimeout(this._restoreGuard);
+
+      const overlay = this.overlay;
+      if (!overlay) return;
+
+      const resting = this.isPaused ? '0.45' : '0.6';
+
+      // Commit the resting opacity while the transition is still suppressed,
+      // then hand the element back to its CSS — otherwise the restored
+      // transition would replay the whole fade a second time.
+      const land = () => {
+        if (this.overlay !== overlay) return;
+        overlay.style.opacity = resting;
+        void overlay.offsetWidth;
+        overlay.style.transition = '';
+        overlay.style.pointerEvents = '';
+      };
+
+      const show = () => {
+        if (this.overlay !== overlay) return;
+
+        if (typeof overlay.animate !== 'function') {
+          land();
+          return;
+        }
+
+        const anim = overlay.animate([{ opacity: 0 }, { opacity: Number(resting) }], {
+          duration,
+          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+          fill: 'forwards',
+        });
+        const settle = () => {
+          if (this.overlay !== overlay) return;
+          anim.cancel();
+          land();
+        };
+        if (anim.finished && typeof anim.finished.then === 'function') anim.finished.then(settle, settle);
+        else setTimeout(settle, duration + 40);
+      };
+
+      if (delayMs > 0) setTimeout(show, delayMs);
+      else show();
+    }
+
+    /** Park and restore in one go, for callers with no card to morph. */
+    restoreOverlay() {
+      if (!this.isParked) return;
+      if (this.beginRestore()) this.completeRestore();
+    }
+
     hideOverlay() {
+      this.isParked = false;
+      this._restorePending = false;
+      clearTimeout(this._restoreGuard);
+
       if (this.isDragging) {
         this.isDragging = false;
         if (this._dragMouseMoveHandler) {
@@ -585,23 +755,23 @@
     }
 
     updateDisplay() {
-      if (!this.overlay || !this.startTime) return;
+      const timeDisplay = this.overlay ? document.getElementById('leetfeedback-timer-time') : null;
+      if (timeDisplay && this.startTime) {
+        const seconds = Math.floor(this.getElapsedActiveTime() / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
 
-      const timeDisplay = document.getElementById('leetfeedback-timer-time');
-      if (!timeDisplay) return;
+        timeDisplay.textContent =
+          hours > 0
+            ? `${hours}:${String(minutes % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
+            : `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+      }
 
-      const seconds = Math.floor(this.getElapsedActiveTime() / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-
-      timeDisplay.textContent =
-        hours > 0
-          ? `${hours}:${String(minutes % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
-          : `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
-
-      // Heartbeat so a long-open problem is not treated as inactive.
+      // Heartbeat so a long-open problem is not treated as inactive. It runs
+      // whether or not the overlay is on screen — while parked behind a
+      // submission card the clock is still the one the backend will be told.
       const now = Date.now();
-      if (!this.lastSaveTime || now - this.lastSaveTime > PERIODIC_SAVE_MS) {
+      if (this.startTime && (!this.lastSaveTime || now - this.lastSaveTime > PERIODIC_SAVE_MS)) {
         this.lastSaveTime = now;
         this.saveToStorage().catch((error) => logger.error('periodic save failed:', error));
       }

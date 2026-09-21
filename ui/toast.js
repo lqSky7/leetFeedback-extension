@@ -36,6 +36,12 @@
 // before the next one starts, so an instantly successful sync still plays
 // arrow -> tick -> arrow -> Traverse mark in full, each morph uncut.
 //
+// The card also owns the corner the timer pill lives in. A submission does not
+// stack a popup next to the pill — the pill hands its box over and the card
+// grows out of it (see the hand-off section below). A failed submission runs
+// that in reverse: the cross rests, then the whole card scales back down into
+// the pill it came from.
+//
 // Exposed as `window.LeetFeedbackToast` and `T.LeetFeedbackToast` (the adapters
 // and the submission pipeline look the global up by that name).
 
@@ -158,6 +164,35 @@
   const MORPH_MS = 520;
   const REVEAL_MS = 700;
   const MORPH_EASING = 'cubic-bezier(0.4, 0, 0.2, 1)';
+
+  /* ── hand-off timing ───────────────────────────────────────────────────── */
+
+  // The pill and the card swap places with a FLIP: the card keeps its final
+  // geometry and a transform stretches it back over the box the pill left, so
+  // the two interpolate as one shape. That stays on the compositor — no layout
+  // and no paint per frame, which is the only way this reads as smooth.
+  const HANDOFF_IN_MS = 460;
+  const HANDOFF_OUT_MS = 460;
+  const HANDOFF_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
+
+  // The content swap — pill out, glyph in, cross out — happens in the opening
+  // (or closing) frames only, while the two boxes still coincide. Everything
+  // after that is a plain shape morph on opaque surfaces.
+  const HANDOFF_CROSSFADE_MS = 150;
+
+  // How long the failure cross rests before it scales back into the pill.
+  // Long enough to read three lines of error and hit Copy, short enough that
+  // the corner is not occupied for the rest of the session.
+  const FAIL_HOLD_MS = 3600;
+
+  // The card's resting border and shadow. Both are drawn in the card's own
+  // (unscaled) space, so a 2.9x vertical stretch would render a fat border and
+  // a 118px halo; they are faded in over the morph and stay invisible while
+  // the box is still the wrong shape.
+  const CARD_BORDER = 'rgba(255, 255, 255, 0.12)';
+  const CARD_SHADOW = '0 12px 40px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(39, 110, 241, 0.15)';
+  const CARD_BORDER_HIDDEN = 'rgba(255, 255, 255, 0)';
+  const CARD_SHADOW_HIDDEN = '0 0 0 rgba(0, 0, 0, 0), 0 0 0 rgba(39, 110, 241, 0)';
 
   let uid = 0;
 
@@ -600,6 +635,7 @@
     constructor() {
       this.container = null;
       this.toasts = [];
+      this.submission = null;
       this.init();
     }
 
@@ -687,9 +723,26 @@
 
     /** Replace any existing submission card and return a fresh tracker. */
     createSubmission() {
-      const existing = document.querySelector('.leetfeedback-submission-card');
-      if (existing) existing.remove();
-      return new SubmissionTracker();
+      // A previous card may still be holding the corner. Hand its claim on the
+      // parked timer to the new card instead of letting the pill flicker back
+      // in between the two, then take the card down.
+      const previous = this.submission;
+      let morphFrom = null;
+      if (previous && !previous.isDismissed) {
+        morphFrom = previous.takeMorphOrigin();
+        previous.dismiss(true);
+      }
+
+      // Belt and braces: an SPA navigation can drop the tracker while its card
+      // is still on screen, and nothing would own that node any more.
+      const orphan = document.querySelector('.leetfeedback-submission-card');
+      if (orphan) orphan.remove();
+
+      const timer = window.ProblemTimer ? window.ProblemTimer.getInstance() : null;
+      if (!morphFrom && timer) morphFrom = timer.parkOverlay();
+
+      this.submission = new SubmissionTracker({ morphFrom });
+      return this.submission;
     }
   }
 
@@ -712,7 +765,7 @@
   };
 
   class SubmissionTracker {
-    constructor() {
+    constructor(options = {}) {
       this.card = null;
       this.copyBtn = null;
       this.msgEl = null;
@@ -726,6 +779,13 @@
       this.pumpTimer = null;
       this.terminal = null; // set once 'synced' or 'failed' has rendered
       this.errorMessage = '';
+
+      // The box the timer pill left behind, if it handed one over. Non-null
+      // means this card owns the corner: it grew out of the pill and is the
+      // only thing that may give it back.
+      this.morphFrom = options.morphFrom || null;
+      this.handoffAnims = null;
+      this.handoffSettled = false;
 
       this.init();
     }
@@ -741,7 +801,7 @@
       this.card = built.card;
       this.copyBtn = built.copyBtn;
       this.msgEl = built.msgEl;
-      this.card.classList.add('leetfeedback-submission-card', 'lfb-fixed', 'lfb-hidden');
+      this.card.classList.add('leetfeedback-submission-card', 'lfb-fixed');
 
       built.close.onclick = () => this.dismiss();
       if (this.copyBtn) wireCopy(this.copyBtn, () => this.errorMessage);
@@ -750,6 +810,16 @@
 
       this.renderPhase('judging');
 
+      if (this.morphFrom && typeof this.card.animate === 'function') {
+        this.handoffIn(this.morphFrom);
+        return;
+      }
+
+      // No pill to grow out of (timer off or hidden), or no Web Animations at
+      // all (the Node smoke harness): give the corner straight back and keep
+      // the card's own slide-in entrance.
+      this.releaseTimer();
+      this.card.classList.add('lfb-hidden');
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           if (!this.card) return;
@@ -757,6 +827,211 @@
           revealGlyph(this.card);
         });
       });
+    }
+
+    /* ── hand-off ────────────────────────────────────────────────────────────
+     *
+     * The timer pill and this card occupy the same corner, so a submission
+     * morphs one into the other rather than stacking a second popup beside the
+     * first. The card keeps its final geometry throughout and a FLIP transform
+     * maps it onto the pill's box — a genuinely non-uniform stretch, which is
+     * what makes the pill *become* the card instead of the card fading in on
+     * top of it.
+     *
+     * Two consequences drive the shape of this code:
+     *
+     *   1. Content cannot ride a non-uniform scale — the glyph would visibly
+     *      squash. So the stage is held back (forward) or dropped early
+     *      (reverse), and only ever swapped while the two boxes coincide.
+     *   2. Border and shadow are drawn in the card's own space, so a 2.9x
+     *      vertical stretch renders a fat border and a huge halo. Both are
+     *      faded in over the morph, so the stretched frames never show them.
+     */
+
+    /** Grow the card out of the box the pill vacated. */
+    handoffIn(origin) {
+      const card = this.card;
+      if (!card) return;
+
+      if (typeof card.animate !== 'function') {
+        this.settleHandoff();
+        return;
+      }
+
+      const stage = card.querySelector('.lfb-stage');
+      const to = T.util.rectOf(card.getBoundingClientRect());
+
+      // The card renders invisible from its first frame; the pill is already
+      // fading under it, so the swap happens while the boxes still overlap.
+      card.style.opacity = '0';
+      card.style.transformOrigin = '0 0';
+      card.style.borderColor = CARD_BORDER_HIDDEN;
+      card.style.boxShadow = CARD_SHADOW_HIDDEN;
+      if (stage) stage.style.opacity = '0';
+
+      let shape;
+      let swap;
+      try {
+        shape = card.animate(
+          [
+            {
+              transform: T.util.morphTransform(origin, to),
+              borderColor: CARD_BORDER_HIDDEN,
+              boxShadow: CARD_SHADOW_HIDDEN,
+            },
+            { transform: 'none', borderColor: CARD_BORDER, boxShadow: CARD_SHADOW },
+          ],
+          { duration: HANDOFF_IN_MS, easing: HANDOFF_EASING, fill: 'forwards' }
+        );
+        swap = card.animate([{ opacity: 0 }, { opacity: 1 }], {
+          duration: HANDOFF_CROSSFADE_MS,
+          easing: 'ease-out',
+          fill: 'forwards',
+        });
+      } catch (error) {
+        this.settleHandoff();
+        return;
+      }
+
+      this.handoffAnims = [shape, swap];
+
+      const done = () => this.settleHandoff();
+      if (shape.finished && typeof shape.finished.then === 'function') shape.finished.then(done, done);
+      else setTimeout(done, HANDOFF_IN_MS + 40);
+      // Safety net: `finished` never resolving would leave the glyph hidden.
+      setTimeout(done, HANDOFF_IN_MS + 200);
+    }
+
+    /**
+     * Land the entrance: drop every inline override the morph wrote, fade the
+     * stage in, and condense the glyph into existence as it always has. Safe to
+     * call more than once.
+     */
+    settleHandoff() {
+      if (this.handoffSettled) return;
+      this.handoffSettled = true;
+
+      const card = this.card;
+      this.cancelHandoff();
+      if (!card) return;
+
+      this.clearHandoffStyles(card);
+
+      const stage = card.querySelector('.lfb-stage');
+      if (stage) {
+        stage.style.transition = `opacity ${HANDOFF_CROSSFADE_MS}ms ease`;
+        stage.style.opacity = '1';
+      }
+
+      if (!this.isDismissed) revealGlyph(card);
+    }
+
+    /**
+     * Reverse of `handoffIn`: shrink the card back into the pill. Returns false
+     * when there is no pill to morph back into, so the caller can fall back to
+     * a plain dismissal.
+     */
+    handoffOut() {
+      const card = this.card;
+      const timer = window.ProblemTimer ? window.ProblemTimer.getInstance() : null;
+      if (!card || !this.morphFrom || !timer) return false;
+      if (typeof card.animate !== 'function') return false;
+
+      const restore = timer.beginRestore();
+      if (!restore) return false;
+
+      this.morphFrom = null;
+
+      // `_cancelHandoff` has already run, so the card is back at its natural
+      // box — which is what the FLIP maths needs as the "from" side.
+      card.style.transform = 'none';
+      card.style.opacity = '';
+      card.style.borderColor = '';
+      card.style.boxShadow = '';
+      card.style.transformOrigin = '0 0';
+
+      const from = T.util.rectOf(card.getBoundingClientRect());
+      const to = restore.rect;
+      const stage = card.querySelector('.lfb-stage');
+      const panel = card.querySelector('.lfb-fail-panel');
+
+      let shape;
+      let fade;
+      try {
+        // The cross belongs to the card, not the pill: drop it in the opening
+        // frames so the shrinking box is just a box.
+        if (stage) {
+          stage.style.opacity = '';
+          stage.animate([{ opacity: 1 }, { opacity: 0 }], {
+            duration: HANDOFF_CROSSFADE_MS,
+            easing: 'ease-in',
+            fill: 'forwards',
+          });
+        }
+        if (panel) panel.style.opacity = '0';
+
+        shape = card.animate(
+          [{ transform: 'none' }, { transform: T.util.morphTransform(to, from) }],
+          { duration: HANDOFF_OUT_MS, easing: HANDOFF_EASING, fill: 'forwards' }
+        );
+        // Hold the card opaque until it has landed on the pill, then hand the
+        // corner over: both boxes coincide by then, so the swap is invisible.
+        fade = card.animate(
+          [
+            { opacity: 1, offset: 0 },
+            { opacity: 1, offset: 0.72 },
+            { opacity: 0, offset: 1 },
+          ],
+          { duration: HANDOFF_OUT_MS, easing: 'linear', fill: 'forwards' }
+        );
+      } catch (error) {
+        // The pill is already rebuilt but still invisible — never strand it.
+        timer.completeRestore();
+        return false;
+      }
+
+      this.handoffAnims = [shape, fade];
+
+      // The pill fades in under the card's last frames.
+      timer.completeRestore({ delayMs: Math.round(HANDOFF_OUT_MS * 0.7) });
+      return true;
+    }
+
+    /** Hand the parked pill to whoever comes next (see createSubmission). */
+    takeMorphOrigin() {
+      const origin = this.morphFrom;
+      this.morphFrom = null;
+      return origin;
+    }
+
+    cancelHandoff() {
+      if (!this.handoffAnims) return;
+      this.handoffAnims.forEach((anim) => {
+        try {
+          anim.cancel();
+        } catch (error) {
+          /* already finished and collected */
+        }
+      });
+      this.handoffAnims = null;
+    }
+
+    /** Drop the inline overrides a hand-off wrote, so the card's CSS applies. */
+    clearHandoffStyles(card = this.card) {
+      if (!card) return;
+      card.style.opacity = '';
+      card.style.transform = '';
+      card.style.transformOrigin = '';
+      card.style.borderColor = '';
+      card.style.boxShadow = '';
+    }
+
+    /** Give the corner back to the pill, if this card was the one that took it. */
+    releaseTimer() {
+      if (!this.morphFrom) return;
+      this.morphFrom = null;
+      const timer = window.ProblemTimer ? window.ProblemTimer.getInstance() : null;
+      if (timer) timer.restoreOverlay();
     }
 
     /** Put a phase on screen: morph the glyph, aim the sweep, arm the beat. */
@@ -781,7 +1056,9 @@
           this.msgEl.setAttribute('title', this.errorMessage || 'Sync failed');
         }
         if (this.card) this.card.classList.add('lfb-fail');
-        setTimeout(() => this.dismiss(true), 8000);
+        // The cross rests long enough to be read and copied, then the whole
+        // card scales back down into the pill it grew out of.
+        setTimeout(() => this.dismissToTimer(), FAIL_HOLD_MS);
       }
     }
 
@@ -881,17 +1158,64 @@
         clearTimeout(this.pumpTimer);
         this.pumpTimer = null;
       }
+      this.cancelHandoff();
 
-      if (!this.card) return;
-      this.card.classList.add(fast ? 'lfb-gone' : 'lfb-hidden');
+      if (!this.card) {
+        this.releaseTimer();
+        return;
+      }
+
+      this.clearHandoffStyles();
       const card = this.card;
+      this.card = null;
+      card.classList.add(fast ? 'lfb-gone' : 'lfb-hidden');
       setTimeout(
         () => {
           if (card && card.parentNode) card.parentNode.removeChild(card);
+          this.releaseTimer();
         },
         fast ? FAST_FADE_MS + 40 : 360
       );
+    }
+
+    /**
+     * Failure exit. The cross has had its hold; now the card scales back down
+     * into the timer pill and the pill fades in as the card lands on it — the
+     * exact reverse of the entrance, so a failed submission leaves the page
+     * exactly as it found it.
+     */
+    dismissToTimer() {
+      if (this.isDismissed) return;
+      this.isDismissed = true;
+
+      if (this.pumpTimer) {
+        clearTimeout(this.pumpTimer);
+        this.pumpTimer = null;
+      }
+      this.cancelHandoff();
+
+      const card = this.card;
+      if (!card) {
+        this.releaseTimer();
+        return;
+      }
+
+      const morphed = this.handoffOut();
       this.card = null;
+
+      if (morphed) {
+        setTimeout(() => {
+          if (card.parentNode) card.parentNode.removeChild(card);
+        }, HANDOFF_OUT_MS + 80);
+        return;
+      }
+
+      this.clearHandoffStyles(card);
+      card.classList.add('lfb-hidden');
+      setTimeout(() => {
+        if (card.parentNode) card.parentNode.removeChild(card);
+        this.releaseTimer();
+      }, 360);
     }
   }
 

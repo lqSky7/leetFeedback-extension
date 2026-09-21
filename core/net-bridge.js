@@ -20,6 +20,8 @@
       this.onEvent = onEvent || null;
       this.ackReceived = false;
       this._listener = null;
+      this._filters = [];
+      this._debugUnsub = null;
     }
 
     /**
@@ -29,6 +31,8 @@
     connect(filters = []) {
       const protocol = T.netProtocol;
       if (!protocol) return;
+
+      this._filters = filters;
 
       this._listener = (event) => {
         if (event.source !== window) return;
@@ -53,22 +57,36 @@
       };
       window.addEventListener('message', this._listener);
 
-      this._sendConfig(filters);
+      this._sendConfig(this._filters);
+
+      if (T.logger && typeof T.logger.onDebugModeChange === 'function') {
+        this._debugUnsub = T.logger.onDebugModeChange((debug) => {
+          this._sendConfig(this._filters, debug);
+        });
+      }
 
       // The static MAIN-world script is injected at document_start, well
       // before this script runs at document_end — but re-send once after a
       // short delay in case of an unlikely load-order race.
       setTimeout(() => {
-        if (!this.ackReceived) this._sendConfig(filters);
+        if (!this.ackReceived) this._sendConfig(this._filters);
       }, 1500);
     }
 
-    _sendConfig(filters) {
+    _sendConfig(filters, debugOverride) {
+      const activeFilters = filters || this._filters || [];
+      const debugMode =
+        typeof debugOverride === 'boolean'
+          ? debugOverride
+          : T.logger
+          ? T.logger.isDebugMode()
+          : false;
+
       window.postMessage(
         {
           type: T.netProtocol.CONFIG,
-          filters,
-          debug: T.logger ? T.logger.isDebugMode() : false,
+          filters: activeFilters,
+          debug: debugMode,
         },
         '*'
       );
@@ -78,6 +96,10 @@
       if (this._listener) {
         window.removeEventListener('message', this._listener);
         this._listener = null;
+      }
+      if (this._debugUnsub) {
+        this._debugUnsub();
+        this._debugUnsub = null;
       }
     }
   }

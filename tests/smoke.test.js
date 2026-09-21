@@ -531,19 +531,43 @@ async function takeuforwardVerdict() {
   const env = createEnvironment();
   const T = loadStack(env, 'platforms/takeuforward.js');
 
-  env.location.href = 'https://takeuforward.org/plus/dsa/problems/two-sum?category=arrays';
-  env.location.pathname = '/plus/dsa/problems/two-sum';
+  env.location.href = 'https://takeuforward.org/practice/dsa/two-sum?category=arrays';
+  env.location.pathname = '/practice/dsa/two-sum';
   env.location.search = '?category=arrays';
+
+  const heading = env.document.createElement('h1');
+  heading.className = 'ProblemPanel-module__qBixIa__title';
+  heading.textContent = 'Two Sum';
+  env.document.body.appendChild(heading);
 
   const adapter = makeAdapter(T, T.TakeUforwardAdapter);
   await adapter.init();
 
-  assert.strictEqual(adapter.isProblemPage(), true, 'tuf: /plus/.../problems/<slug> is a problem page');
+  assert.strictEqual(adapter.isProblemPage(), true, 'tuf: /practice/dsa/<slug> is a problem page');
   assert.strictEqual(
     adapter.getCurrentProblemKey(),
-    'https://takeuforward.org/plus/dsa/problems/two-sum',
+    'https://takeuforward.org/practice/dsa/two-sum',
     'tuf: keyed by URL without query'
   );
+
+  // Verify run attempt and run check
+  const runUrl = 'https://backend-go.takeuforward.org/api/v1/plus/judge/run';
+  await adapter.onNetEvent({
+    phase: 'request',
+    url: runUrl,
+    method: 'POST',
+    requestBody: { language: 'cpp', usercode: 'int main() { return 0; }', problem_id: 99 },
+  });
+  assert.strictEqual(adapter.tracker.runCounter, 1, 'tuf: run recorded from request body');
+
+  const checkRunUrl = 'https://backend-go.takeuforward.org/api/v1/plus/judge/check-run';
+  await adapter.onNetEvent({
+    phase: 'response',
+    url: checkRunUrl,
+    method: 'GET',
+    response: { success: true, data: { status: 'Accepted' } },
+  });
+  assert.strictEqual(adapter.tracker.attempts[0].successful, true, 'tuf: run attempt marked successful');
 
   const submitUrl = 'https://backend-go.takeuforward.org/api/v1/plus/judge/submit';
   await adapter.onNetEvent({
@@ -579,6 +603,8 @@ async function takeuforwardVerdict() {
   assert.ok(push, 'tuf: backend push attempted');
   const payload = JSON.parse(push.options.body);
   assert.strictEqual(payload.platform, 'takeuforward');
+  assert.strictEqual(payload.problemTitle, 'Two Sum', 'tuf: title extracted from ProblemPanel');
+  assert.strictEqual(payload.problemSlug, 'two-sum', 'tuf: slug derived correctly');
   assert.strictEqual(payload.outcome, 'accepted');
   assert.strictEqual(payload.topic, 'Arrays', 'tuf: topic from ?category=');
 
@@ -591,30 +617,49 @@ async function geeksforgeeksDomPath() {
 
   const adapter = makeAdapter(T, T.GeeksforGeeksAdapter);
 
-  assert.strictEqual(
-    T.config.domVerdictFallback.geeksforgeeks,
-    true,
-    'gfg: DOM fallback enabled while network rules are unverified'
-  );
+  assert.strictEqual(T.config.domVerdictFallback.geeksforgeeks, false);
+  assert.ok(T.config.recon.excludedHosts.includes('geeksforgeeks.org'));
+  assert.strictEqual(await adapter.captureFromDom('submit', 'stale editor code', 'cpp'), false);
 
-  // No network filters configured, so the DOM path must take the attempt.
-  const took = await adapter.captureFromDom('submit', 'int main() { return 0; }', 'cpp');
-  assert.strictEqual(took, true, 'gfg: DOM capture records when the network saw nothing');
-  assert.strictEqual(adapter.tracker.submitCounter, 1, 'gfg: submit recorded via DOM');
+  adapter.getCurrentCode = () => 'stale editor code';
+  adapter.getCurrentLanguage = () => 'cpp';
+  adapter.getProblemTitle = () => 'Two Sum';
+  const code = 'def solve(values):\n    return sorted(values)';
+  const start = {
+    phase: 'request', method: 'POST',
+    url: 'https://practiceapiorigin.geeksforgeeks.org/api/latest/problems/two-sum/submit/compile/',
+    requestBody: { userCode: code, language: 'python3' },
+  };
+  const result = {
+    phase: 'response', method: 'POST',
+    url: 'https://practiceapiorigin.geeksforgeeks.org/api/latest/problems/submission/submit/result/',
+  };
+  await adapter.onNetEvent(start);
+  assert.strictEqual(adapter.tracker.currentSubmissionAttempt.code, code);
+  assert.strictEqual(adapter.tracker.currentSubmissionAttempt.language, 'python3');
+  const info = await adapter.extractProblemInfo();
+  assert.strictEqual(info.code, code);
+  assert.strictEqual(info.language, 'python3');
+  await adapter.onNetEvent({ ...result, response: { view_mode: 'wrong' } });
+  await adapter.onNetEvent({ ...result, response: { view_mode: 'wrong' } });
+  assert.strictEqual(adapter.tracker.incorrectRunCounter, 1);
+  await adapter.onNetEvent(start);
+  await adapter.onNetEvent({ ...result, response: { status: 'QUEUED' } });
+  assert.strictEqual(adapter.tracker.submissionInProgress, true);
+  await adapter.onNetEvent({ ...result, response: { view_mode: 'correct' } });
+  const pushes = env.sentMessages.filter((m) => m.type === 'BACKEND_API_FETCH');
+  assert.strictEqual(pushes.length, 1);
+  const payload = JSON.parse(pushes[0].options.body);
+  assert.strictEqual(payload.platform, 'geeksforgeeks');
+  assert.strictEqual(payload.outcome, 'accepted');
+  await adapter.onNetEvent({ ...result, response: { view_mode: 'correct' } });
+  assert.strictEqual(env.sentMessages.filter((m) => m.type === 'BACKEND_API_FETCH').length, 1);
+  adapter.topics = ['Old topic'];
+  adapter.handleProblemChange();
+  assert.strictEqual(adapter.submissionSettled, false);
+  assert.deepStrictEqual(adapter.topics, []);
 
-  // Once the network has captured it, the DOM path must stand down.
-  adapter._netCaptureAt.submit = Date.now();
-  const skipped = await adapter.captureFromDom('submit', 'int main() { return 0; }', 'cpp');
-  assert.strictEqual(skipped, false, 'gfg: DOM capture stands down when the network won');
-  assert.strictEqual(adapter.tracker.submitCounter, 1, 'gfg: no double record');
-
-  // And with the fallback switched off, the DOM path is retired.
-  T.config.domVerdictFallback.geeksforgeeks = false;
-  const disabled = await adapter.captureFromDom('run', 'int main() { return 0; }', 'cpp');
-  assert.strictEqual(disabled, false, 'gfg: DOM capture retired when the fallback is off');
-  T.config.domVerdictFallback.geeksforgeeks = true;
-
-  return 'GeeksforGeeks DOM fallback -> records, stands down, and retires';
+  return 'GeeksforGeeks API code and repeat verdicts -> one backend push';
 }
 
 async function pipelineRetriesOnBackendFailure() {

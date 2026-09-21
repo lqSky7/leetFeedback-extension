@@ -76,7 +76,7 @@
     // deleting it. Flip a platform to false only after its intercept rules are
     // verified against a real submit — see platforms/index.md.
     domVerdictFallback: {
-      geeksforgeeks: true,
+      geeksforgeeks: false,
       codechef: true,
       naukri: true,
     },
@@ -93,7 +93,7 @@
     // already verified, and a recorder on top of it is pure noise.
     recon: {
       // Platforms with verified network interception — recon must never run.
-      excludedHosts: ['leetcode.com', 'takeuforward.org'],
+      excludedHosts: ['leetcode.com', 'takeuforward.org', 'geeksforgeeks.org'],
 
       // Never record on Traverse's own surfaces, or the recorder would capture
       // its own upload traffic and the website's auth handshake.

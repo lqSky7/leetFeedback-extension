@@ -63,21 +63,25 @@
 
     isProblemPage() {
       const slug = this.getProblemSlugFromUrl();
+      const pathname = window.location.pathname;
       return (
-        window.location.pathname.includes('/plus/') &&
-        window.location.pathname.includes('/problems/') &&
+        pathname.includes('/practice/') &&
         slug !== '' &&
-        slug !== 'problems'
+        slug !== 'practice' &&
+        slug !== 'dsa'
       );
     }
 
-    /** Last path segment — identifies the problem within the SPA. */
+    /** Last path segment — identifies the problem within /practice/dsa/<slug>. */
     getProblemSlugFromUrl() {
-      const parts = window.location.pathname.split('/').filter((part) => part.length > 0);
+      const pathname = window.location.pathname;
+      const match = pathname.match(/\/practice\/(?:[^\/]+\/)?([^\/\?]+)/);
+      if (match && match[1]) return match[1];
+      const parts = pathname.split('/').filter((part) => part.length > 0);
       return parts[parts.length - 1] || '';
     }
 
-    /** TUF keys storage by the full problem URL (pre-refactor behavior). */
+    /** TUF keys storage by the full problem URL. */
     getCurrentProblemKey() {
       return window.location.href.split('?')[0];
     }
@@ -171,13 +175,19 @@
       const data = response && response.data;
       if (!data) return;
 
-      const status = String(data.status || '').trim();
+      const status = String(data.status || '').trim().toLowerCase();
       if (isPending(status)) {
         this.logger.log(`run still judging (${status || 'waiting'})`);
         return;
       }
 
-      await this.runVerdict(status.toLowerCase() === 'accepted');
+      const isAccepted =
+        status === 'accepted' ||
+        status === 'passed' ||
+        status === 'success' ||
+        (Boolean(data.total_test_cases) && data.passed_test_cases === data.total_test_cases);
+
+      await this.runVerdict(Boolean(isAccepted));
     }
 
     /* ── metadata ── */
@@ -196,18 +206,38 @@
       };
     }
 
-    /** Title / description / difficulty are the only scraped values. */
+    /** Title / description / difficulty are extracted from ProblemPanel. */
     fetchQuestionDetails() {
-      const heading = document.querySelector('h1.text-xl.font-bold');
-      const paragraph = document.querySelector('.tuf-text-14');
-      if (heading && paragraph) {
-        this.title = heading.textContent ? heading.textContent.trim() : '';
-        this.description = paragraph.textContent ? paragraph.textContent.trim() : '';
+      const heading = document.querySelector(
+        'h1[class*="ProblemPanel"], [class*="ProblemPanel"][class*="title"], h1'
+      );
+      if (heading) {
+        const clone = heading.cloneNode(true);
+        const badge = clone.querySelector('[class*="Badge"], [class*="badge"]');
+        if (badge) badge.remove();
+        this.title = (clone.textContent || '').trim();
+      }
+      if (!this.title && typeof document !== 'undefined' && document.title) {
+        this.title = document.title.split(' - ')[0].trim();
+      }
+
+      const paragraph = document.querySelector(
+        '[class*="ProblemPanel"][class*="richText"], [class*="ProblemPanel"][class*="content"] p'
+      );
+      if (paragraph) {
+        this.description = (paragraph.textContent || '').trim();
+      } else if (typeof document !== 'undefined') {
+        const metaDesc = document.querySelector('meta[name="description"]');
+        if (metaDesc && metaDesc.content) {
+          this.description = metaDesc.content.trim();
+        }
       }
 
       const difficultyEl = document.querySelector('[class*="difficulty"], [class*="Difficulty"]');
       if (difficultyEl && difficultyEl.textContent) {
         this.difficulty = difficultyEl.textContent.trim() || 'Medium';
+      } else {
+        this.difficulty = 'Medium';
       }
     }
 
@@ -219,26 +249,20 @@
       return (cached && cached.PUBLIC_CODE) || '';
     }
 
-    /** Category / subcategory come from the URL, or the active sidebar path. */
+    /** Category / source from URL search params. */
     extractTopicsFromUrl() {
       const topics = [];
       const params = new URLSearchParams(window.location.search);
       const categoryParam = params.get('category');
-      const subcategoryParam = params.get('subcategory');
+      const sourceParam = params.get('source');
 
       const titleCase = (value) =>
-        value.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+        value.replace(/[-_]/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-      let category = categoryParam ? titleCase(categoryParam) : null;
-      const subcategory = subcategoryParam ? titleCase(subcategoryParam) : null;
+      if (categoryParam) topics.push(titleCase(categoryParam));
+      if (sourceParam) topics.push(titleCase(sourceParam));
 
-      if (!category) {
-        const active = document.querySelector('.category-root-trigger--active-path');
-        if (active) category = active.textContent.trim();
-      }
-
-      topics.push(category || 'General');
-      if (subcategory) topics.push(subcategory);
+      if (topics.length === 0) topics.push('General');
       return topics;
     }
   }
