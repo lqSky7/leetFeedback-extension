@@ -10,9 +10,8 @@
   const T = (globalThis.Traverse = globalThis.Traverse || {});
 
   T.config = {
-    // Backend the extension pushes submissions to. Kept from the pre-refactor
-    // code; change here (and only here) to point at a different backend.
-    backendBaseURL: 'https://neatness-enlarged-curled.ngrok-free.dev',
+    // Backend the extension pushes submissions to.
+    backendBaseURL: 'https://traverses.dpdns.org',
 
     // Website that syncs auth into the extension.
     websiteBaseURL: 'https://traverses.tech',

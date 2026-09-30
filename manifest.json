@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Traverse",
-    "version": "2.2.6",
+    "version": "2.2.8",
     "description": "Automatically track coding practice sessions, streaks, and progress.",
     "icons": {
         "16": "icons/16.png",
@@ -11,8 +11,6 @@
     "permissions": [
         "storage",
         "unlimitedStorage",
-        "scripting",
-        "activeTab",
         "tabs",
         "sidePanel"
     ],
@@ -40,8 +38,9 @@
         "https://*.edabit.com/*",
         "https://api.github.com/*",
         "https://generativelanguage.googleapis.com/*",
+        "https://traverses.dpdns.org/*",
+        "https://*.dpdns.org/*",
         "https://*.ngrok-free.dev/*",
-        "https://traverse-backend.duckdns.org/*",
         "https://leet-feedback.vercel.app/*",
         "https://*.vercel.app/*",
         "https://traverses.tech/*",
