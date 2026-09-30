@@ -187,7 +187,7 @@ Payload for `/api/submissions`, built by `core/backend-api.js`:
 ```
 {
   problemSlug, platform, problemTitle, difficulty: 'easy'|'medium'|'hard',
-  language, outcome: 'accepted'|'failed', idempotencyKey, happenedAt,
+  language, outcome: 'accepted', idempotencyKey, happenedAt,
   deviceId, shouldAnalyzeWithAI, geminiApiKey, geminiModel,
   numberOfTries, timeTaken, category, topic, subtopic, assistanceLevel,
   attempts: [{ code, language, timestamp, type, successful, ... }]
@@ -239,3 +239,11 @@ Payload for `/api/submissions`, built by `core/backend-api.js`:
 | Add a platform to recon coverage | `core/config.js` → `recon.platforms` **and** the recon `content_scripts` `matches` in `manifest.json` |
 | Change what recon records, or how it judges a verdict | `core/recon-controller.js` — but read invariants 7 and 8 first |
 | Change the emailed digest's shape | backend `src/lib/reconDigest.ts` |
+
+## Success-only submission contract
+
+`/api/submissions` records successful solves. Judge errors and unsuccessful code iterations stay in the local attempt history. `assistanceLevel` is optional for older clients; missing values remain unknown for recall calibration.
+
+## Submission contract (2026-09-30)
+
+Backend payloads always carry `outcome: accepted`; unavailable assistance is sent as unknown. Judge errors remain local code-iteration history.

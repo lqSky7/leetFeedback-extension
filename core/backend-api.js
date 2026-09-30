@@ -168,7 +168,7 @@
         problemTitle: name || 'Unknown Problem',
         difficulty: DIFFICULTY_NAMES[Number(difficulty)] || 'medium',
         language: languageValue,
-        outcome: solved.value ? 'accepted' : 'failed',
+        outcome: 'accepted',
         idempotencyKey: `${problemSlug}-${solved.date || Date.now()}`,
         happenedAt: solved.date ? new Date(solved.date).toISOString() : new Date().toISOString(),
         deviceId: 1,

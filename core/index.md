@@ -141,3 +141,9 @@ via `window.LeetFeedbackToast` / `window.LeetFeedbackHintPrompt` /
 | How a captured verdict is recognised | `recon-controller.js` → `inferVerdict` / the token lists |
 | How button/editor selectors are generated | `recon-controller.js` → `stableSelector`, `describe*` |
 | A new message between page and content script | `net-protocol.js` **and** `page/net-interceptor.js` |
+
+`backend-api.js` always sends successful solve status; assistance reports feed delayed recall calibration.
+
+## Submission contract (2026-09-30)
+
+Backend payloads always carry `outcome: accepted`; unavailable assistance is sent as unknown. Judge errors remain local code-iteration history.

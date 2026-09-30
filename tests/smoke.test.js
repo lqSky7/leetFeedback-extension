@@ -702,6 +702,33 @@ async function pipelineRetriesOnBackendFailure() {
   return 'Backend failure -> tracking state preserved for the next solve';
 }
 
+async function legacyStatusAndUnknownAssistance() {
+  const env = createEnvironment();
+  const T = loadStack(env, 'platforms/leetcode.js');
+  const backend = new T.BackendAPI();
+  const payload = await backend.formatProblemDataForBackend({
+    name: 'Two Sum', slug: 'two-sum', solved: { value: false, date: Date.now(), tries: 1 },
+  });
+  assert.strictEqual(payload.outcome, 'accepted', 'legacy stored status cannot emit an unsuccessful submission');
+  assert.strictEqual(payload.assistanceLevel, null, 'unknown assistance remains unknown');
+
+  globalThis.LeetFeedbackHintPrompt = { ask: async () => { throw new Error('prompt unavailable'); } };
+  let pushedOptions;
+  T.submissionPipeline._backendAPI = {
+    initialize: async () => {},
+    pushCurrentProblemData: async (_, options) => {
+      pushedOptions = options;
+      return { success: true };
+    },
+  };
+  const synced = await T.submissionPipeline.execute({
+    platform: 'leetcode', problemInfo: { title: 'Two Sum' }, problemKey: 'two-sum', tracker: null,
+  });
+  assert.strictEqual(synced, true, 'missing recall evidence must not block successful sync');
+  assert.strictEqual(pushedOptions.assistanceLevel, null, 'prompt error cannot fabricate unaided recall');
+  return 'Successful legacy payload and unknown assistance remain compatible';
+}
+
 /* ───────────────────────────────── runner ───────────────────────────────── */
 
 const SCENARIOS = [
@@ -712,6 +739,7 @@ const SCENARIOS = [
   takeuforwardVerdict,
   geeksforgeeksDomPath,
   pipelineRetriesOnBackendFailure,
+  legacyStatusAndUnknownAssistance,
 ];
 
 (async () => {
