@@ -30,6 +30,8 @@
       'http://localhost:3000',
     ],
 
+    leetcodeImport: { startURL: 'https://leetcode.com/progress/', jobKey: 'leetcode_import_job', pageKey: 'leetcode_import_page', catalogKey: 'leetcode_import_catalog' },
+
     // Storage keys. These are part of the data contract with the backend and
     // existing user data — do not rename without a migration.
     keys: {

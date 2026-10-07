@@ -115,3 +115,27 @@ MIT License - Free to use, modify, and distribute.
 <div align="center" style="color: #718096; font-size: 14px;">
   <strong>Traverse</strong> - The Complete Learning Ecosystem
 </div>
+
+### Import existing LeetCode history
+
+Open **Settings → LeetCode Import → Import history**. The extension
+opens LeetCode's Progress page and uses that tab's signed-in session. If you are signed out,
+complete LeetCode login in the opened tab; collection starts automatically.
+Keep the tab open until the Settings status reports completion.
+
+The collector pages through `userProgressQuestionList` (50 per page), then
+`userProgressSubmissionList` for every problem (10 attempts per page), following
+both reported totals. It checkpoints all data locally and collects problem
+statements and submission code before the first upload. An interrupted capture
+resumes locally when you click Retry; it never reports partial data as success.
+Login/verification failures, inaccessible code or missing required problem
+details stop the import. No unfinished records are uploaded.
+
+The bulk endpoint requires a completed-capture marker and validates every record
+in each batch before writing any of it. Incomplete batches return 422. Imported
+solves carry `leetcode-import`; no AI analysis or revision scheduling runs, and
+imports never enter the live solution pipeline or GitHub mirroring. Ordinary
+submission routes retain their existing contract.
+
+Import checks: `node tests/leetcode-import.test.js` and
+`node tests/leetcode-import-background.test.js`.

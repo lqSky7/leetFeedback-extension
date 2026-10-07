@@ -165,6 +165,8 @@ class PopupController {
   }
 
   async initialize() {
+    this.initializeSettingsMenus();
+    this.initializeLeetCodeImport();
     await this.loadStoredData();
     await this.initializeAuth();
     await this.initializeRecon();
@@ -174,6 +176,67 @@ class PopupController {
     this.updateConnectionStatus();
     this.initializeChromaText();
     this.checkForUpdates();
+  }
+
+  initializeSettingsMenus() {
+    document.querySelectorAll('#settings > .settings-section').forEach((section, index) => {
+      if (section.id === 'gemini-section') return;
+      const heading = section.querySelector('h3');
+      if (!heading) return;
+      const body = document.createElement('div');
+      body.id = `settings-menu-${index}`;
+      body.className = 'settings-menu-body';
+      body.hidden = true;
+      while (heading.nextSibling) body.appendChild(heading.nextSibling);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'settings-menu-toggle';
+      button.textContent = heading.textContent;
+      button.setAttribute('aria-expanded', 'false');
+      button.setAttribute('aria-controls', body.id);
+      heading.replaceChildren(button);
+      section.appendChild(body);
+      button.addEventListener('click', () => {
+        body.hidden = !body.hidden;
+        button.setAttribute('aria-expanded', String(!body.hidden));
+      });
+    });
+  }
+
+  initializeLeetCodeImport() {
+    const button = document.getElementById('leetcode-import-start');
+    const status = document.getElementById('leetcode-import-status');
+    const key = Traverse.config.leetcodeImport.jobKey;
+    const render = (job) => {
+      const running = job && ['checking', 'starting', 'running', 'waiting-login'].includes(job.state);
+      button.disabled = !!running;
+      button.textContent = job?.state === 'error' ? 'Retry import' : running ? 'Importing…' : 'Import history';
+      const message = job?.message || '';
+      const failedStatus = message.match(/LeetCode request failed \((\d+)\)/)?.[1];
+      const compactErrors = {
+        '400': 'LeetCode couldn’t load your history. Retry.',
+        '401': 'Sign in to LeetCode, then retry.',
+        '403': 'Complete verification in LeetCode, then retry.',
+        '429': 'LeetCode is rate limiting requests. Retry shortly.',
+      };
+      status.textContent = compactErrors[failedStatus] || message;
+      status.title = message;
+      status.hidden = !status.textContent;
+    };
+    chrome.storage.local.get([key]).then(data => render(data[key]));
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes[key]) render(changes[key].newValue);
+    });
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        const reply = await chrome.runtime.sendMessage({ type: 'LEETCODE_IMPORT_START' });
+        if (!reply?.success) throw new Error(reply?.error || 'Could not start import');
+      } catch (error) {
+        button.disabled = false;
+        status.textContent = error.message;
+      }
+    });
   }
 
   initializeChromaText() {

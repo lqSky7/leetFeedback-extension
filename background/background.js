@@ -13,7 +13,7 @@
 // Every async `sendResponse` path must `return true`, or the channel closes
 // before the response is sent.
 
-importScripts('../core/config.js', '../core/logger.js');
+importScripts('../core/config.js', '../core/logger.js', 'leetcode-import.js');
 
 const T = globalThis.Traverse;
 const logger = T.createLogger('background');
@@ -66,6 +66,10 @@ function markSessionRestarted() {
 const RUNTIME_HANDLERS = {
   BACKEND_API_FETCH: handleBackendAPIFetch,
   RECON_UPLOAD: handleReconUpload,
+  LEETCODE_IMPORT_STATUS: (request, sender, reply) => T.leetcodeImport.status(request, sender, reply),
+  LEETCODE_IMPORT_START: (request, sender, reply) => T.leetcodeImport.start(request, sender, reply),
+  LEETCODE_IMPORT_FETCH: (request, sender, reply) => T.leetcodeImport.fetch(request, sender, reply),
+  LEETCODE_IMPORT_UPLOAD: (request, sender, reply) => T.leetcodeImport.upload(request, sender, reply),
 };
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

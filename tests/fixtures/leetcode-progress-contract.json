@@ -1,0 +1,7 @@
+{
+  "provenance": "Question-list request captured in HAR; submission-list query from LeetCode Progress page source in that HAR. No authenticated submission-detail response was captured.",
+  "queries": {
+    "userProgressSubmissionList": "query userProgressSubmissionList($offset: Int!, $limit: Int!, $questionSlug: String!) {\n  userProgressSubmissionList(\n    offset: $offset\n    limit: $limit\n    questionSlug: $questionSlug\n  ) {\n    submissions {\n      id\n      status\n      langName\n      runtime\n      timestamp\n      memory\n    }\n    totalNum\n  }\n}\n    ",
+    "userProgressQuestionList": "\n    query userProgressQuestionList($filters: UserProgressQuestionListInput) {\n  userProgressQuestionList(filters: $filters) {\n    totalNum\n    questions {\n      translatedTitle\n      frontendId\n      title\n      titleSlug\n      difficulty\n      lastSubmittedAt\n      numSubmitted\n      questionStatus\n      lastResult\n      topicTags {\n        name\n        nameTranslated\n        slug\n      }\n    }\n  }\n}\n    "
+  }
+}

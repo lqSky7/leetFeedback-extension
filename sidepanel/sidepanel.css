@@ -478,14 +478,6 @@ input {
   margin-bottom: 0;
 }
 
-.hint-consequences-warning {
-  font-size: 11px;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.42);
-  letter-spacing: 0.02em;
-  margin-top: -4px;
-  margin-bottom: 2px;
-}
 
 #hint-prompt-section .field {
   gap: 6px;
@@ -1759,4 +1751,50 @@ input {
 
 .recon-feedback.error {
   color: var(--error);
+}
+
+/* Settings menus begin collapsed each time the panel opens. */
+.settings-menu-body[hidden] { display: none !important; }
+.settings-menu-toggle {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; border: 0; padding: 0; background: transparent;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.settings-menu-toggle::after { content: '⌄'; }
+.settings-menu-toggle[aria-expanded="true"]::after { content: '⌃'; }
+#leetcode-import-status { color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.settings-section h3:has(> .settings-menu-toggle[aria-expanded="false"]) { margin-bottom: 0 !important; }
+
+/* Give expanded import and hint controls room without long helper text. */
+#leetcode-import-section,
+#hint-prompt-section {
+  padding: 20px !important;
+  gap: 0;
+}
+#leetcode-import-section .settings-menu-body,
+#hint-prompt-section .settings-menu-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+#leetcode-import-section .import-description {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+#leetcode-import-section .import-description span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+#leetcode-import-section #leetcode-import-start {
+  align-self: flex-start;
+  margin: 0;
+}
+#leetcode-import-status {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+#hint-prompt-section .field {
+  gap: 8px;
+  margin: 0;
 }

@@ -309,6 +309,16 @@
                 "platforms/website-sync.js"
             ],
             "run_at": "document_end"
+        },
+        {
+            "matches": [
+                "https://leetcode.com/*"
+            ],
+            "js": [
+                "core/config.js",
+                "core/leetcode-import.js"
+            ],
+            "run_at": "document_idle"
         }
     ],
     "action": {
