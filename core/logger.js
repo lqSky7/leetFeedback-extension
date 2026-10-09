@@ -10,6 +10,23 @@
   const T = (globalThis.Traverse = globalThis.Traverse || {});
 
   let _debugMode = false;
+  const _listeners = new Set();
+
+  function onDebugModeChange(callback) {
+    if (typeof callback === 'function') {
+      _listeners.add(callback);
+      return () => _listeners.delete(callback);
+    }
+    return () => {};
+  }
+
+  function _notifyDebugMode(val) {
+    for (const cb of _listeners) {
+      try {
+        cb(val);
+      } catch (_) {}
+    }
+  }
 
   // Initialize debug mode from storage if available
   if (typeof chrome !== 'undefined' && chrome.storage) {
@@ -18,6 +35,7 @@
       storageArea.get(['debug_mode'], (data) => {
         if (data && typeof data.debug_mode === 'boolean') {
           _debugMode = data.debug_mode;
+          _notifyDebugMode(_debugMode);
         }
       });
     }
@@ -26,6 +44,7 @@
       chrome.storage.onChanged.addListener((changes, area) => {
         if ((area === 'sync' || area === 'local') && changes.debug_mode) {
           _debugMode = Boolean(changes.debug_mode.newValue);
+          _notifyDebugMode(_debugMode);
         }
       });
     }
@@ -37,6 +56,7 @@
 
   function setDebugMode(val) {
     _debugMode = Boolean(val);
+    _notifyDebugMode(_debugMode);
   }
 
   function formatPrefix(tag) {
@@ -77,6 +97,7 @@
     warn,
     isDebugMode,
     setDebugMode,
+    onDebugModeChange,
     createLogger,
   };
 

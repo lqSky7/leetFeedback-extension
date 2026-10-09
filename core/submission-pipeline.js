@@ -57,14 +57,14 @@
 
       // Step 0: self-reported assistance level — asked before the backend
       // push so the answer rides along in the same request.
-      let assistanceLevel = 'none';
+      let assistanceLevel = null;
       try {
         if (window.LeetFeedbackHintPrompt && window.LeetFeedbackHintPrompt.ask) {
           assistanceLevel = await window.LeetFeedbackHintPrompt.ask();
           logger.log(`[${platform}] assistance level: ${assistanceLevel}`);
         }
       } catch (hintError) {
-        logger.warn(`[${platform}] hint prompt failed, defaulting to none:`, hintError);
+        logger.warn(`[${platform}] hint prompt unavailable, leaving assistance unrecorded:`, hintError);
       }
 
       // Step 1: push to the Traverse backend.

@@ -41,7 +41,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
  * whose `window` is the page global, with `fetch` and `postMessage` in place
  * before it patches them.
  */
-function loadInterceptor() {
+function loadInterceptor(overrides = {}) {
   const posted = [];
   const listeners = {};
 
@@ -59,8 +59,8 @@ function loadInterceptor() {
     Object,
     Date,
     Math,
-    URLSearchParams: undefined,
-    FormData: undefined,
+    URLSearchParams,
+    FormData,
     XMLHttpRequest: undefined,
     addEventListener: (type, fn) => {
       (listeners[type] = listeners[type] || []).push(fn);
@@ -68,6 +68,7 @@ function loadInterceptor() {
     removeEventListener: () => {},
     postMessage: (message) => posted.push(message),
     fetch: async (url) => makeResponse(JSON.stringify({ served: String(url) })),
+    ...overrides,
   };
 
   // In the page, `window` IS the global object — the interceptor relies on that
@@ -258,15 +259,19 @@ async function gfgRecordsAttemptsFromTheJudgeRequests() {
     phase: 'request',
     method: 'POST',
     url: `${GFG}/${GFG_SLUG}/compile-sub-id/?`,
-    requestBody: 'request_type=compileOutput',
+    requestBody: { request_type: 'compileOutput', userCode: 'int run() { return 1 & 2; }', language: 'c' },
   });
   await adapter.onNetEvent({
     phase: 'request',
     method: 'POST',
     url: `${GFG}/${GFG_SLUG}/submit/compile/?`,
-    requestBody: 'request_type=solutionCheck',
+    requestBody: { request_type: 'solutionCheck', userCode: 'def solve():\n    return 42', language: 'python3' },
   });
 
+  assert.strictEqual(callsOfKind(adapter, 'captureRun')[0].code, 'int run() { return 1 & 2; }');
+  assert.strictEqual(callsOfKind(adapter, 'captureRun')[0].language, 'c');
+  assert.strictEqual(callsOfKind(adapter, 'captureSubmit')[0].code, 'def solve():\n    return 42');
+  assert.strictEqual(callsOfKind(adapter, 'captureSubmit')[0].language, 'python3');
   assert.strictEqual(callsOfKind(adapter, 'captureRun').length, 1, 'a run start records a run attempt');
   assert.strictEqual(callsOfKind(adapter, 'captureSubmit').length, 1, 'a submit start records a submit attempt');
 }
@@ -561,7 +566,70 @@ async function filtersMatchTheCapturedJudgeTraffic() {
   }
 }
 
+async function multipartBodiesReachPlatformEventsUnchanged() {
+  const code = 'int main() { return (1 & 2) + 3; }\n' + 'x'.repeat(12000);
+  const body = new FormData();
+  body.set('userCode', code);
+  body.set('language', 'cpp');
+  let sentBody;
+  class FakeXhr {
+    open() {}
+    setRequestHeader() {}
+    addEventListener(type, fn) { this[type] = fn; }
+    send(value) {
+      sentBody = value;
+      this.status = 200;
+      this.responseType = 'json';
+      this.response = { view_mode: 'correct' };
+      this.load();
+    }
+  }
+  const env = loadInterceptor({
+    XMLHttpRequest: FakeXhr,
+    fetch: async (_url, init) => {
+      sentBody = init.body;
+      return makeResponse('{}');
+    },
+  });
+  env.dispatch('message', { type: 'TRV_NET_CONFIG', filters: [{ url: '/submit', methods: ['POST'] }] });
+  await env.sandbox.fetch('https://judge.example/submit', { method: 'POST', body });
+  assert.strictEqual(sentBody, body);
+  await settle();
+  const xhr = new env.sandbox.XMLHttpRequest();
+  xhr.open('POST', 'https://judge.example/submit');
+  xhr.send(body);
+  assert.strictEqual(sentBody, body);
+  const requests = env.posted.filter((m) => m.type === 'TRV_NET_EVENT' && m.phase === 'request');
+  assert.strictEqual(requests.length, 2);
+  for (const event of requests) {
+    assert.strictEqual(event.requestBody.userCode, code);
+    assert.strictEqual(event.requestBody.language, 'cpp');
+  }
+  assert.ok(env.posted.some((m) => m.response && m.response.view_mode === 'correct'));
+
+  const request = new Request('https://judge.example/submit', { method: 'POST', body });
+  const expectedBytes = Buffer.from(await request.clone().arrayBuffer());
+  const expectedCode = (await request.clone().formData()).get('userCode');
+  let actualBytes;
+  const requestEnv = loadInterceptor({
+    fetch: async (input) => {
+      assert.strictEqual(input, request);
+      actualBytes = Buffer.from(await input.arrayBuffer());
+      return makeResponse('{}');
+    },
+  });
+  requestEnv.dispatch('message', { type: 'TRV_NET_CONFIG', filters: [{ url: '/submit', methods: ['POST'] }] });
+  await requestEnv.sandbox.fetch(request);
+  await settle();
+  await settle();
+  assert.deepStrictEqual(actualBytes, expectedBytes);
+  const captured = requestEnv.posted.find((m) => m.type === 'TRV_NET_EVENT' && m.phase === 'request');
+  assert.strictEqual(captured.requestBody.userCode, expectedCode);
+  assert.strictEqual(captured.requestBody.language, 'cpp');
+}
+
 const SCENARIOS = [
+  ['multipart fetch/XHR preserve full code and original body', multipartBodiesReachPlatformEventsUnchanged],
   ['recon seq stays monotonic across config pushes', reconSeqStaysMonotonicAcrossConfigPushes],
   ['netFilters match the captured judge traffic', filtersMatchTheCapturedJudgeTraffic],
   ['GFG records attempts from the judge requests', gfgRecordsAttemptsFromTheJudgeRequests],
