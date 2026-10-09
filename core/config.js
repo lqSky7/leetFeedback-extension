@@ -10,9 +10,8 @@
   const T = (globalThis.Traverse = globalThis.Traverse || {});
 
   T.config = {
-    // Backend the extension pushes submissions to. Kept from the pre-refactor
-    // code; change here (and only here) to point at a different backend.
-    backendBaseURL: 'https://neatness-enlarged-curled.ngrok-free.dev',
+    // Backend the extension pushes submissions to.
+    backendBaseURL: 'https://traverses.dpdns.org',
 
     // Website that syncs auth into the extension.
     websiteBaseURL: 'https://traverses.tech',
@@ -78,7 +77,7 @@
     // deleting it. Flip a platform to false only after its intercept rules are
     // verified against a real submit — see platforms/index.md.
     domVerdictFallback: {
-      geeksforgeeks: true,
+      geeksforgeeks: false,
       codechef: true,
       naukri: true,
     },
@@ -95,7 +94,7 @@
     // already verified, and a recorder on top of it is pure noise.
     recon: {
       // Platforms with verified network interception — recon must never run.
-      excludedHosts: ['leetcode.com', 'takeuforward.org'],
+      excludedHosts: ['leetcode.com', 'takeuforward.org', 'geeksforgeeks.org'],
 
       // Never record on Traverse's own surfaces, or the recorder would capture
       // its own upload traffic and the website's auth handshake.

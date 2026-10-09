@@ -168,7 +168,7 @@
         problemTitle: name || 'Unknown Problem',
         difficulty: DIFFICULTY_NAMES[Number(difficulty)] || 'medium',
         language: languageValue,
-        outcome: solved.value ? 'accepted' : 'failed',
+        outcome: 'accepted',
         idempotencyKey: `${problemSlug}-${solved.date || Date.now()}`,
         happenedAt: solved.date ? new Date(solved.date).toISOString() : new Date().toISOString(),
         deviceId: 1,
@@ -231,7 +231,7 @@
     _deriveSlug(problemLink, name) {
       const fallback = String(name || 'unknown-problem').toLowerCase().replace(/\s+/g, '-');
       if (!problemLink) return fallback;
-      const match = problemLink.match(/(?:problem-details|problems)\/([^\/\?]+)/);
+      const match = problemLink.match(/(?:practice\/(?:dsa\/|[^\/]+\/)?|problem-details\/|problems\/)([^\/\?]+)/);
       return match ? match[1] : fallback;
     }
 

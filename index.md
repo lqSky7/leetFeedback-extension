@@ -132,8 +132,11 @@ off for LeetCode, TakeUforward, and Traverse's own surfaces. See
    captures are emailed and written to disk.
 9. **UI freeze.** The sidepanel, timer overlay, toasts and hint prompt must stay
    pixel- and behaviour-identical. Refactors change the code behind them, never
-   their appearance or copy. (The recon settings card is the single sanctioned
-   addition; it extends the existing Settings tab rather than restyling it.)
+   their appearance or copy. Two sanctioned exceptions, both owner-requested and
+   both recorded where they live: the recon settings card (an addition that
+   extends the existing Settings tab rather than restyling it), and the Glowy
+   CTA's colour, re-based on the brand chroma band (`sidepanel/index.md` §1). A
+   visual change needs an explicit request; it never rides along with a refactor.
 10. **Background handlers must `return true`** when responding asynchronously.
 11. **The service worker holds no problem state.** MV3 terminates it when idle;
     everything must be rehydrated from `chrome.storage`.
@@ -184,7 +187,7 @@ Payload for `/api/submissions`, built by `core/backend-api.js`:
 ```
 {
   problemSlug, platform, problemTitle, difficulty: 'easy'|'medium'|'hard',
-  language, outcome: 'accepted'|'failed', idempotencyKey, happenedAt,
+  language, outcome: 'accepted', idempotencyKey, happenedAt,
   deviceId, shouldAnalyzeWithAI, geminiApiKey, geminiModel,
   numberOfTries, timeTaken, category, topic, subtopic, assistanceLevel,
   attempts: [{ code, language, timestamp, type, successful, ... }]
@@ -236,3 +239,11 @@ Payload for `/api/submissions`, built by `core/backend-api.js`:
 | Add a platform to recon coverage | `core/config.js` → `recon.platforms` **and** the recon `content_scripts` `matches` in `manifest.json` |
 | Change what recon records, or how it judges a verdict | `core/recon-controller.js` — but read invariants 7 and 8 first |
 | Change the emailed digest's shape | backend `src/lib/reconDigest.ts` |
+
+## Success-only submission contract
+
+`/api/submissions` records successful solves. Judge errors and unsuccessful code iterations stay in the local attempt history. `assistanceLevel` is optional for older clients; missing values remain unknown for recall calibration.
+
+## Submission contract (2026-09-30)
+
+Backend payloads always carry `outcome: accepted`; unavailable assistance is sent as unknown. Judge errors remain local code-iteration history.

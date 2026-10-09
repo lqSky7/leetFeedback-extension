@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
     "name": "Traverse",
-    "version": "2.1.1",
-    "description": "Chrome extension for Traverse Ecosystem",
+    "version": "2.4.0",
+    "description": "Automatically track coding practice sessions, streaks, and progress.",
     "icons": {
         "16": "icons/16.png",
         "48": "icons/48.png",
@@ -40,8 +40,9 @@
         "https://*.edabit.com/*",
         "https://api.github.com/*",
         "https://generativelanguage.googleapis.com/*",
+        "https://traverses.dpdns.org/*",
+        "https://*.dpdns.org/*",
         "https://*.ngrok-free.dev/*",
-        "https://traverse-backend.duckdns.org/*",
         "https://leet-feedback.vercel.app/*",
         "https://*.vercel.app/*",
         "https://traverses.tech/*",
@@ -322,7 +323,7 @@
         }
     ],
     "action": {
-        "default_title": "Open LeetFeedback",
+        "default_title": "Open Traverse",
         "default_icon": {
             "16": "icons/16.png",
             "48": "icons/48.png",

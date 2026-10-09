@@ -8,6 +8,14 @@ const created = [], requests = [];
 const configContext = { globalThis: {} };
 vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../core/config.js'), 'utf8'), configContext);
 const T = configContext.globalThis.Traverse;
+const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../manifest.json'), 'utf8'));
+assert.ok(manifest.permissions.includes('scripting'), 'history import requires permission to fetch in the signed-in tab');
+assert.ok(manifest.host_permissions.some(pattern => {
+  const host = new URL(pattern).hostname;
+  const backendHost = new URL(T.config.backendBaseURL).hostname;
+  return host === backendHost || (host.startsWith('*.') &&
+    (backendHost === host.slice(2) || backendHost.endsWith('.' + host.slice(2))));
+}), 'the configured backend must be covered by extension host permissions');
 const chrome = {
   runtime: { getURL: value => `chrome-extension://test/${value}` },
   storage: { local: { get: async keys => Object.fromEntries(keys.map(key => [key, store[key]])), set: async obj => Object.assign(store, obj), remove: async keys => [].concat(keys).forEach(key => delete store[key]) } },
