@@ -43,6 +43,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   });
 
   markSessionRestarted();
+  scheduleRetentionSweep();
 
   // Drop the legacy recon token override. Nothing reads it any more — the token
   // is baked into config.js — and leaving it in storage invites the reader to
@@ -51,7 +52,10 @@ chrome.runtime.onInstalled.addListener((details) => {
   chrome.storage.local.remove(T.config.recon.keys.token);
 });
 
-chrome.runtime.onStartup.addListener(markSessionRestarted);
+chrome.runtime.onStartup.addListener(() => {
+  markSessionRestarted();
+  scheduleRetentionSweep();
+});
 
 /** Tells ProblemTimer that any timer persisted before this launch is stale. */
 function markSessionRestarted() {
@@ -60,6 +64,74 @@ function markSessionRestarted() {
     [keys.sessionStartTime]: Date.now(),
   });
 }
+
+/* ── problem-data retention (2 days) ──
+ *
+ * `problem_data_<key>` records in chrome.storage.local hold each problem's
+ * attempts, counters, code and timer state. Policy: a record survives at
+ * least `problemDataRetention.days` after its last write, then a sweep
+ * removes it. The sweep runs on every worker start (MV3 workers restart
+ * often, which makes that the most reliable trigger and covers the
+ * browser-was-closed case) and on a periodic alarm as a backstop while the
+ * browser stays open.
+ */
+
+const RETENTION_ALARM = 'problem-data-retention-sweep';
+
+function scheduleRetentionSweep() {
+  if (!chrome.alarms) return;
+  chrome.alarms.create(RETENTION_ALARM, {
+    periodInMinutes: T.config.problemDataRetention.sweepPeriodMinutes,
+  });
+}
+
+if (chrome.alarms) {
+  chrome.alarms.onAlarm.addListener((alarm) => {
+    // Returning the promise lets tests (and curious callers) await the sweep.
+    if (alarm.name === RETENTION_ALARM) return sweepExpiredProblemData();
+  });
+}
+
+async function sweepExpiredProblemData() {
+  try {
+    const all = await chrome.storage.local.get(null);
+    const now = Date.now();
+    const retentionMs = T.config.problemDataRetention.days * 24 * 60 * 60 * 1000;
+    const expired = [];
+
+    for (const [key, record] of Object.entries(all)) {
+      if (!key.startsWith(T.config.problemDataPrefix) || !record || typeof record !== 'object') {
+        continue;
+      }
+
+      // Freshest activity signal wins: `timestamp` is stamped on every write,
+      // `lastActiveTime` by the timer heartbeat, `solved.date` on a solve.
+      const lastTouched = Math.max(
+        record.timestamp ? Date.parse(record.timestamp) : 0,
+        Number(record.lastActiveTime) || 0,
+        Number(record.solved && record.solved.date) || 0
+      );
+
+      // No readable timestamp means a malformed record — leave it alone
+      // rather than guess.
+      if (!lastTouched || now - lastTouched <= retentionMs) continue;
+      expired.push(key);
+    }
+
+    if (expired.length > 0) {
+      await chrome.storage.local.remove(expired);
+      logger.log(
+        `retention sweep: removed ${expired.length} problem record(s) older than ` +
+          `${T.config.problemDataRetention.days} days`
+      );
+    }
+  } catch (error) {
+    logger.error('retention sweep failed:', error);
+  }
+}
+
+// Every worker start is a sweep opportunity; the alarm is only the backstop.
+sweepExpiredProblemData();
 
 /* ── runtime messages (content scripts + sidepanel) ── */
 

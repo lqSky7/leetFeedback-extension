@@ -1,0 +1,14 @@
+{
+  "name": "traverse-extension",
+  "private": true,
+  "version": "2.4.0",
+  "description": "Build tooling for the Traverse extension. The extension itself has no runtime dependencies.",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "build:minor": "node scripts/build.js minor",
+    "build:major": "node scripts/build.js major"
+  },
+  "devDependencies": {
+    "terser": "^5.31.0"
+  }
+}

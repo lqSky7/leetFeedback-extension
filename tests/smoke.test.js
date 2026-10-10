@@ -296,6 +296,27 @@ async function leetcodeAccepted() {
   assert.strictEqual(adapter.isProblemPage(), true, 'leetcode: /problems/ should be a problem page');
   assert.strictEqual(adapter.getCurrentProblemKey(), 'two-sum', 'leetcode: slug key');
 
+  // A run first (and it fails) — numberOfTries must still count SUBMITS only.
+  await adapter.onNetEvent({
+    phase: 'request',
+    url: 'https://leetcode.com/problems/two-sum/interpret_solution/',
+    method: 'POST',
+    requestBody: { lang: 'cpp', typed_code: 'class Solution { public: int y; };' },
+  });
+  await adapter.onNetEvent({
+    phase: 'response',
+    url: 'https://leetcode.com/problems/two-sum/interpret_solution/',
+    method: 'POST',
+    response: { interpret_id: 'run1' },
+  });
+  await adapter.onNetEvent({
+    phase: 'response',
+    url: 'https://leetcode.com/submissions/detail/run1/check/',
+    method: 'GET',
+    response: { state: 'SUCCESS', run_success: false, correct_answer: false },
+  });
+  assert.strictEqual(adapter.tracker.runCounter, 1, 'leetcode: run counted before submit');
+
   // The site submits: request carries the code, response carries the id.
   await adapter.onNetEvent({
     phase: 'request',
@@ -304,7 +325,7 @@ async function leetcodeAccepted() {
     requestBody: { lang: 'cpp', typed_code: 'class Solution { public: int x; };' },
   });
   assert.strictEqual(adapter.tracker.submitCounter, 1, 'leetcode: submit recorded');
-  assert.strictEqual(adapter.tracker.attempts.length, 1, 'leetcode: attempt stored');
+  assert.strictEqual(adapter.tracker.attempts.length, 2, 'leetcode: run + submit attempts stored');
 
   await adapter.onNetEvent({
     phase: 'response',
@@ -354,7 +375,12 @@ async function leetcodeAccepted() {
   assert.strictEqual(payload.assistanceLevel, 'none', 'leetcode: hint answer rides along');
   assert.strictEqual(payload.shouldAnalyzeWithAI, true, 'leetcode: analysis on by default');
   assert.ok(payload.numberOfTries >= 1, 'leetcode: tries reported');
-  assert.strictEqual(payload.attempts.length, 1, 'leetcode: attempts reported');
+  assert.strictEqual(
+    payload.numberOfTries,
+    1,
+    'leetcode: numberOfTries counts SUBMITS (1), not runs — the revision scheduler consumes this'
+  );
+  assert.strictEqual(payload.attempts.length, 2, 'leetcode: run + submit attempts reported');
   assert.ok(payload.idempotencyKey.startsWith('two-sum-'), 'leetcode: idempotency key');
 
   assert.strictEqual(adapter.tracker.submitCounter, 0, 'leetcode: tracker reset after push');

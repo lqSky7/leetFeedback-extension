@@ -103,6 +103,21 @@
       });
       this._netBridge.connect(this.netFilters);
 
+      // The timer's restart button wipes the stored record for the problem it
+      // is tracking. Mirror that here: if the in-memory tracker kept the old
+      // attempts/counters, the very next saveTrackingState would resurrect
+      // them into the freshly cleared record.
+      window.addEventListener('traverse:problem-data-cleared', (event) => {
+        const clearedKey = event && event.detail ? event.detail.problemKey : null;
+        if (clearedKey && clearedKey === this.currentProblemKey) {
+          this.tracker.reset();
+          this.currentProblem = null;
+          this.submissionTracker = null;
+          this._netCaptureAt = { submit: 0, run: 0 };
+          this.logger.log('problem data cleared via timer restart — tracking state dropped');
+        }
+      });
+
       // Watch SPA navigations.
       this._urlObserver = this.observeUrlChanges(() => this.handleUrlChange());
 

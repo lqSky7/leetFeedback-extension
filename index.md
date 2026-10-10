@@ -28,6 +28,7 @@ remaining migration phases live in [REFACTOR_PLAN.md](REFACTOR_PLAN.md).
 | `background/` | Service worker: backend request proxy + auth storage owner | [`background/index.md`](background/index.md) |
 | `sidepanel/` | The extension's own UI (HTML/CSS/JS), unchanged visually | [`sidepanel/index.md`](sidepanel/index.md) |
 | `tests/` | Node scripts, no test runner: `smoke.test.js` (platform-adapter stack), `recon.test.js` (recon controller), `background.test.js` (worker loads + its router is wired), `platforms.test.js` (the network verdict extractors, the interceptor's `seq` invariant, and the MAIN-world load path), `auth.test.js`, `g4f-api-test.mjs`. Run them directly with `node` | — |
+| `scripts/` | `build.js` — publication build: bumps the manifest version (patch/minor/major), minifies JS (Terser) + CSS/HTML into `dist/`, verifies manifest references and JS parseability, zips to `~/Desktop/traverse-v<version>.zip`. Dev-only files (tests, docs, tooling) never ship | — |
 | `icons/`, `fonts/` | Static assets | — |
 
 ---
@@ -196,6 +197,9 @@ Payload for `/api/submissions`, built by `core/backend-api.js`:
 
 - `idempotencyKey` is `<slug>-<solved.date>`; the backend deduplicates on it, so
   a retried push of the same solve is safe.
+- `numberOfTries` counts **submissions**, not runs — the revision scheduler's
+  quality buckets are calibrated against submits. `submitCounter` wins, the
+  submit-attempt count is the fallback, 1 the floor.
 - `attempts[0]` carries full code; later attempts carry a compact line diff
   (`BackendAPI.diffSummary`) instead of the whole file.
 - `category` is a 0–14 id from `CATEGORY_MAP` (first recognized topic wins).
@@ -206,14 +210,14 @@ Payload for `/api/submissions`, built by `core/backend-api.js`:
 
 | Key | Area | Written by | Notes |
 |---|---|---|---|
-| `problem_data_<problemKey>` | local | `core/session-store.js` | One record per problem: metadata, `solved`, tracking counters, timer fields |
+| `problem_data_<problemKey>` | local | `core/session-store.js` | One record per problem: metadata, `solved`, tracking counters, timer fields. Retention: the background sweep removes records untouched for more than 2 days (`problemDataRetention` in config) |
 | `auth_token`, `auth_user`, `auth_timestamp` | local | background, `core/auth.js` | Direct session. Token stored raw, `Bearer ` added on use |
 | `auth_accounts`, `auth_active_account_id` | local | background, `core/auth.js` | Multi-account list + active id (`backend:<id\|username>`) |
 | `github_token`, `github_owner`, `github_repo`, `github_branch` | sync | sidepanel | GitHub mirroring config |
 | `github_push_enabled` | sync | sidepanel | Opt-in switch for GitHub mirroring |
 | `gemini_api_key`, `ai_provider`, `gemini_model` | sync | sidepanel | Forwarded to the backend; analysis itself is server-side |
-| `debug_mode` | sync | sidepanel | Single debug flag for every logger |
-| `timer_overlay_enabled`, `timer_overlay_position` | sync / local | sidepanel, timer | Overlay visibility and last drag position |
+| `debug_mode` | sync | sidepanel (Home → System Logs pill) | Single debug flag for every logger |
+| `timer_overlay_enabled`, `timer_overlay_position` | sync / local | sidepanel (Home → Timer Overlay pill), timer | Overlay visibility and last drag position |
 | `hint_prompt_enabled`, `hint_prompt_default_option`, `hint_prompt_duration` | sync | sidepanel | Hint prompt behaviour |
 | `browser_session_restarted`, `session_start_time` | local | background | Set on startup so stale timers are discarded |
 | `tuf_code_data` | local | `platforms/takeuforward.js` | Cross-page cache of the last submitted TUF code |
@@ -239,6 +243,7 @@ Payload for `/api/submissions`, built by `core/backend-api.js`:
 | Add a platform to recon coverage | `core/config.js` → `recon.platforms` **and** the recon `content_scripts` `matches` in `manifest.json` |
 | Change what recon records, or how it judges a verdict | `core/recon-controller.js` — but read invariants 7 and 8 first |
 | Change the emailed digest's shape | backend `src/lib/reconDigest.ts` |
+| Ship a release | `node scripts/build.js [patch\|minor\|major]` — bumps the version, minifies, zips to the Desktop |
 
 ## Success-only submission contract
 

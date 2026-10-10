@@ -147,7 +147,7 @@
         parent_topic = [],
         problem_link,
         attempts = [],
-        runCounter = 0,
+        submitCounter = 0,
         shouldAnalyzeWithGemini = true,
         problemStartTime = null,
         language = null,
@@ -159,6 +159,14 @@
       // Language: the last recorded attempt wins, then the stored field.
       const lastAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null;
       const languageValue = lastAttempt?.language || language || 'python';
+
+      // numberOfTries counts SUBMISSIONS, not runs. The revision scheduler's
+      // quality buckets (>3/>5/>10/>20) are calibrated against submits; runs
+      // would inflate the number for anyone who tests locally before sending.
+      // submitCounter is the primary source; the submit-attempt count covers
+      // records written before the counter existed.
+      const submitAttempts = attempts.filter((a) => a.type === 'submit').length;
+      const numberOfTries = Number(submitCounter) || submitAttempts || 1;
 
       const problemSlug = this._deriveSlug(problem_link, name);
 
@@ -176,7 +184,7 @@
         shouldAnalyzeWithAI: shouldAnalyzeWithGemini !== false,
         geminiApiKey,
         geminiModel,
-        numberOfTries: Number(runCounter) || 1,
+        numberOfTries,
         timeTaken: this._timeTakenSeconds(storedProblemData, problemStartTime, solved),
         category: mapTopicToCategory(parent_topic),
         topic: parent_topic[0] || null,

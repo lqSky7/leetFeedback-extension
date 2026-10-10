@@ -42,17 +42,18 @@
 
                 <div class="separator"></div>
 
-                <!-- Timer Options Section -->
-                <div class="settings-section" id="timer-section">
-                    <h3>Timer Options</h3>
-                    <div class="settings-option">
-                        <div class="settings-option-title">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="timer-overlay-enabled" checked />
-                                <span class="checkbox-custom"></span>
-                                Show Timer Overlay
-                            </label>
-                        </div>
+                <!-- Quick Toggles Section -->
+                <div class="settings-section" id="quick-toggles-section">
+                    <h3>Quick Toggles</h3>
+                    <div class="toggle-pills">
+                        <button type="button" class="toggle-pill" id="toggle-timer-overlay" aria-pressed="false"
+                            data-tooltip="Show the floating timer on problem pages">
+                            Timer Overlay
+                        </button>
+                        <button type="button" class="toggle-pill" id="toggle-debug-logs" aria-pressed="false"
+                            data-tooltip="Log Traverse activity to the browser console on every site, the background worker and this panel">
+                            System Logs
+                        </button>
                     </div>
                 </div>
             </section>
@@ -230,21 +231,6 @@
                         </label>
                         <input type="number" id="hint-prompt-duration" min="3" max="60" value="10" placeholder="10" />
                     </div>
-                </div>
-
-                <!-- Options/Debug Section -->
-                <div class="settings-section">
-                    <h3>Options</h3>
-                    <div class="settings-option">
-                        <div class="settings-option-title">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="debug-mode" />
-                                <span class="checkbox-custom"></span>
-                                Enable Debug Logs
-                            </label>
-                        </div>
-                    </div>
-                    <div class="separator"></div>
                 </div>
 
                 <!-- Platform Recon Section -->

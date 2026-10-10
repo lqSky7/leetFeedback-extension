@@ -50,6 +50,11 @@
       this.displayIntervalId = null;
       this.isEnabled = true;
 
+      // Eye-button hide: purely visual, never touches the enabled setting.
+      // Cleared when a different problem starts (startTimer/reset), so the
+      // overlay returns on the next problem page.
+      this.hiddenByUser = false;
+
       // Set while the overlay is handed over to a submission card: detached
       // from the DOM, still counting (see parkOverlay).
       this.isParked = false;
@@ -98,8 +103,10 @@
       chrome.storage.onChanged.addListener((changes, area) => {
         if (area === 'sync' && changes[keys.timerOverlayEnabled]) {
           this.isEnabled = changes[keys.timerOverlayEnabled].newValue !== false;
-          if (this.isEnabled && this.problemUrl) {
-            this.showOverlay();
+          if (this.isEnabled) {
+            // Re-enabling from settings must win over a stale eye-hide.
+            this.hiddenByUser = false;
+            if (this.problemUrl) this.showOverlay();
           } else {
             this.hideOverlay();
           }
@@ -119,12 +126,15 @@
         return;
       }
 
-      // Same problem (SPA re-render): keep the existing timer running.
+      // Same problem (SPA re-render): keep the existing timer running. A
+      // user-hidden overlay stays hidden for this problem.
       if (this.problemUrl === problemUrl && this.startTime) {
-        if (this.isEnabled) this.showOverlay();
+        if (this.isEnabled && !this.hiddenByUser) this.showOverlay();
         return;
       }
 
+      // New problem: the eye-hide never survives a navigation.
+      this.hiddenByUser = false;
       this.problemUrl = problemUrl;
       await this.loadFromStorage();
 
@@ -149,21 +159,52 @@
       this.tabHiddenAt = null;
       this.isPaused = false;
       this.pausedAt = null;
+      this.hiddenByUser = false;
       logger.log('timer reset');
     }
 
-    /** Reset the timer for the problem already being tracked. */
+    /**
+     * Full reset, from the overlay's restart button: restart the clock AND
+     * wipe the stored record for the problem (attempts, counters, code, timer
+     * state — everything `problem_data_<key>` holds). The record is removed,
+     * not blanked, so the next attempt rebuilds it from zero; the adapters are
+     * told via `traverse:problem-data-cleared` so their in-memory trackers drop
+     * the old state too. Pause is untouched by this — the button is a hard
+     * restart of both clock and data.
+     */
     async resetTimer() {
+      const clearedKey = this.problemUrl;
+
+      // Restart the clock first: whatever happens to storage, the visible
+      // timer starts over now.
       this.startTime = Date.now();
       this.pausedTime = 0;
       this.isTabHidden = document.hidden;
       this.tabHiddenAt = null;
       this.isPaused = false;
       this.pausedAt = null;
+      this.lastSaveTime = 0;
 
-      await this.saveToStorage();
+      if (clearedKey) {
+        // Queue behind any in-flight save so a pending read-modify-write
+        // cannot resurrect the record after the removal. The task swallows its
+        // own errors — a rejection here would poison _saveQueue and every
+        // future save would silently skip.
+        this._saveQueue = this._saveQueue.then(async () => {
+          try {
+            await T.sessionStore.removeProblemData(clearedKey);
+          } catch (error) {
+            logger.error('resetTimer: failed to clear problem data:', error);
+          }
+        });
+        await this._saveQueue;
+        window.dispatchEvent(
+          new CustomEvent('traverse:problem-data-cleared', { detail: { problemKey: clearedKey } })
+        );
+      }
+
       this.updateDisplay();
-      logger.log('timer reset for current problem');
+      logger.log('timer reset — problem data cleared for', clearedKey);
     }
 
     setupVisibilityTracking() {
@@ -503,6 +544,16 @@
       if (this.beginRestore()) this.completeRestore();
     }
 
+    /**
+     * Eye button: hide the overlay for this problem only. Unlike the old close
+     * button this never writes the enabled setting — the overlay returns as
+     * soon as a different problem starts (startTimer clears hiddenByUser).
+     */
+    hideForNow() {
+      this.hiddenByUser = true;
+      this.hideOverlay();
+    }
+
     hideOverlay() {
       this.isParked = false;
       this._restorePending = false;
@@ -617,8 +668,12 @@
         transition: all 0.15s ease;
         flex-shrink: 0;
       `;
-        btn.textContent = text;
         btn.title = title;
+        if (typeof text === 'string') {
+          btn.textContent = text;
+        } else if (text && text.nodeType) {
+          btn.appendChild(text);
+        }
         btn.addEventListener('mouseover', () => {
           btn.style.background = 'rgba(255, 255, 255, 0.1)';
           btn.style.color = '#FFFFFF';
@@ -643,11 +698,12 @@
       );
       pauseBtn.id = 'leetfeedback-timer-pause-btn';
 
-      const resetBtn = makeButton('↺', 'Reset timer', '12px', '#A6A6A6', () => this.resetTimer());
-      const closeBtn = makeButton('×', 'Hide timer (re-enable in extension settings)', '15px', '#8A8A8A', () => {
-        this.hideOverlay();
-        chrome.storage.sync.set({ [T.config.keys.timerOverlayEnabled]: false });
-      });
+      const resetBtn = makeButton('↺', 'Restart timer & clear this problem\'s data', '12px', '#A6A6A6', () =>
+        this.resetTimer()
+      );
+      const hideBtn = makeButton('👁', 'Hide timer (it comes back on the next problem)', '13px', '#8A8A8A', () =>
+        this.hideForNow()
+      );
 
       overlay.appendChild(icon);
       overlay.appendChild(timeDisplay);
@@ -656,7 +712,7 @@
       overlay.appendChild(createDivider());
       overlay.appendChild(resetBtn);
       overlay.appendChild(createDivider());
-      overlay.appendChild(closeBtn);
+      overlay.appendChild(hideBtn);
 
       this.overlay = overlay;
       this.setupDragging();

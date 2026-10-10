@@ -26,7 +26,7 @@ const BACKGROUND_DIR = path.join(ROOT, 'background');
 
 /** A chrome mock covering what background.js touches at load time. */
 function createChrome() {
-  const listeners = { message: [], external: [], installed: [], startup: [] };
+  const listeners = { message: [], external: [], installed: [], startup: [], alarm: [], alarmsCreated: [] };
   const store = {};
 
   const localGet = (keysOrCb, maybeCb) => {
@@ -78,6 +78,10 @@ function createChrome() {
         set: (obj, cb) => (cb ? cb() : Promise.resolve()),
       },
       onChanged: { addListener: () => {} },
+    },
+    alarms: {
+      create: (name, info) => listeners.alarmsCreated.push({ name, info }),
+      onAlarm: { addListener: (fn) => listeners.alarm.push(fn) },
     },
   };
 }
@@ -260,6 +264,49 @@ async function tokenRejectionIsActionable() {
   );
 }
 
+/**
+ * The retention sweep: problem records untouched for more than
+ * `problemDataRetention.days` are removed; everything else — fresh records,
+ * other keys, malformed records with no timestamp — survives.
+ */
+async function retentionSweepRemovesOnlyStaleProblemData() {
+  const { chromeMock, loadError } = loadBackgroundWorker();
+  assert.strictEqual(loadError, null, 'worker must load');
+
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+
+  chromeMock.store['problem_data_stale'] = {
+    name: 'Old Problem',
+    timestamp: new Date(now - 3 * DAY_MS).toISOString(),
+  };
+  chromeMock.store['problem_data_fresh'] = {
+    name: 'Fresh Problem',
+    timestamp: new Date(now - 6 * 60 * 60 * 1000).toISOString(),
+  };
+  // lastActiveTime beats an old timestamp — a timer heartbeat counts as life.
+  chromeMock.store['problem_data_kept_by_heartbeat'] = {
+    name: 'Heartbeat Problem',
+    timestamp: new Date(now - 3 * DAY_MS).toISOString(),
+    lastActiveTime: now - 60 * 1000,
+  };
+  // Malformed: no readable stamp anywhere. The sweep must not guess.
+  chromeMock.store['problem_data_malformed'] = { name: 'Broken Record' };
+  chromeMock.store['leetcode_import_job'] = { stage: 'running' };
+  chromeMock.store.auth_token = 'test-token';
+
+  const alarmListener = chromeMock.listeners.alarm[0];
+  assert.ok(alarmListener, 'the worker must register an onAlarm listener');
+  await alarmListener({ name: 'problem-data-retention-sweep' });
+
+  assert.ok(!('problem_data_stale' in chromeMock.store), 'stale record must be swept');
+  assert.ok('problem_data_fresh' in chromeMock.store, 'fresh record must survive');
+  assert.ok('problem_data_kept_by_heartbeat' in chromeMock.store, 'recent heartbeat must survive');
+  assert.ok('problem_data_malformed' in chromeMock.store, 'malformed record must not be guessed at');
+  assert.ok('leetcode_import_job' in chromeMock.store, 'non-problem keys are not the sweep\'s business');
+  assert.ok('auth_token' in chromeMock.store, 'auth keys are not the sweep\'s business');
+}
+
 /* ───────────────────────────────── runner ──────────────────────────────── */
 
 const SCENARIOS = [
@@ -268,6 +315,7 @@ const SCENARIOS = [
   ['an unknown message type is rejected', unknownMessageTypeIsRejected],
   ['recon upload ignores a stale stored token', reconUploadIgnoresStoredTokenOverride],
   ['a token rejection is actionable', tokenRejectionIsActionable],
+  ['retention sweep removes only stale problem data', retentionSweepRemovesOnlyStaleProblemData],
 ];
 
 (async () => {

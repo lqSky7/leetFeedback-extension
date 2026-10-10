@@ -353,24 +353,30 @@ class PopupController {
       });
     }
 
-    // Timer overlay enabled checkbox
-    const timerOverlayCheckbox = document.getElementById("timer-overlay-enabled");
-    if (timerOverlayCheckbox) {
-      timerOverlayCheckbox.addEventListener("change", (e) => {
-        this.config.timerOverlayEnabled = e.target.checked;
-        chrome.storage.sync.set({ timer_overlay_enabled: e.target.checked });
-        spLog("Timer overlay enabled:", e.target.checked);
+    // Home quick toggles (pill buttons: greyed = off, white = on)
+    const timerPill = document.getElementById("toggle-timer-overlay");
+    if (timerPill) {
+      timerPill.addEventListener("click", () => {
+        const next = !(this.config.timerOverlayEnabled !== false);
+        this.config.timerOverlayEnabled = next;
+        chrome.storage.sync.set({ timer_overlay_enabled: next });
+        this.updateQuickToggles();
+        spLog("Timer overlay enabled:", next);
       });
     }
 
-    // Debug mode checkbox
-    const debugModeCheckbox = document.getElementById("debug-mode");
-    if (debugModeCheckbox) {
-      debugModeCheckbox.addEventListener("change", (e) => {
-        this.config.debugMode = e.target.checked;
-        chrome.storage.sync.set({ debug_mode: e.target.checked });
-        // Always log debug mode toggle so user can see it working
-        console.log("Debug mode enabled:", e.target.checked);
+    // Debug logging pill — writes the single systemwide `debug_mode` key that
+    // every logger (background, content scripts, sidepanel) reads.
+    const debugPill = document.getElementById("toggle-debug-logs");
+    if (debugPill) {
+      debugPill.addEventListener("click", () => {
+        const next = !(this.config.debugMode === true);
+        this.config.debugMode = next;
+        chrome.storage.sync.set({ debug_mode: next });
+        this.updateQuickToggles();
+        // Always print the toggle itself so the user sees it working.
+        console.log("Traverse debug logging:", next ? "on" : "off");
+        spLog("Debug logging enabled:", next);
       });
     }
 
@@ -410,6 +416,22 @@ class PopupController {
     const section = document.getElementById("hint-prompt-section");
     if (section) {
       section.classList.toggle("disabled-flow", !enabled);
+    }
+  }
+
+  /** Reflect toggle state onto the Home pill buttons (greyed off, white on). */
+  updateQuickToggles() {
+    const timerPill = document.getElementById("toggle-timer-overlay");
+    if (timerPill) {
+      const on = this.config.timerOverlayEnabled !== false;
+      timerPill.classList.toggle("on", on);
+      timerPill.setAttribute("aria-pressed", String(on));
+    }
+    const debugPill = document.getElementById("toggle-debug-logs");
+    if (debugPill) {
+      const on = this.config.debugMode === true;
+      debugPill.classList.toggle("on", on);
+      debugPill.setAttribute("aria-pressed", String(on));
     }
   }
 
@@ -822,7 +844,7 @@ class PopupController {
     document.getElementById("repo").value = this.config.repo || "";
     document.getElementById("branch").value = this.config.branch;
     document.getElementById("gemini-key").value = this.config.geminiKey;
-    document.getElementById("debug-mode").checked = this.config.debugMode;
+    this.updateQuickToggles();
 
     const aiProviderInput = document.getElementById("ai-provider");
     const aiProviderCs = this.customSelects?.['ai-provider'];
@@ -838,13 +860,9 @@ class PopupController {
 
     // New settings
     const githubPushCheckbox = document.getElementById("github-push-enabled");
-    const timerOverlayCheckbox = document.getElementById("timer-overlay-enabled");
 
     if (githubPushCheckbox) {
       githubPushCheckbox.checked = this.config.githubPushEnabled;
-    }
-    if (timerOverlayCheckbox) {
-      timerOverlayCheckbox.checked = this.config.timerOverlayEnabled;
     }
 
     // Set initial GitHub accordion state
@@ -913,7 +931,10 @@ class PopupController {
         () => { },
       );
 
-      this.config = formData;
+      // Merge, don't replace: collectFormData only covers the config form's
+      // fields, and a blind replace would drop keys the pills own
+      // (timerOverlayEnabled, hintPrompt*, …) until the next full load.
+      this.config = { ...this.config, ...formData };
 
       this.refreshAuthConfigSummary();
 
@@ -938,7 +959,7 @@ class PopupController {
       branch: document.getElementById("branch").value.trim() || "main",
       geminiKey: document.getElementById("gemini-key").value.trim(),
       aiProvider: aiProviderEl ? aiProviderEl.value : "g4f",
-      debugMode: document.getElementById("debug-mode").checked,
+      debugMode: this.config.debugMode === true,
       geminiModel: document.getElementById("gemini-model")?.value || "gemini-3-flash-preview",
     };
   }

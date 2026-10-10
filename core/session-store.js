@@ -11,7 +11,9 @@
 
   class SessionStore {
     constructor() {
-      this.prefix = 'problem_data_';
+      // Single source of truth for the prefix lives in config (the background
+      // retention sweep needs the same string without loading this module).
+      this.prefix = (T.config && T.config.problemDataPrefix) || 'problem_data_';
     }
 
     getStorageKey(problemSlug) {

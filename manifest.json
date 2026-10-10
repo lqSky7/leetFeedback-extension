@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Traverse",
-    "version": "2.4.0",
+    "version": "2.4.1",
     "description": "Automatically track coding practice sessions, streaks, and progress.",
     "icons": {
         "16": "icons/16.png",
@@ -9,6 +9,7 @@
         "128": "icons/128.png"
     },
     "permissions": [
+        "alarms",
         "storage",
         "unlimitedStorage",
         "scripting",

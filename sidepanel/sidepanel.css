@@ -774,6 +774,104 @@ input {
   border-color: #FFFFFF;
 }
 
+/* ── Quick Toggle Pills (Home) ─────────────────────────────────────────── */
+/* Two-state buttons: greyed out when off, white when on — same on-state
+   language as a checked checkbox above. */
+.toggle-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.toggle-pill {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface-elevated);
+  color: var(--text-muted);
+  font-family: var(--font-family-base);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  position: relative;
+  transition: all var(--dur-fast) var(--ease-base);
+}
+
+.toggle-pill::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  flex-shrink: 0;
+  transition: all var(--dur-fast) var(--ease-base);
+}
+
+.toggle-pill:hover {
+  border-color: var(--border-hover);
+  color: var(--text-secondary);
+  background: var(--bg-surface-hover);
+}
+
+.toggle-pill:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.toggle-pill.on {
+  background: #FFFFFF;
+  border-color: #FFFFFF;
+  color: #000000;
+}
+
+.toggle-pill.on::before {
+  background: #000000;
+}
+
+.toggle-pill.on:hover {
+  background: #EBEBFF;
+  border-color: #EBEBFF;
+  color: #000000;
+}
+
+/* Tooltip for pills (same visual language as .info-icon::after, but centred
+   under the pill). */
+.toggle-pill[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 210px;
+  padding: 8px 10px;
+  background: #1A1A1A;
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-sm);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: normal;
+  text-align: left;
+  line-height: 1.4;
+  white-space: normal;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-base);
+  z-index: 999;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+}
+
+.toggle-pill[data-tooltip]:hover::after {
+  visibility: visible;
+  opacity: 1;
+}
+
 /* ── Messages & Alerts ─────────────────────────────────────────────────── */
 .messages {
   margin-top: 14px;

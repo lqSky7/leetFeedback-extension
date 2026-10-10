@@ -31,6 +31,12 @@
 
     leetcodeImport: { startURL: 'https://leetcode.com/progress/', jobKey: 'leetcode_import_job', pageKey: 'leetcode_import_page', catalogKey: 'leetcode_import_catalog' },
 
+    // Per-problem record retention. `problem_data_<key>` records (attempts,
+    // counters, code, timer state) must survive at least `days` after their
+    // last write; the background worker's sweep removes anything older.
+    problemDataPrefix: 'problem_data_',
+    problemDataRetention: { days: 2, sweepPeriodMinutes: 360 },
+
     // Storage keys. These are part of the data contract with the backend and
     // existing user data — do not rename without a migration.
     keys: {
