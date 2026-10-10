@@ -5,6 +5,19 @@
 // the submission and the revision scheduler discounts assisted solves — a
 // solution found with the editorial is not evidence of durable recall.
 //
+// Deliberately plain. This component used to bring itself in with the footer's
+// chroma sweep; a masked gradient band travelling across the glyphs made the
+// icons read as if they were sliding sideways, so the sweep is gone from here
+// completely. Nothing in this prompt animates beyond the card's own fade/scale
+// and the countdown itself. What is left of the chroma language is static: the
+// countdown ring and its number are stroked/filled with the same five stops as
+// the footer wordmark (baby pink -> crimson -> amber gold -> ice white ->
+// cobalt), painted once and never moved.
+//
+// The three icons are drawn on a shared tight viewBox so they read big inside
+// their 72px box, and they are picked for what they say: a lone figure ("me"),
+// a lightbulb ("a nudge") and an open book ("the editorial").
+//
 // Exposed as `window.LeetFeedbackHintPrompt` and `T.LeetFeedbackHintPrompt`
 // (the submission pipeline looks the global up by that name).
 
@@ -14,38 +27,58 @@
   const T = (globalThis.Traverse = globalThis.Traverse || {});
   const logger = T.createLogger ? T.createLogger('hint') : { log() {} };
 
+  /* ── the three answers ─────────────────────────────────────────────────── */
+
   const LEVELS = [
     {
       value: 'none',
       label: 'I solved it myself',
-      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="12 2 15 8.5 22 12 15 15.5 12 22 9 15.5 2 12 9 8.5 12 2"/>
-                    <polygon points="12 6 16 12 12 18 8 12 12 6"/>
-                    <circle cx="12" cy="12" r="1.5"/>
-                </svg>`,
+      geometry:
+        '<circle cx="12" cy="7.7" r="3.6"/>' +
+        '<path d="M4.9 20.7C4.9 16.8 8.1 14.1 12 14.1s7.1 2.7 7.1 6.6"/>',
     },
     {
       value: 'hint',
       label: 'Minor Hint',
-      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="9.5"/>
-                    <ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(-30 12 12)"/>
-                    <ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(30 12 12)"/>
-                    <circle cx="12" cy="12" r="1.8"/>
-                </svg>`,
+      geometry:
+        '<circle cx="12" cy="9.6" r="5.9"/>' +
+        '<path d="M9.6 15.4h4.8v3.3a1.1 1.1 0 0 1-1.1 1.1h-2.6a1.1 1.1 0 0 1-1.1-1.1z"/>' +
+        '<path d="M9.6 17.6h4.8"/>' +
+        '<path d="M10.7 9.9a1.3 1.3 0 0 1 2.6 0"/>',
     },
     {
       value: 'solution',
       label: 'Full solution',
-      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="12 2 21 7.2 21 16.8 12 22 3 16.8 3 7.2 12 2"/>
-                    <line x1="12" y1="12" x2="21" y2="7.2"/>
-                    <line x1="12" y1="12" x2="3" y2="7.2"/>
-                    <line x1="12" y1="12" x2="12" y2="22"/>
-                    <polygon points="12 7.5 16 9.8 16 14.2 12 16.5 8 14.2 8 9.8 12 7.5"/>
-                </svg>`,
+      geometry:
+        '<path d="M12 6.6C10.3 5.2 7.9 4.6 4.6 4.9v12.2c3.3-.3 5.7.3 7.4 1.7"/>' +
+        '<path d="M12 6.6c1.7-1.4 4.1-2 7.4-1.7v12.2c-3.3-.3-5.7.3-7.4 1.7"/>' +
+        '<path d="M12 6.6v12.2"/>',
     },
   ];
+
+  const ICON_STROKE = 1.4;
+
+  // The three glyphs share one tight viewBox — the union of their bounds plus
+  // half a stroke of padding — instead of the full 24x24 grid. Drawing on a
+  // 24-unit grid keeps the geometry readable; cropping to the ink is what makes
+  // the icons actually big inside their 72px box (and thickens the stroke with
+  // them).
+  const ICON_VIEWBOX = '3.9 3 16.2 18.4';
+
+  /** One icon: a plain stroked glyph, coloured by the wrapper's currentColor. */
+  function iconSvg(geometry) {
+    return (
+      '<svg class="lfb-hint-icon" viewBox="' +
+      ICON_VIEWBOX +
+      '" aria-hidden="true">' +
+      '<g class="lfb-hint-icon-base" fill="none" stroke="currentColor" stroke-width="' +
+      ICON_STROKE +
+      '" stroke-linecap="round" stroke-linejoin="round">' +
+      geometry +
+      '</g>' +
+      '</svg>'
+    );
+  }
 
   const DEFAULT_DURATION_SECONDS = 10;
 
@@ -121,6 +154,20 @@
       timerWrap.setAttribute('title', `Auto-selecting in ${durationSeconds}s`);
       timerWrap.innerHTML = `
             <svg class="lfb-hint-timer-svg" viewBox="0 0 36 36" width="36" height="36">
+                <defs>
+                    <linearGradient id="lfb-hint-timer-ring" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#FFB6C1"/>
+                        <stop offset="25%" stop-color="#F02832"/>
+                        <stop offset="50%" stop-color="#FFBE14"/>
+                        <stop offset="75%" stop-color="#EBEBFF"/>
+                        <stop offset="100%" stop-color="#145AE6"/>
+                    </linearGradient>
+                    <linearGradient id="lfb-hint-timer-num" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#FFB6C1"/>
+                        <stop offset="50%" stop-color="#FFBE14"/>
+                        <stop offset="100%" stop-color="#EBEBFF"/>
+                    </linearGradient>
+                </defs>
                 <circle class="lfb-hint-timer-bg" cx="18" cy="18" r="${timerRadius}" />
                 <circle class="lfb-hint-timer-progress" cx="18" cy="18" r="${timerRadius}" style="stroke-dasharray: ${circumference}; stroke-dashoffset: 0;" />
                 <text class="lfb-hint-timer-text" x="18" y="18">${durationSeconds}</text>
@@ -152,7 +199,7 @@
 
         const iconWrap = document.createElement('div');
         iconWrap.className = 'lfb-hint-icon-wrap';
-        iconWrap.innerHTML = level.icon;
+        iconWrap.innerHTML = iconSvg(level.geometry);
 
         const label = document.createElement('span');
         label.className = 'lfb-hint-btn-label';
@@ -293,7 +340,9 @@
                 transform: translate(-50%, -50%) scale(1) !important;
             }
 
-            /* Top right circular countdown timer */
+            /* Top right circular countdown timer. The ring and the number carry
+               the chroma palette as a fixed gradient — painted once, never
+               moved. Nothing on this prompt sweeps. */
             .lfb-hint-timer-wrap {
                 position: absolute !important;
                 top: 20px !important;
@@ -317,7 +366,7 @@
             }
             .lfb-hint-timer-progress {
                 fill: none !important;
-                stroke: rgba(255, 255, 255, 0.85) !important;
+                stroke: url(#lfb-hint-timer-ring) !important;
                 stroke-width: 2.2 !important;
                 stroke-linecap: round !important;
                 transition: stroke-dashoffset 0.06s linear !important;
@@ -325,7 +374,7 @@
             .lfb-hint-timer-text {
                 transform: rotate(90deg) !important;
                 transform-origin: 18px 18px !important;
-                fill: #FFFFFF !important;
+                fill: url(#lfb-hint-timer-num) !important;
                 font-size: 11px !important;
                 font-weight: 700 !important;
                 text-anchor: middle !important;
@@ -372,7 +421,7 @@
                 flex-direction: column !important;
                 align-items: center !important;
                 justify-content: center !important;
-                padding: 20px 12px 16px 12px !important;
+                padding: 16px 12px 14px 12px !important;
                 background: rgba(255, 255, 255, 0.025) !important;
                 border: 1px solid rgba(255, 255, 255, 0.09) !important;
                 border-radius: 8px !important;
@@ -397,15 +446,16 @@
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
-                width: 50px !important;
-                height: 50px !important;
+                width: 72px !important;
+                height: 72px !important;
                 color: #A3A3A3 !important;
-                margin-bottom: 12px !important;
+                margin-bottom: 10px !important;
                 transition: color 0.15s ease !important;
             }
             .lfb-hint-icon-wrap svg {
                 width: 100% !important;
                 height: 100% !important;
+                display: block !important;
             }
             .lfb-hint-btn:hover .lfb-hint-icon-wrap,
             .lfb-hint-btn:focus-visible .lfb-hint-icon-wrap {

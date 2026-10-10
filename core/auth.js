@@ -58,7 +58,7 @@
     }
 
     getApiBaseUrl() {
-      return (T.config && T.config.backendBaseURL) || 'https://neatness-enlarged-curled.ngrok-free.dev';
+      return (T.config && T.config.backendBaseURL) || 'https://traverses.dpdns.org';
     }
 
     getWebsiteBaseUrl() {

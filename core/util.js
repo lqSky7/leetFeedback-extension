@@ -1,7 +1,8 @@
 // Traverse — shared pure utilities (no chrome.* or DOM calls).
 //
 // Formatters and helpers used by the GitHub client, the submission pipeline,
-// and platform adapters. Kept dependency-free so it loads in any context.
+// and platform adapters, plus the rect geometry the timer overlay and the
+// submission card share. Kept dependency-free so it loads in any context.
 
 (function () {
   'use strict';
@@ -127,6 +128,39 @@
         .replace(/\u00A0/g, ' ')
         .replace(/[\u200B-\u200D\uFEFF]/g, '')
         .replace(/\r\n/g, '\n');
+    },
+
+    /* ── rect morph geometry ──────────────────────────────────────────────── */
+
+    /**
+     * Reduce a DOMRect (or any rect-like) to the four numbers a morph needs.
+     * Plain numbers on purpose: the caller can measure now and animate later,
+     * after the element it measured has been detached.
+     */
+    rectOf(rect) {
+      return {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+    },
+
+    /**
+     * FLIP transform: the CSS transform that renders an element whose *natural*
+     * box is `to` exactly over `from`. Apply it with `transform-origin: 0 0`,
+     * and the element's box maps corner to corner — which is what lets a wide
+     * timer pill and a square status card interpolate as ONE shape instead of
+     * two popups crossfading.
+     *
+     * The scale is deliberately non-uniform: that stretch IS the morph. Any
+     * content that would visibly squash (glyphs, labels) has to be hidden for
+     * the duration by the caller.
+     */
+    morphTransform(from, to) {
+      const sx = to.width > 0 ? from.width / to.width : 1;
+      const sy = to.height > 0 ? from.height / to.height : 1;
+      return `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${sx}, ${sy})`;
     },
   };
 

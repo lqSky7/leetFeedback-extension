@@ -298,7 +298,7 @@ async function armsAndCapturesAllFourFlows() {
   const config = env.postedMessages.find((m) => m.type === 'TRV_RECON_CONFIG');
   assert.ok(config, 'expected a TRV_RECON_CONFIG message');
   assert.strictEqual(config.enabled, true);
-  assert.ok(config.excludeUrl && config.excludeUrl.includes('ngrok'), 'ingest URL should be excluded');
+  assert.ok(config.excludeUrl && (config.excludeUrl.includes('dpdns') || config.excludeUrl.includes('ngrok')), 'ingest URL should be excluded');
 
   // Buttons were discovered, with usable selectors.
   assert.ok(
