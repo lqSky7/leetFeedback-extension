@@ -143,10 +143,15 @@
       this.shouldAnalyzeWithGemini = true;
     }
 
-    /** Tries reported to the backend: submit count, else runs + 1. */
+    /**
+     * Tries stored on the solved record: the submit count. The old fallback
+     * reported runs + 1 when no submit trigger was captured, which leaked run
+     * counts into a submit-count field; an accepted solve always proves at
+     * least one submission, captured or not.
+     */
     getTotalTries() {
       const submits = this.attempts.filter((a) => a.type === 'submit').length;
-      return submits > 0 ? submits : this.runCounter + 1;
+      return submits > 0 ? submits : 1;
     }
   }
 
