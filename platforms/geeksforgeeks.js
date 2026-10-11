@@ -362,7 +362,7 @@
     /* ── editor access ── */
 
     getCurrentCode() {
-      // ⚠️  This file runs in the isolated content-script world, so window.ace
+      // This file runs in the isolated content-script world, so window.ace
       // is NOT the page's ACE instance.  Only DOM elements are visible across
       // the boundary.  Strategies that touch JS globals (ace, monaco) are
       // unreachable here; they are kept as last-resort fallbacks in case GFG

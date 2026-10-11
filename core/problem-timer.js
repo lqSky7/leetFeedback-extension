@@ -32,6 +32,38 @@
   // shows it regardless (see beginRestore).
   const RESTORE_GUARD_MS = 1500;
 
+  // Pill icons as real inline SVG. The old pause/play glyphs (Unicode
+  // U+23F8 / U+25B6) carry emoji presentation on Apple platforms and rendered
+  // as emoji inside the pill; SVGs cannot. fill/stroke use currentColor so
+  // the button's hover colour swap keeps working, and no emoji exists
+  // anywhere in this extension's UI.
+  const PILL_ICONS = {
+    pause:
+      '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">' +
+      '<g fill="currentColor">' +
+      '<rect x="6.4" y="5" width="4.2" height="14" rx="1.4"/>' +
+      '<rect x="13.4" y="5" width="4.2" height="14" rx="1.4"/>' +
+      '</g></svg>',
+    play:
+      '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">' +
+      '<path fill="currentColor" d="M8.2 5.4v13.2c0 .95 1.05 1.53 1.85 1.02l10.2-6.6c.72-.47.72-1.57 0-2.04L10.05 4.38C9.25 3.87 8.2 4.45 8.2 5.4z"/>' +
+      '</svg>',
+    reset:
+      '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">' +
+      '<g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<polyline points="2.8 4.6 2.8 10 8.2 10"/>' +
+      '<path d="M4.4 15a8.6 8.6 0 1 0 1.7-9L2.8 10"/>' +
+      '</g></svg>',
+  };
+
+  /** One pill icon as a DOM node (innerHTML keeps the SVG namespace happy). */
+  function iconNode(name) {
+    const holder = document.createElement('span');
+    holder.style.cssText = 'display:flex;align-items:center;justify-content:center;';
+    holder.innerHTML = PILL_ICONS[name];
+    return holder;
+  }
+
   class ProblemTimer {
     constructor() {
       if (window._problemTimerInstance) return window._problemTimerInstance;
@@ -283,7 +315,8 @@
     updatePauseButton() {
       const btn = document.getElementById('leetfeedback-timer-pause-btn');
       if (!btn) return;
-      btn.textContent = this.isPaused ? '▶' : '⏸';
+      btn.textContent = '';
+      btn.appendChild(iconNode(this.isPaused ? 'play' : 'pause'));
       btn.title = this.isPaused ? 'Resume timer' : 'Pause timer';
       btn.setAttribute('aria-label', this.isPaused ? 'Resume timer' : 'Pause timer');
       btn.setAttribute('aria-pressed', this.isPaused ? 'true' : 'false');
@@ -672,7 +705,7 @@
         btn.title = title;
         if (typeof text === 'string') {
           btn.textContent = text;
-        } else if (text && text.nodeType) {
+        } else if (text) {
           btn.appendChild(text);
         }
         btn.addEventListener('mouseover', () => {
@@ -691,7 +724,7 @@
       };
 
       const pauseBtn = makeButton(
-        this.isPaused ? '▶' : '⏸',
+        iconNode(this.isPaused ? 'play' : 'pause'),
         this.isPaused ? 'Resume timer' : 'Pause timer',
         '11px',
         '#A6A6A6',
@@ -699,8 +732,12 @@
       );
       pauseBtn.id = 'leetfeedback-timer-pause-btn';
 
-      const resetBtn = makeButton('↺', 'Restart timer & clear this problem\'s data', '12px', '#A6A6A6', () =>
-        this.resetTimer()
+      const resetBtn = makeButton(
+        iconNode('reset'),
+        'Restart timer & clear this problem\'s data',
+        '12px',
+        '#A6A6A6',
+        () => this.resetTimer()
       );
       const hideBtn = makeButton('Hide', 'Hide timer (it comes back on the next problem)', '11px', '#8A8A8A', () =>
         this.hideForNow()

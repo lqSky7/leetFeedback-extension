@@ -1,6 +1,6 @@
 // Traverse — Naukri Code360 adapter.
 //
-// ⚠️ Capture is still DOM-based. Code360's judge endpoints have not been
+// Capture is still DOM-based. Code360's judge endpoints have not been
 // verified against a real submit yet, so `netFilters` is intentionally empty and
 // the verdict is read from the page. To move it onto the network path, see the
 // procedure in platforms/geeksforgeeks.js.

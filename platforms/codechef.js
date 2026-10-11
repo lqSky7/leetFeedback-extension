@@ -4,7 +4,7 @@
 // were read off a real recorded session (recon capture
 // `recon-codechef-2026-09-12t21-52-35-336z.json`).
 //
-// ⚠️  Evidence note: that capture's request/response pairing is only partly
+// Evidence note: that capture's request/response pairing is only partly
 // trustworthy — see the `reconSeq` bug fixed in page/net-interceptor.js, which
 // let late responses overwrite earlier records. The *endpoints and payload
 // shapes* below come from the records that are self-consistent (a submit that
@@ -423,7 +423,7 @@
     }
 
     /**
-     * ⚠️  Not `h1`: the recorded page's first `h1` was "Welcome to the CodeChef
+     * Not `h1`: the recorded page's first `h1` was "Welcome to the CodeChef
      * AI Tutor" — a banner, not the problem name. The statement container is
      * checked first, then `document.title`, which read "Chef Builds Stack
      * Practice Problem in Stacks and Queues" on the same page.

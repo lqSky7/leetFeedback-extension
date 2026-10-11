@@ -4,13 +4,13 @@
 //
 // Covers the three behaviours the smoke suite does not reach (it drives the
 // adapter stack, not the overlay):
-//   1. Restart (↺) — restarts the clock AND wipes the problem's stored record;
+//   1. Restart — restarts the clock AND wipes the problem's stored record;
 //      the adapter drops its in-memory tracker state via the
 //      traverse:problem-data-cleared event.
 //   2. Hide — hides the overlay for the current problem only; it never
 //      writes the enabled setting, returns on the next problem, and a settings
 //      re-enable wins over a stale hide.
-//   3. Pause (⏸) — freezes the clock but never touches the collected data.
+//   3. Pause — freezes the clock but never touches the collected data.
 //
 // Run: node tests/timer-reset.test.js
 
@@ -305,7 +305,7 @@ async function restartClearsStoredDataAndDropsAdapterState() {
   assert.strictEqual(record.code, undefined, 'old code must be gone');
   assert.strictEqual(record.solved, undefined, 'old solved marker must be gone');
 
-  return 'restart (↺) clears the record and resets the adapter tracker';
+  return 'restart clears the record and resets the adapter tracker';
 }
 
 async function hideButtonHidesPerProblemAndSettingsReenableWins() {
