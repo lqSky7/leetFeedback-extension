@@ -91,6 +91,7 @@
                 "core/session-store.js",
                 "core/attempt-tracker.js",
                 "core/backend-api.js",
+                "core/practice-client.js",
                 "core/github-api.js",
                 "core/submission-pipeline.js",
                 "core/problem-timer.js",

@@ -67,6 +67,12 @@
         logger.warn(`[${platform}] hint prompt unavailable, leaving assistance unrecorded:`, hintError);
       }
 
+      // Queue the observed Advanced session end alongside submission. Telemetry failure
+      // never blocks the existing accepted-submission pipeline.
+      if (platform === "leetcode" && T.practiceClient) {
+        void T.practiceClient.accepted(assistanceLevel).catch(() => false);
+      }
+
       // Step 1: push to the Traverse backend.
       if (submissionTracker) submissionTracker.setBackendStarted();
 
