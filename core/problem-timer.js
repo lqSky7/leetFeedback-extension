@@ -50,7 +50,7 @@
       this.displayIntervalId = null;
       this.isEnabled = true;
 
-      // Eye-button hide: purely visual, never touches the enabled setting.
+      // Hide-button hide: purely visual, never touches the enabled setting.
       // Cleared when a different problem starts (startTimer/reset), so the
       // overlay returns on the next problem page.
       this.hiddenByUser = false;
@@ -104,7 +104,7 @@
         if (area === 'sync' && changes[keys.timerOverlayEnabled]) {
           this.isEnabled = changes[keys.timerOverlayEnabled].newValue !== false;
           if (this.isEnabled) {
-            // Re-enabling from settings must win over a stale eye-hide.
+            // Re-enabling from settings must win over a stale hide.
             this.hiddenByUser = false;
             if (this.problemUrl) this.showOverlay();
           } else {
@@ -133,7 +133,7 @@
         return;
       }
 
-      // New problem: the eye-hide never survives a navigation.
+      // New problem: the hide never survives a navigation.
       this.hiddenByUser = false;
       this.problemUrl = problemUrl;
       await this.loadFromStorage();
@@ -545,9 +545,10 @@
     }
 
     /**
-     * Eye button: hide the overlay for this problem only. Unlike the old close
-     * button this never writes the enabled setting — the overlay returns as
-     * soon as a different problem starts (startTimer clears hiddenByUser).
+     * Hide button: hide the overlay for this problem only. Unlike the old
+     * close button this never writes the enabled setting — the overlay
+     * returns as soon as a different problem starts (startTimer clears
+     * hiddenByUser).
      */
     hideForNow() {
       this.hiddenByUser = true;
@@ -701,7 +702,7 @@
       const resetBtn = makeButton('↺', 'Restart timer & clear this problem\'s data', '12px', '#A6A6A6', () =>
         this.resetTimer()
       );
-      const hideBtn = makeButton('👁', 'Hide timer (it comes back on the next problem)', '13px', '#8A8A8A', () =>
+      const hideBtn = makeButton('Hide', 'Hide timer (it comes back on the next problem)', '11px', '#8A8A8A', () =>
         this.hideForNow()
       );
 

@@ -1418,7 +1418,9 @@ class PopupController {
     if (!updateNotification) return;
 
     try {
-      // Check if we should throttle (only check once per day)
+      // Throttle the real network check to once per day. A cached result is
+      // still rendered on every panel open (inline section + center-screen
+      // prompt), so an update never needs a second check to be visible.
       const cacheResult = await chrome.storage.local.get(["update_check_cache"]);
       const cache = cacheResult.update_check_cache;
       const now = Date.now();
@@ -1426,7 +1428,7 @@ class PopupController {
 
       const storeUrl = "https://chromewebstore.google.com/detail/traverse/nnapafjmoelkehjedfgjchoeelgbiama";
 
-      if (cache && cache.timestamp && (now - cache.timestamp) < oneDay) {
+      if (cache && cache.timestamp && (now - cache.timestamp) < oneDay && cache.latestVersion) {
         // Use cached latest version but compare against CURRENT manifest version
         const currentVersion = chrome.runtime.getManifest().version;
         const hasUpdate = this.compareVersions(cache.latestVersion, currentVersion) > 0;
@@ -1434,7 +1436,8 @@ class PopupController {
         return;
       }
 
-      // Fetch web store page content
+      // Fetch the Chrome Web Store listing page — the version the store serves
+      // IS the source of truth. Nothing here reads GitHub.
       const response = await fetch(storeUrl);
 
       if (!response.ok) {
@@ -1442,24 +1445,7 @@ class PopupController {
       }
 
       const htmlText = await response.text();
-      let latestVersion = null;
-
-      // Extract version using regex matching
-      const regexMatch = htmlText.match(/\\?"version\\?":\s*\\?"([0-9.]+)\\?"/);
-      if (regexMatch) {
-        latestVersion = regexMatch[1];
-      } else {
-        // Fallback to DOM parsing
-        const doc = new DOMParser().parseFromString(htmlText, "text/html");
-        const divs = Array.from(doc.querySelectorAll("div"));
-        const versionDiv = divs.find(el => el.textContent.trim() === "Version");
-        if (versionDiv && versionDiv.nextElementSibling) {
-          const versionStr = versionDiv.nextElementSibling.textContent.trim();
-          if (/^\d+(\.\d+)+$/.test(versionStr)) {
-            latestVersion = versionStr;
-          }
-        }
-      }
+      const latestVersion = this.extractStoreVersion(htmlText);
 
       if (!latestVersion) {
         throw new Error("Could not parse version from Chrome Web Store");
@@ -1485,13 +1471,52 @@ class PopupController {
 
     } catch (error) {
       spError("[Update Check] Error:", error);
+      // Never fake an "up to date" badge on a failed check — say so. The next
+      // panel open retries, since a failure writes no cache.
       updateNotification.innerHTML = `
-        <div class="update-uptodate">
-          <span class="update-uptodate-icon">✓</span>
-          <span>v${chrome.runtime.getManifest().version}</span>
+        <div class="update-check-failed">
+          <span class="update-check-failed-icon">!</span>
+          <span>Update check failed — running v${chrome.runtime.getManifest().version}</span>
         </div>
       `;
     }
+  }
+
+  /**
+   * Pull the store listing's version out of the page HTML. The page embeds
+   * several extensions' manifests (related-extensions carousel), so a naive
+   * first-match on "version" can return another extension's number. Order:
+   * the structured Version element first, then the manifest JSON anchored on
+   * the Traverse name, then the DOM fallback. Every hit must be semver-ish.
+   */
+  extractStoreVersion(html) {
+    const candidates = [
+      // The listing's own "Version" row: <div>Version</div><div>2.4.3</div>
+      /<div[^>]*>\s*Version\s*<\/div>\s*<div[^>]*>\s*(\d+(?:\.\d+)+)\s*<\/div>/,
+      // Escaped manifest JSON inside a script string, anchored on the name.
+      /\\"name\\":\s*\\"Traverse\\"[\s\S]{0,600}?\\"version\\":\s*\\"(\d+(?:\.\d+)+)\\"/,
+      /"name":\s*"Traverse"[\s\S]{0,600}?"version":\s*"(\d+(?:\.\d+)+)"/,
+    ];
+
+    for (const re of candidates) {
+      const match = html.match(re);
+      if (match && /^\d+(\.\d+)+$/.test(match[1])) return match[1];
+    }
+
+    // DOM fallback: the Version row read structurally.
+    try {
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const divs = Array.from(doc.querySelectorAll("div"));
+      const versionDiv = divs.find((el) => el.textContent.trim() === "Version");
+      if (versionDiv && versionDiv.nextElementSibling) {
+        const versionStr = versionDiv.nextElementSibling.textContent.trim();
+        if (/^\d+(\.\d+)+$/.test(versionStr)) return versionStr;
+      }
+    } catch (parseError) {
+      spError("[Update Check] DOM fallback failed:", parseError);
+    }
+
+    return null;
   }
 
   renderUpdateNotification(hasUpdate, latestVersion, currentVersion, releaseUrl = "https://chromewebstore.google.com/detail/traverse/nnapafjmoelkehjedfgjchoeelgbiama") {
@@ -1511,6 +1536,8 @@ class PopupController {
           </a>
         </div>
       `;
+      // The prominent prompt: a centered card over the whole panel.
+      this.showUpdateModal(latestVersion, currentVersion, releaseUrl);
     } else {
       updateNotification.classList.remove("has-update");
       updateNotification.innerHTML = `
@@ -1519,7 +1546,40 @@ class PopupController {
           <span>Up to date (v${currentVersion})</span>
         </div>
       `;
+      this.hideUpdateModal();
     }
+  }
+
+  /** Center-screen update prompt: version info + an Update now button. */
+  showUpdateModal(latestVersion, currentVersion, releaseUrl) {
+    // One at a time — rebuild rather than stack.
+    this.hideUpdateModal();
+
+    const backdrop = document.createElement("div");
+    backdrop.id = "update-modal-backdrop";
+    backdrop.innerHTML = `
+      <div class="update-modal" role="dialog" aria-modal="true" aria-label="Update available">
+        <h3>Update available</h3>
+        <p>Traverse <b>v${latestVersion}</b> is on the Chrome Web Store.<br>You are running v${currentVersion}.</p>
+        <div class="update-modal-actions">
+          <a href="${releaseUrl}" target="_blank" rel="noreferrer" class="update-modal-button">Update now</a>
+          <button type="button" class="update-modal-later">Later</button>
+        </div>
+      </div>
+    `;
+
+    backdrop.querySelector(".update-modal-later").addEventListener("click", () => this.hideUpdateModal());
+    backdrop.addEventListener("click", (event) => {
+      if (event.target === backdrop) this.hideUpdateModal();
+    });
+
+    document.body.appendChild(backdrop);
+    requestAnimationFrame(() => backdrop.classList.add("visible"));
+  }
+
+  hideUpdateModal() {
+    const existing = document.getElementById("update-modal-backdrop");
+    if (existing) existing.remove();
   }
 
   compareVersions(a, b) {

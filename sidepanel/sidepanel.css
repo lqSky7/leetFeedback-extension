@@ -840,36 +840,26 @@ input {
   color: #000000;
 }
 
-/* Tooltip for pills (same visual language as .info-icon::after, but centred
-   under the pill). */
-.toggle-pill[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 210px;
-  padding: 8px 10px;
-  background: #1A1A1A;
-  border: 1px solid var(--border-hover);
-  border-radius: var(--radius-sm);
-  color: #FFFFFF;
-  font-size: 11px;
-  font-weight: normal;
-  text-align: left;
-  line-height: 1.4;
-  white-space: normal;
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity var(--dur-fast) var(--ease-base);
-  z-index: 999;
-  box-shadow: var(--shadow-md);
-  pointer-events: none;
+/* Quick-toggle explanation texts — always visible under the pills, in the
+   normal flow. The old hover popups are gone on purpose: they floated over
+   the footer band and hid themselves on mouse-out, so the explanations were
+   never actually readable. Nothing here overlays anything anymore. */
+.pill-hints {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
 }
 
-.toggle-pill[data-tooltip]:hover::after {
-  visibility: visible;
-  opacity: 1;
+.pill-hint {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.pill-hint b {
+  color: var(--text-secondary);
+  font-weight: 600;
 }
 
 /* ── Messages & Alerts ─────────────────────────────────────────────────── */
@@ -1611,6 +1601,116 @@ input {
 .update-uptodate-icon {
   font-size: 13px;
   font-weight: 700;
+}
+
+/* A failed check must read as unknown, not as "up to date". */
+.update-check-failed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.update-check-failed-icon {
+  color: var(--warning);
+  font-weight: 700;
+}
+
+/* ── Center-screen update prompt ─────────────────────────────────────────
+   A real prompt with a button, centered over the whole panel — not a quiet
+   row at the bottom of Settings. Fires whenever a check (fresh or cached)
+   finds the store ahead of the installed version; "Later" and a backdrop
+   click both dismiss it until the next panel open. */
+#update-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transition: opacity var(--dur-normal) var(--ease-base);
+  padding: 20px;
+}
+
+#update-modal-backdrop.visible {
+  opacity: 1;
+}
+
+.update-modal {
+  width: 300px;
+  max-width: 100%;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lg);
+  padding: 22px 20px 18px;
+  text-align: center;
+  transform: scale(0.96);
+  transition: transform var(--dur-normal) var(--ease-base);
+}
+
+#update-modal-backdrop.visible .update-modal {
+  transform: scale(1);
+}
+
+.update-modal h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.update-modal p {
+  margin: 0 0 16px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.update-modal p b {
+  color: #79A3F7;
+}
+
+.update-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.update-modal-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 16px;
+  background: #FFFFFF;
+  color: #000000;
+  text-decoration: none;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: all var(--dur-fast) var(--ease-base);
+}
+
+.update-modal-button:hover {
+  background: #EAEAEA;
+}
+
+.update-modal-later {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-family-base);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.update-modal-later:hover {
+  color: var(--text-secondary);
 }
 
 /* ── Footer ────────────────────────────────────────────────────────────── */

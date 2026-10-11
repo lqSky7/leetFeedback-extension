@@ -7,7 +7,7 @@
 //   1. Restart (↺) — restarts the clock AND wipes the problem's stored record;
 //      the adapter drops its in-memory tracker state via the
 //      traverse:problem-data-cleared event.
-//   2. Eye (👁) — hides the overlay for the current problem only; it never
+//   2. Hide — hides the overlay for the current problem only; it never
 //      writes the enabled setting, returns on the next problem, and a settings
 //      re-enable wins over a stale hide.
 //   3. Pause (⏸) — freezes the clock but never touches the collected data.
@@ -308,7 +308,7 @@ async function restartClearsStoredDataAndDropsAdapterState() {
   return 'restart (↺) clears the record and resets the adapter tracker';
 }
 
-async function eyeHidesPerProblemAndSettingsReenableWins() {
+async function hideButtonHidesPerProblemAndSettingsReenableWins() {
   const env = createEnvironment();
   const T = loadStack(env, 'platforms/leetcode.js');
   const timer = freshTimer(T);
@@ -317,8 +317,8 @@ async function eyeHidesPerProblemAndSettingsReenableWins() {
   assert.ok(timer.overlay, 'precondition: overlay visible');
 
   timer.hideForNow();
-  assert.strictEqual(timer.hiddenByUser, true, 'eye-hide must set hiddenByUser');
-  assert.strictEqual(timer.overlay, null, 'eye-hide must remove the overlay');
+  assert.strictEqual(timer.hiddenByUser, true, 'hide must set hiddenByUser');
+  assert.strictEqual(timer.overlay, null, 'hide must remove the overlay');
 
   // Same problem, SPA re-render: stays hidden. The old close button's
   // disabled-setting must NOT be written either.
@@ -330,7 +330,7 @@ async function eyeHidesPerProblemAndSettingsReenableWins() {
   assert.strictEqual(
     syncSettings.timer_overlay_enabled,
     undefined,
-    'eye-hide must never write the enabled setting'
+    'hide must never write the enabled setting'
   );
 
   // A different problem: the hide never survives navigation.
@@ -402,7 +402,7 @@ async function pauseTouchesTimeOnly() {
 
 const SCENARIOS = [
   ['restart clears stored data and drops adapter state', restartClearsStoredDataAndDropsAdapterState],
-  ['eye hides per problem; settings re-enable wins', eyeHidesPerProblemAndSettingsReenableWins],
+  ['hide hides per problem; settings re-enable wins', hideButtonHidesPerProblemAndSettingsReenableWins],
   ['restart with no tracked problem is a no-op', restartWithoutProblemIsHarmless],
   ['pause touches time only', pauseTouchesTimeOnly],
 ];
