@@ -6,7 +6,12 @@
   "scripts": {
     "build": "node scripts/build.js",
     "build:minor": "node scripts/build.js minor",
-    "build:major": "node scripts/build.js major"
+    "build:major": "node scripts/build.js major",
+    "build:firefox": "node scripts/build.js patch firefox",
+    "build:firefox:minor": "node scripts/build.js minor firefox",
+    "build:firefox:major": "node scripts/build.js major firefox",
+    "lint:firefox": "npx --yes web-ext lint --source-dir . --ignore-files \"tests/**\" \"scripts/**\" \"dist/**\" \"node_modules/**\" \"*.md\" \"package*.json\" \"manifest.chrome.overlay.json\"",
+    "test": "node tests/background.test.js && node tests/auth.test.js && node tests/manifest.test.js && node tests/handoff.test.js && node tests/leetcode-import.test.js && node tests/leetcode-import-background.test.js && node tests/platforms.test.js && node tests/practice-client.test.js && node tests/recon.test.js && node tests/smoke.test.js && node tests/timer-reset.test.js"
   },
   "devDependencies": {
     "terser": "^5.31.0"

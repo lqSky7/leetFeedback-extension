@@ -26,7 +26,7 @@ const BACKGROUND_DIR = path.join(ROOT, 'background');
 
 /** A chrome mock covering what background.js touches at load time. */
 function createChrome() {
-  const listeners = { message: [], external: [], installed: [], startup: [], alarm: [], alarmsCreated: [] };
+  const listeners = { message: [], external: [], installed: [], startup: [], alarm: [], alarmsCreated: [], actionClicked: [] };
   const store = {};
 
   const localGet = (keysOrCb, maybeCb) => {
@@ -94,9 +94,20 @@ function createChrome() {
  * and background.js declares top-level `const`s (`T`, `logger`, `keys`) that
  * cannot be re-declared — so a second scenario would fail on the harness rather
  * than on the code.
+ *
+ * Pass `{ firefox: true }` to load it the way Firefox does instead: there is no
+ * service worker, so `importScripts` is absent and the event page's files come
+ * from `manifest.json` → `background.scripts`, in order, sharing one global.
  */
 function loadBackgroundWorker(options = {}) {
   const chromeMock = createChrome();
+  let firefoxScripts = null;
+
+  if (options.firefox) {
+    // Firefox-only surface: the sidebar and the toolbar click that opens it.
+    chromeMock.sidebarAction = { toggle: () => Promise.resolve() };
+    chromeMock.action = { onClicked: { addListener: (fn) => chromeMock.listeners.actionClicked.push(fn) } };
+  }
 
   const sandbox = {
     chrome: chromeMock,
@@ -113,24 +124,37 @@ function loadBackgroundWorker(options = {}) {
       }),
   };
 
-  const context = vm.createContext(sandbox);
+  // Firefox exposes both namespaces; the panel/background code branches on
+  // `browser` being present, so the mock has to provide it.
+  if (options.firefox) sandbox.browser = { runtime: { id: 'traverse@traverses.tech' } };
 
-  sandbox.importScripts = (...files) => {
-    for (const file of files) {
-      const resolved = path.join(BACKGROUND_DIR, file);
-      vm.runInContext(fs.readFileSync(resolved, 'utf8'), context, { filename: resolved });
-    }
-  };
+  const context = vm.createContext(sandbox);
 
   let loadError = null;
   try {
-    const file = path.join(BACKGROUND_DIR, 'background.js');
-    vm.runInContext(fs.readFileSync(file, 'utf8'), context, { filename: file });
+    if (options.firefox) {
+      const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+      firefoxScripts = manifest.background.scripts || [];
+      for (const rel of firefoxScripts) {
+        const file = path.join(ROOT, rel);
+        vm.runInContext(fs.readFileSync(file, 'utf8'), context, { filename: file });
+      }
+    } else {
+      sandbox.importScripts = (...files) => {
+        for (const file of files) {
+          const resolved = path.join(BACKGROUND_DIR, file);
+          vm.runInContext(fs.readFileSync(resolved, 'utf8'), context, { filename: resolved });
+        }
+      };
+
+      const file = path.join(BACKGROUND_DIR, 'background.js');
+      vm.runInContext(fs.readFileSync(file, 'utf8'), context, { filename: file });
+    }
   } catch (error) {
     loadError = error;
   }
 
-  return { chromeMock, loadError };
+  return { chromeMock, loadError, firefoxScripts };
 }
 
 /** Ask the registered listener for a response, the way sendMessage does. */
@@ -173,6 +197,64 @@ async function workerLoadsAndRegistersListener() {
     1,
     'the worker must register exactly one onMessage listener'
   );
+
+  assert.strictEqual(
+    chromeMock.listeners.actionClicked.length,
+    0,
+    'Chrome opens the side panel declaratively — it must not also bind a click handler'
+  );
+}
+
+/**
+ * The Firefox load path, which Chrome's does not cover.
+ *
+ * Firefox has no MV3 service worker. The background runs as an event page whose
+ * files are listed in `manifest.json` → `background.scripts`, and `importScripts`
+ * does not exist in that context. Two things can therefore regress silently:
+ *
+ *   1. the `typeof importScripts === 'function'` guard, and
+ *   2. drift between that list and the `importScripts(...)` arguments.
+ *
+ * Either one throws on start, which is a UI freeze — not a crash — so nothing
+ * surfaces it to the user. This pins the list, the load, and the sidebar wiring
+ * that only Firefox takes.
+ */
+async function loadsAsFirefoxEventPage() {
+  const { chromeMock, loadError, firefoxScripts } = loadBackgroundWorker({ firefox: true });
+
+  assert.strictEqual(
+    loadError,
+    null,
+    `the Firefox event page must load without importScripts: ${loadError && loadError.message}`
+  );
+
+  assert.strictEqual(
+    chromeMock.listeners.message.length,
+    1,
+    'the event page must register exactly one onMessage listener'
+  );
+
+  // Order is the dependency graph: config before logger, entry file last.
+  assert.ok(Array.isArray(firefoxScripts) && firefoxScripts.length >= 2, 'background.scripts must list the dependencies');
+  assert.strictEqual(
+    firefoxScripts[firefoxScripts.length - 1],
+    'background/background.js',
+    'background.js must be the last script, after everything it reads from T'
+  );
+  for (const dep of ['core/config.js', 'core/logger.js', 'background/leetcode-import.js']) {
+    assert.ok(firefoxScripts.includes(dep), `${dep} must be listed in background.scripts`);
+  }
+
+  // Firefox has no side panel, so the toolbar click has to open the sidebar.
+  assert.strictEqual(
+    chromeMock.listeners.actionClicked.length,
+    1,
+    'Firefox must bind exactly one action click handler for the sidebar'
+  );
+
+  // The router has to work identically on this path.
+  const response = await sendMessage(chromeMock, { type: 'NOT_A_REAL_TYPE' });
+  assert.strictEqual(response && response.error, 'Unknown message type');
 }
 
 /**
@@ -311,6 +393,7 @@ async function retentionSweepRemovesOnlyStaleProblemData() {
 
 const SCENARIOS = [
   ['worker loads and registers a message listener', workerLoadsAndRegistersListener],
+  ['loads as a Firefox event page (no importScripts)', loadsAsFirefoxEventPage],
   ['every registered handler is callable', everyKnownHandlerIsCallable],
   ['an unknown message type is rejected', unknownMessageTypeIsRejected],
   ['recon upload ignores a stale stored token', reconUploadIgnoresStoredTokenOverride],

@@ -6,3 +6,4 @@ coverage/
 .vite/
 *.log
 .interview-prep/
+.workbuddy-ai/

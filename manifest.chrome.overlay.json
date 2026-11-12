@@ -1,0 +1,27 @@
+{
+    "permissions": [
+        "alarms",
+        "storage",
+        "unlimitedStorage",
+        "scripting",
+        "activeTab",
+        "tabs",
+        "sidePanel"
+    ],
+    "background": {
+        "service_worker": "background/background.js"
+    },
+    "externally_connectable": {
+        "matches": [
+            "https://traverses.tech/*",
+            "https://*.traverses.tech/*",
+            "https://leet-feedback.vercel.app/*",
+            "https://*.vercel.app/*",
+            "http://localhost:5173/*",
+            "http://localhost:3000/*"
+        ]
+    },
+    "side_panel": {
+        "default_path": "sidepanel/sidepanel.html"
+    }
+}

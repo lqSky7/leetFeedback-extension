@@ -1,20 +1,26 @@
 // Traverse — publication build script.
 //
-// Produces a minified, Chrome Web Store-ready zip of the extension:
-//   1. Bumps the version in manifest.json (patch by default; `minor`/`major` as argv[2]).
+// Produces a minified, store-ready zip of the extension for one browser:
+//   1. Bumps the version in manifest.json (patch by default; `minor`/`major` as
+//      argv[2]).
 //   2. Copies the publication set into dist/ — dev-only files (tests, docs,
 //      tooling) stay out of the store package.
-//   3. Minifies: JS via Terser (a real parser — regex minification corrupts
+//   3. Writes the browser's manifest into dist/. `manifest.json` is the Firefox
+//      manifest; the Chrome build derives its own from it plus an overlay, so
+//      neither package carries keys the other browser warns about.
+//   4. Minifies: JS via Terser (a real parser — regex minification corrupts
 //      template literals), CSS/HTML via conservative whitespace/comment
 //      stripping. This is standard minification, NOT obfuscation: no top-level
 //      renaming, no string encryption, no control-flow tricks — the store's
 //      review diff stays readable and Chrome's obfuscation policy is respected.
-//   4. Verifies the output: every manifest-referenced file exists, and every
+//   5. Verifies the output: every manifest-referenced file exists, and every
 //      dist .js still parses (`node --check`).
-//   5. Zips dist/ contents at the zip root (manifest.json must sit at the top
-//      level) onto the Desktop as traverse-v<version>.zip.
+//   6. Zips dist/ contents at the zip root (manifest.json must sit at the top
+//      level) onto the Desktop.
 //
-// Run: node scripts/build.js [patch|minor|major]
+// Run: node scripts/build.js [patch|minor|major] [chrome|firefox]
+//   chrome  (default) -> traverse-v<version>.zip
+//   firefox           -> traverse-firefox-v<version>.zip
 
 'use strict';
 
@@ -34,6 +40,7 @@ const EXCLUDED = new Set([
   '.github',
   '.gitignore',
   '.DS_Store',
+  '.workbuddy-ai',
   'node_modules',
   'dist',
   'scripts',
@@ -48,6 +55,7 @@ const EXCLUDED = new Set([
   'README.md',
   'LICENSE',
   'index.md',
+  'manifest.chrome.overlay.json',
 ]);
 
 const log = (...args) => console.log('[build]', ...args);
@@ -149,6 +157,14 @@ async function buildTree() {
   return files;
 }
 
+/* ── per-browser manifests ──────────────────────────────────────────────── */
+
+// `manifest.json` is the Firefox manifest and the single source of truth for
+// everything the two browsers share; Chrome's half is an overlay. The
+// derivation, and the reasoning behind it, live in scripts/manifest.js so the
+// tests and this script cannot disagree about what "the Chrome manifest" means.
+const { manifestFor } = require('./manifest.js');
+
 /* ── verification ───────────────────────────────────────────────────────── */
 
 /** Every file the manifest (and the background's importScripts) references must exist in dist. */
@@ -159,7 +175,12 @@ function verifyReferencedFiles() {
   const add = (rel) => rel && referenced.add(rel);
 
   add(manifest.background && manifest.background.service_worker);
+  // Firefox has no MV3 service worker and loads the background as an event page
+  // from this list instead, so its entries are just as load-bearing.
+  for (const script of (manifest.background && manifest.background.scripts) || []) add(script);
   add(manifest.side_panel && manifest.side_panel.default_path);
+  add(manifest.sidebar_action && manifest.sidebar_action.default_panel);
+  for (const icon of Object.values((manifest.sidebar_action && manifest.sidebar_action.default_icon) || {})) add(icon);
   for (const icon of Object.values(manifest.icons || {})) add(icon);
   for (const icon of Object.values((manifest.action && manifest.action.default_icon) || {})) add(icon);
   for (const cs of manifest.content_scripts || []) for (const js of cs.js || []) add(js);
@@ -167,14 +188,18 @@ function verifyReferencedFiles() {
     for (const res of war.resources || []) add(res);
   }
 
-  // background.js pulls core modules via importScripts('…').
-  const worker = path.join(DIST, manifest.background.service_worker);
-  const importScripts = fs
-    .readFileSync(worker, 'utf8')
-    .match(/importScripts\(([^)]*)\)/g) || [];
-  for (const call of importScripts) {
-    for (const match of call.matchAll(/['"]([^'"]+)['"]/g)) {
-      add(path.join(path.dirname(manifest.background.service_worker), match[1]));
+  // background.js pulls core modules via importScripts('…') on Chrome. The call
+  // is guarded for Firefox, but the argument list still has to resolve.
+  const workerPath = manifest.background && manifest.background.service_worker;
+  if (workerPath) {
+    const worker = path.join(DIST, workerPath);
+    const importScripts = fs
+      .readFileSync(worker, 'utf8')
+      .match(/importScripts\(([^)]*)\)/g) || [];
+    for (const call of importScripts) {
+      for (const match of call.matchAll(/['"]([^'"]+)['"]/g)) {
+        add(path.join(path.dirname(workerPath), match[1]));
+      }
     }
   }
 
@@ -206,15 +231,47 @@ function verifyJsParses() {
   return checked;
 }
 
+/**
+ * No hidden directories in the package.
+ *
+ * The copy pass is driven by a deny-list of basenames, so anything new at the
+ * repo root ships unless someone remembers to exclude it. That has already gone
+ * wrong once: a tooling directory (`.workbuddy-ai/`) rode along into both zips.
+ * A store package never legitimately contains a dot-directory, so this turns
+ * "someone forgot" into a build failure instead of a silent upload.
+ */
+function verifyNoHiddenDirs() {
+  const found = [];
+  const stack = [DIST];
+
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.name.startsWith('.')) {
+        found.push(path.relative(DIST, full));
+        continue;
+      }
+      stack.push(full);
+    }
+  }
+
+  if (found.length > 0) fail(`dev-only directories shipped to dist/: ${found.join(', ')}`);
+  return true;
+}
+
 /* ── zip ────────────────────────────────────────────────────────────────── */
 
-function zipDist(version) {
+/** Chrome keeps the historical filename; the Firefox package must not clobber it. */
+function zipDist(version, browser) {
   if (!fs.existsSync(DESKTOP)) fail(`Desktop not found: ${DESKTOP}`);
 
-  const out = path.join(DESKTOP, `traverse-v${version}.zip`);
+  const name = browser === 'chrome' ? `traverse-v${version}.zip` : `traverse-firefox-v${version}.zip`;
+  const out = path.join(DESKTOP, name);
   fs.rmSync(out, { force: true });
 
-  // Files at the zip ROOT — Chrome expects manifest.json at the top level.
+  // Files at the zip ROOT — both stores expect manifest.json at the top level.
   const probe = spawnSync('zip', ['-r', '-X', '-q', out, '.'], { cwd: DIST, encoding: 'utf8' });
   if (probe.status !== 0) fail(`zip failed: ${probe.stderr || probe.stdout}`);
 
@@ -226,7 +283,12 @@ function zipDist(version) {
 (async () => {
   const level = (process.argv[2] || 'patch').toLowerCase();
   if (!['patch', 'minor', 'major'].includes(level)) {
-    fail(`usage: node scripts/build.js [patch|minor|major] (got "${level}")`);
+    fail(`usage: node scripts/build.js [patch|minor|major] [chrome|firefox] (got "${level}")`);
+  }
+
+  const browser = (process.argv[3] || 'chrome').toLowerCase();
+  if (!['chrome', 'firefox'].includes(browser)) {
+    fail(`unknown browser "${browser}" — expected chrome or firefox`);
   }
 
   const manifestPath = path.join(ROOT, 'manifest.json');
@@ -243,17 +305,26 @@ function zipDist(version) {
   const fileCount = await buildTree();
   log(`built ${fileCount} files into dist/`);
 
+  // buildTree copies the source manifest verbatim. Chrome gets the derived one
+  // instead, so a Chrome package never carries keys Chrome warns about.
+  const shipped = manifestFor(browser, manifest);
+  fs.writeFileSync(path.join(DIST, 'manifest.json'), JSON.stringify(shipped, null, 4) + '\n');
+  log(`${browser} manifest: ${Object.keys(shipped).length} keys`);
+
   const refCount = verifyReferencedFiles();
   log(`verified ${refCount} manifest-referenced files exist in dist/`);
 
   const jsCount = verifyJsParses();
   log(`verified ${jsCount} minified .js files still parse`);
 
-  const out = zipDist(version);
+  verifyNoHiddenDirs();
+  log('verified no dev-only directories shipped');
+
+  const out = zipDist(version, browser);
   const zipSize = fs.statSync(out).size;
 
   log('');
-  log(`✓ traverse-v${version}.zip`);
+  log(`✓ ${path.basename(out)}`);
   log(`  ${(zipSize / 1024).toFixed(1)} kB, ${fileCount} files`);
   log(`  ${out}`);
 })().catch((error) => fail(error && error.stack ? error.stack : error));

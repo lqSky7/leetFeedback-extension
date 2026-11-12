@@ -1417,6 +1417,17 @@ class PopupController {
     const updateNotification = document.getElementById("update-notification");
     if (!updateNotification) return;
 
+    // Firefox builds are not published to the Chrome Web Store. Left alone, the
+    // check would compare this build against the Chrome listing and, once the
+    // fork's version diverges, tell the user an update is waiting on the Chrome
+    // Web Store — pointing them at the wrong browser's build. Report the running
+    // version and stop. No new copy: this reuses the existing up-to-date state.
+    if (typeof browser !== "undefined" && browser.runtime) {
+      const runningVersion = chrome.runtime.getManifest().version;
+      this.renderUpdateNotification(false, runningVersion, runningVersion);
+      return;
+    }
+
     try {
       // Throttle the real network check to once per day. A cached result is
       // still rendered on every panel open (inline section + center-screen

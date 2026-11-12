@@ -19,9 +19,11 @@
     // GitHub REST API.
     githubApiBaseURL: 'https://api.github.com',
 
-    // Origins allowed to message the background service worker
-    // (externally_connectable auth sync). Must stay in sync with the
-    // "externally_connectable" matches in manifest.json.
+    // Origins allowed to message the background worker
+    // (externally_connectable auth sync, Chrome only — Firefox has no web-page
+    // messaging and uses platforms/website-sync.js instead). Must stay in sync
+    // with the "externally_connectable" matches in manifest.chrome.overlay.json;
+    // tests/manifest.test.js fails if one side covers an origin the other does not.
     allowedExternalOrigins: [
       'https://traverses.tech',
       'https://leet-feedback.vercel.app',

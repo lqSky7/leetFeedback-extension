@@ -1,19 +1,28 @@
-// Traverse — background service worker.
+// Traverse — background service worker (Chrome) / event page (Firefox).
 //
 // Deliberately thin. Its jobs:
 //   1. Proxy cross-origin backend requests (content scripts cannot make them).
 //   2. Own auth storage: accept the website's session over
 //      `externally_connectable` and keep the multi-account list consistent.
-//   3. Open the side panel when the toolbar icon is clicked.
+//   3. Open the side panel (Chrome) or the sidebar (Firefox) when the toolbar
+//      icon is clicked.
 //   4. Flag a browser restart so ProblemTimer starts a fresh timer.
 //
 // It holds NO problem state — that lives in the content scripts and in
-// chrome.storage, because MV3 workers are terminated whenever they go idle.
+// chrome.storage, because MV3 background contexts are terminated when idle.
 //
 // Every async `sendResponse` path must `return true`, or the channel closes
 // before the response is sent.
 
-importScripts('../core/config.js', '../core/logger.js', 'leetcode-import.js');
+// Chrome runs this file as a service worker, where the dependencies can only be
+// pulled in through `importScripts`. Firefox has no MV3 service worker: it runs
+// an event page and loads the same files as ordinary scripts, declared in
+// manifest.json → `background.scripts`. `importScripts` does not exist in that
+// document context, so the call is guarded — and the manifest list must stay in
+// sync with the arguments below.
+if (typeof importScripts === 'function') {
+  importScripts('../core/config.js', '../core/logger.js', 'leetcode-import.js');
+}
 
 const T = globalThis.Traverse;
 const logger = T.createLogger('background');
@@ -27,9 +36,24 @@ const AUTH_KEYS = [
   keys.auth.activeAccountId,
 ];
 
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => {
-  logger.error('could not set side panel behavior:', error);
-});
+// Chrome: clicking the toolbar icon opens the side panel.
+if (chrome.sidePanel && typeof chrome.sidePanel.setPanelBehavior === 'function') {
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => {
+    logger.error('could not set side panel behavior:', error);
+  });
+}
+
+// Firefox: there is no side panel API. The panel is declared as a
+// `sidebar_action`, and the toolbar click has to open it explicitly. The
+// listener is only registered where `sidebarAction` exists, so Chrome keeps its
+// `openPanelOnActionClick` behaviour and never reaches this branch.
+if (chrome.sidebarAction && chrome.action && chrome.action.onClicked) {
+  chrome.action.onClicked.addListener(() => {
+    Promise.resolve(chrome.sidebarAction.toggle()).catch((error) => {
+      logger.error('could not toggle the sidebar:', error);
+    });
+  });
+}
 
 /* ── lifecycle ── */
 

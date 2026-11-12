@@ -6,6 +6,11 @@ The extension's own interface, docked beside the problem page. Users sign in,
 switch accounts, configure GitHub mirroring, AI provider, the timer overlay, the
 hint prompt, debug logging and **platform recon** here.
 
+The same HTML serves both browsers: Chrome renders it as a **side panel**
+(`side_panel` + `chrome.sidePanel`), Firefox as a **sidebar** (`sidebar_action` +
+`chrome.sidebarAction`). No markup, CSS or script differs between them — only
+the host chrome around the panel.
+
 **UI freeze applies (root `index.md`, invariant 9).** This directory was *not*
 restructured in the refactor — only the script paths in `sidepanel.html` changed,
 because the modules it loads moved from `shared/` and `utils/` into `core/`.
@@ -79,6 +84,15 @@ at upload time.
   fights the controller and the last writer wins.
 - Recon flow rows are built with DOM APIs (`createElement` / `textContent`), not
   `innerHTML`, because the labels derive from scraped page content.
+- **The update check is Chrome-only.** `checkForUpdates()` scrapes the Chrome Web
+  Store listing for the latest published version. On Firefox it short-circuits
+  and renders the existing up-to-date state instead: the store is not Firefox's
+  update channel, and once this fork's version diverges the comparison would tell
+  the user an update is waiting on the Chrome Web Store. The guard reuses the
+  current markup, so the UI freeze holds — do not add a Firefox-only banner.
+- Storage is `chrome.storage`, not `browser.storage`. Firefox supports promises
+  on the `chrome` namespace, so the promise-style and callback-style calls in this
+  file both work unchanged.
 
 ## 5. Where to make common changes
 
